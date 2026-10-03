@@ -7,6 +7,8 @@ export default {
       colors: {
         bg: 'var(--bg)',
         surface: 'var(--surface)',
+        'bg-brand': 'var(--bg-brand)',
+        'bg-login': 'var(--bg-login)',
         border: 'var(--border)',
         'text-primary': 'var(--text-primary)',
         'text-secondary': 'var(--text-secondary)',
