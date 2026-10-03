@@ -4,25 +4,28 @@ export type UserRole =
   | 'tecnico'
   | 'interno_hospital'
 
-export interface LoginCredentialsDTO {
-  email: string
-  password: string
-  rememberMe?: boolean
-}
-
 export interface UserProfileDTO {
   id: string
   name: string
-  email: string
+  email?: string
   roles: UserRole[]
   tenantId?: string | null
 }
 
-export interface AuthTokenDTO {
-  accessToken: string
-  tokenType: 'Bearer' | string
-  expiresIn: number
-  user: UserProfileDTO
+export interface CurrentUserResponse {
+  id?: string
+  userId?: string
+  sub?: string
+  subject?: string
+  name?: string
+  displayName?: string
+  email?: string
+  roles?: unknown[]
+  papeis?: unknown[]
+  tenantId?: string | null
+  tenant_id?: string | null
+  'https://heem.app/roles'?: unknown[]
+  'https://heem.app/tenant_id'?: string | null
 }
 
 export interface AuthState {

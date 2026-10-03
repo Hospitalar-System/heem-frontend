@@ -3,27 +3,25 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { login } from '../api/login'
+import { getCurrentUser, getDevelopmentToken } from '../api/identity'
 import { LoginForm } from '../components/LoginForm'
 import { ThemeProvider } from '@/app/theme-provider'
 
-vi.mock('../api/login', () => ({ login: vi.fn() }))
+vi.mock('../api/identity', () => ({
+  getCurrentUser: vi.fn(),
+  getDevelopmentToken: vi.fn(),
+}))
 vi.mock('sonner', () => ({
   Toaster: () => null,
   toast: { error: vi.fn(), success: vi.fn() },
 }))
 
-const successfulLogin = {
-  accessToken: 'test-access-token',
-  tokenType: 'Bearer',
-  expiresIn: 900,
-  user: {
-    id: 'user-1',
-    name: 'Ana Silva',
-    email: 'ana@hospital.com.br',
-    roles: ['admin_cliente' as const],
-    tenantId: 'hospital-1',
-  },
+const developmentUser = {
+  id: 'user-1',
+  name: 'Ana Silva',
+  email: 'ana@hospital.com.br',
+  roles: ['tecnico' as const],
+  tenantId: 'hospital-1',
 }
 
 function CurrentPath() {
@@ -52,81 +50,37 @@ function renderLogin() {
 describe('LoginForm', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('renderiza os campos e a ação de entrar', () => {
+  it('apresenta acesso de desenvolvimento como Técnico', () => {
     renderLogin()
 
-    expect(screen.getByRole('textbox', { name: 'E-mail' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Senha')).toBeInTheDocument()
-    expect(screen.getByRole('checkbox', { name: 'Lembrar-me' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Entrar como Técnico' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Senha')).not.toBeInTheDocument()
   })
 
-  it('mostra erros Zod para campos vazios e e-mail inválido', async () => {
+  it('obtém token, consulta a identidade e redireciona ao dashboard', async () => {
     const user = userEvent.setup()
-    renderLogin()
-    await user.click(screen.getByRole('button', { name: 'Entrar' }))
-    expect(await screen.findByText('Informe seu e-mail.')).toBeInTheDocument()
-    expect(screen.getByText('Informe sua senha.')).toBeInTheDocument()
-
-    await user.type(screen.getByRole('textbox', { name: 'E-mail' }), 'nao-e-email')
-    await user.type(screen.getByLabelText('Senha'), '123456')
-    await user.click(screen.getByRole('button', { name: 'Entrar' }))
-    expect(await screen.findByText('Informe um e-mail válido.')).toBeInTheDocument()
-    expect(login).not.toHaveBeenCalled()
-  })
-
-  it('alterna entre senha oculta e visível sem apagar o valor', async () => {
-    const user = userEvent.setup()
-    renderLogin()
-    const password = screen.getByLabelText('Senha')
-    await user.type(password, 'segredo123')
-    expect(password).toHaveAttribute('type', 'password')
-    await user.click(screen.getByRole('button', { name: 'Mostrar senha' }))
-    expect(password).toHaveAttribute('type', 'text')
-    expect(password).toHaveValue('segredo123')
-    await user.click(screen.getByRole('button', { name: 'Ocultar senha' }))
-    expect(password).toHaveAttribute('type', 'password')
-  })
-
-  it('envia as credenciais e lembra-me e redireciona após sucesso', async () => {
-    const user = userEvent.setup()
-    vi.mocked(login).mockResolvedValue(successfulLogin)
+    vi.mocked(getDevelopmentToken).mockResolvedValue('test-access-token')
+    vi.mocked(getCurrentUser).mockResolvedValue(developmentUser)
     renderLogin()
 
-    await user.type(screen.getByRole('textbox', { name: 'E-mail' }), 'ana@hospital.com.br')
-    await user.type(screen.getByLabelText('Senha'), 'senha-segura')
-    await user.click(screen.getByRole('checkbox', { name: 'Lembrar-me' }))
-    await user.click(screen.getByRole('button', { name: 'Entrar' }))
+    await user.click(screen.getByRole('button', { name: 'Entrar como Técnico' }))
 
-    await waitFor(() => expect(login).toHaveBeenCalledWith({
-      email: 'ana@hospital.com.br',
-      password: 'senha-segura',
-      rememberMe: true,
-    }))
+    await waitFor(() => expect(getDevelopmentToken).toHaveBeenCalledOnce())
+    expect(getCurrentUser).toHaveBeenCalledWith('test-access-token')
     expect(await screen.findByTestId('current-path')).toHaveTextContent('/dashboard')
   })
 
-  it('notifica erro RFC 7807 de credenciais inválidas', async () => {
+  it('mostra falha retornada pelo backend', async () => {
     const user = userEvent.setup()
     const { toast } = await import('sonner')
-    vi.mocked(login).mockRejectedValue({
-      response: {
-        data: {
-          type: 'about:blank',
-          title: 'Unauthorized',
-          status: 401,
-          detail: 'E-mail ou senha inválidos.',
-          code: 'AUTH_INVALID_CREDENTIALS',
-        },
-      },
+    vi.mocked(getDevelopmentToken).mockResolvedValue('test-access-token')
+    vi.mocked(getCurrentUser).mockRejectedValue({
+      response: { data: { detail: 'Token inválido.', code: 'AUTH_INVALID_TOKEN' } },
     })
     renderLogin()
 
-    await user.type(screen.getByRole('textbox', { name: 'E-mail' }), 'ana@hospital.com.br')
-    await user.type(screen.getByLabelText('Senha'), 'senha-segura')
-    await user.click(screen.getByRole('button', { name: 'Entrar' }))
+    await user.click(screen.getByRole('button', { name: 'Entrar como Técnico' }))
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('E-mail ou senha inválidos.'))
-    expect(screen.getByRole('textbox', { name: 'E-mail' })).toHaveValue('ana@hospital.com.br')
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Token inválido.'))
   })
 })

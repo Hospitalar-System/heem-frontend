@@ -1,19 +1,20 @@
 # Spec F1.1 — Login do painel Web
 
-**Status:** aprovada para implementação nesta tarefa  
+**Status:** fluxo local de desenvolvimento implementado; integração Auth0 pendente
 **Story:** F1.1 — Autenticação & Sessão (`docs/epics.md`)  
 **Referência visual:** [Frame Login no Figma](https://www.figma.com/design/xyPzQydXlRphxz2V58D2ZE/Untitled?node-id=102-21)  
 **Documentos relacionados:** `AGENTS.md`, `docs/design.md`, `docs/experience.md`, `docs/epics.md`
 
 ## Objetivo
 
-Permitir que usuários do HEMM acessem o painel Web com e-mail e senha, recebam mensagens de erro acionáveis e sigam para a área inicial correspondente ao seu papel.
+Permitir que usuários acessem o painel pelo provedor de identidade. No desenvolvimento local, o frontend obtém um token de perfil de teste e consulta a identidade autenticada no backend.
 
 ## Escopo
 
-- Tela e formulário de login para desktop e telas estreitas.
-- Validação local de credenciais, chamada à API, captura de `ProblemDetail` e feedback de carregamento/erro.
-- Armazenamento do access token somente em memória e suporte à cookie de refresh `HttpOnly` enviada pelo backend.
+- Tela de entrada para desktop e telas estreitas.
+- Em desenvolvimento local, chamada a `GET /dev/token/tecnico` em `http://localhost:8080`, seguida por `GET /api/v1/me` com bearer token.
+- Armazenamento do access token somente em memória.
+- Integração futura com Auth0 Universal Login; o frontend não coleta senha nem chama uma rota de login do backend.
 - Redirecionamento por papel a destinos definidos centralmente.
 - Seletor de tema Dark, Light e Auto (preferência do sistema).
 - Testes unitários/de integração do formulário e do fluxo de submissão.
@@ -33,53 +34,18 @@ Elementos de produto solicitados além do frame: checkbox “Lembrar-me”, sele
 
 ## Requisitos funcionais e regras de negócio
 
-1. O formulário apresenta e-mail, senha, “Lembrar-me” e botão “Entrar”.
-2. E-mail é obrigatório e deve ter formato válido. Não há lista aprovada de domínios corporativos; o cliente não deve inventar uma allowlist. A autorização final é do backend.
-3. Senha é obrigatória e deve conter ao menos 6 caracteres.
-4. Submeter dados válidos executa `POST /api/v1/auth/login` com JSON de credenciais. O estado de carregamento impede submissões duplicadas.
-5. Em sucesso, guardar o access token em memória, guardar o perfil na sessão da aplicação e navegar para a rota inicial do papel.
-6. Papéis aceitos: `super_admin`, `admin_cliente`, `tecnico` e `interno_hospital`. O roteamento é uma convenção inicial e deve ser centralizado:
-   - `super_admin` → `/platform/clients`
-   - `admin_cliente` → `/dashboard`
-   - `tecnico` → `/field`
-   - `interno_hospital` → `/hospital/requests`
+1. No modo local atual, o botão solicita um token para o perfil `tecnico` em `GET /dev/token/tecnico`.
+2. O frontend consulta `GET /api/v1/me` usando `Authorization: Bearer <token>`.
+3. Em sucesso, guardar o access token e a identidade apenas em memória e navegar para `/dashboard` para qualquer papel reconhecido.
+4. Papéis aceitos: `super_admin`, `admin_cliente`, `tecnico` e `interno_hospital`. O dashboard exige uma sessão autenticada, mas não restringe a visualização pelo papel.
 7. Uma resposta com mais de um papel deve selecionar o primeiro destino disponível segundo a prioridade definida na função de roteamento; se não houver papel reconhecido, manter a sessão sem elevar privilégios e exibir erro de acesso.
-8. “Lembrar-me” será enviado como campo opcional no request. Seu efeito de duração depende de suporte do backend na política da cookie de refresh; o front-end nunca altera a duração de uma cookie `HttpOnly`.
+5. Em produção, o SDK Auth0 será responsável pelo Universal Login, renovação de token e logout. O token obtido será usado nas chamadas ao backend.
 
 ## Contrato de API e suposições
 
-O repositório não contém a especificação OpenAPI do backend. Até confirmar o contrato real, a implementação adota esta forma provisória:
+O token local pode ser retornado como texto ou objeto com `access_token`, `accessToken` ou `token`. `/api/v1/me` atualmente retorna `subject`, `papeis` (por exemplo, `ROLE_TECNICO`, `FACTOR_BEARER`) e `tenantId`; o frontend usa `subject` como identificador, remove o prefixo `ROLE_` e ignora autoridades que não são papéis da aplicação. O contrato Auth0 futuro também poderá fornecer os claims namespaced `https://heem.app/roles` e `https://heem.app/tenant_id`, além do e-mail.
 
-**Request**
-
-```json
-{
-  "email": "usuario@empresa.com",
-  "password": "********",
-  "rememberMe": false
-}
-```
-
-`rememberMe` é opcional e precisa ser confirmado com o backend; removê-lo do JSON se o DTO da API não o aceitar.
-
-**Response esperada pelo front-end**
-
-```json
-{
-  "accessToken": "<token de curta duração>",
-  "tokenType": "Bearer",
-  "expiresIn": 900,
-  "user": {
-    "id": "<id>",
-    "name": "<nome>",
-    "email": "usuario@empresa.com",
-    "roles": ["admin_cliente"],
-    "tenantId": "<tenant opcional>"
-  }
-}
-```
-
-O backend deve emitir o refresh token por cookie `HttpOnly`, `Secure` em HTTPS e `SameSite` apropriado. O Axios usa `withCredentials`; o cliente não lê nem persiste o refresh token. O access token permanece apenas em memória e é removido ao encerrar a sessão. Nunca gravar tokens em `localStorage` ou `sessionStorage`.
+O cliente usa `VITE_API_BASE_URL` quando definido; o padrão local é `http://localhost:8080/api/v1`. O endpoint de token pode ser sobrescrito por `VITE_DEV_TOKEN_URL`. O access token nunca é gravado em `localStorage` ou `sessionStorage`.
 
 ## Erros RFC 7807
 
@@ -97,8 +63,8 @@ interface ProblemDetail {
 }
 ```
 
-- Credencial inválida: exibir `detail` ou `code` retornado pelo backend; não substituir por erro genérico fixo.
-- Usuário inativo e tenant bloqueado: exibir mensagem segura retornada pela API e preservar o formulário para nova tentativa.
+- Falha na emissão do token ou na consulta de `/api/v1/me`: exibir `detail` ou `code` retornado pelo backend quando disponível.
+- Usuário sem papel reconhecido: exibir erro de acesso sem conceder privilégios.
 - Erro de rede/inesperado: exibir mensagem de indisponibilidade que não revele detalhes internos; incluir `traceId` quando presente.
 - Apresentar o erro em região acessível (`role="alert"`) e notificação Sonner, evitando duplicação de mensagens.
 
@@ -106,9 +72,7 @@ interface ProblemDetail {
 
 - Usar classes semânticas `bg-bg`, `bg-surface`, `border-border`, `text-text-primary`, `text-text-secondary`, `bg-primary`, `bg-danger` e tokens definidos em `tailwind.config.js`.
 - Suportar Dark (padrão), Light e Auto (preferência do sistema), aplicando `.dark`/`.light` no elemento raiz. Persistir somente a preferência de tema, nunca credenciais ou tokens.
-- Todos os controles têm label associado; usar `type="email"`, `autoComplete="username"`, `autoComplete="current-password"` e `aria-invalid`/`aria-describedby` para erros de campo.
-- Tab percorre os campos e ações em ordem visual; Enter submete o formulário quando válido.
-- Botão de visibilidade da senha tem `type="button"`, nome acessível que alterna entre “Mostrar senha” e “Ocultar senha” e não altera o valor.
+- O botão de acesso tem nome acessível e foco visível; o estado de carregamento impede solicitações duplicadas.
 - O botão de submit comunica carregamento, fica desabilitado durante a mutation e mantém foco visível.
 - Estados: Default, Loading no botão, Error em alerta/toast; mensagens de validação junto aos campos.
 - Seguir o contraste e tipografia definidos em `docs/design.md`; respeitar `prefers-reduced-motion` nas transições.
@@ -116,19 +80,14 @@ interface ProblemDetail {
 ## Critérios de aceite
 
 - [ ] A tela reflete a composição de duas colunas do frame Figma e se adapta a telas estreitas.
-- [ ] Campos vazios, e-mail malformado e senha menor que 6 caracteres são impedidos pelo schema Zod e mostram erro acessível.
-- [ ] E-mail/senha válidos enviam request à rota especificada; o botão mostra carregamento e bloqueia cliques repetidos.
+- [ ] O modo de desenvolvimento solicita token de teste, consulta `/api/v1/me` com bearer e bloqueia cliques repetidos durante o carregamento.
 - [ ] Sucesso armazena access token apenas em memória e navega conforme roles reconhecidas.
-- [ ] Erro RFC 7807 exibe `detail`/`code` apropriado e não perde o valor do e-mail.
-- [ ] Toggle mostra/oculta a senha sem perder o valor.
+- [ ] Falhas exibem erro útil, preferindo `detail`/`code` de RFC 7807.
 - [ ] Dark, Light e Auto alteram os tokens visuais e o tema não afeta a sessão.
 - [ ] Navegação por teclado e nomes acessíveis funcionam nos controles principais.
 - [ ] Os cinco testes pedidos para a Story passam; `npm run lint` e `npm run build` passam.
 
 ## Decisões a confirmar com o backend
 
-1. Forma exata do request/response e capitalização dos campos.
-2. Se `rememberMe` é aceito e como altera expiração da cookie de refresh.
-3. Nome, atributos e comportamento de refresh da cookie `HttpOnly`.
-4. Valores oficiais de `ProblemDetail.code` para credenciais, conta inativa e tenant bloqueado.
-5. Claims/estrutura de roles e rotas de landing definitivas para cada perfil.
+1. Integração e configuração do tenant Auth0, incluindo audience, claims e rotação de refresh token.
+2. Contrato final de `/api/v1/me` e perfis disponíveis em `GET /dev/token`.

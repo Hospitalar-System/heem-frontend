@@ -1,15 +1,15 @@
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { login } from '../api/login'
+import { getCurrentUser, getDevelopmentToken } from '../api/identity'
 import { setAuthSession } from '../session'
-import type { LoginCredentialsDTO, ProblemDetail, UserRole } from '../types'
+import type { ProblemDetail, UserRole } from '../types'
 
 const roleLandingPaths: Record<UserRole, string> = {
-  super_admin: '/platform/clients',
+  super_admin: '/dashboard',
   admin_cliente: '/dashboard',
-  tecnico: '/field',
-  interno_hospital: '/hospital/requests',
+  tecnico: '/dashboard',
+  interno_hospital: '/dashboard',
 }
 
 export function getRoleLandingPath(roles: UserRole[]) {
@@ -31,6 +31,7 @@ export function getLoginErrorMessage(error: unknown) {
     if (problem?.code) return problem.code
     if (problem?.traceId) return `Não foi possível entrar. Referência: ${problem.traceId}`
   }
+  if (error instanceof Error && error.message) return error.message
   return 'Não foi possível conectar ao serviço. Tente novamente.'
 }
 
@@ -38,14 +39,18 @@ export function useLogin() {
   const navigate = useNavigate()
 
   return useMutation({
-    mutationFn: (credentials: LoginCredentialsDTO) => login(credentials),
-    onSuccess: (result) => {
-      const destination = getRoleLandingPath(result.user.roles)
+    mutationFn: async () => {
+      const accessToken = await getDevelopmentToken()
+      const user = await getCurrentUser(accessToken)
+      return { accessToken, user }
+    },
+    onSuccess: ({ accessToken, user }) => {
+      const destination = getRoleLandingPath(user.roles)
       if (!destination) {
         toast.error('Sua conta não possui um perfil de acesso reconhecido.')
         return
       }
-      setAuthSession(result.accessToken, result.user)
+      setAuthSession(accessToken, user)
       navigate(destination, { replace: true })
     },
     onError: (error) => toast.error(getLoginErrorMessage(error)),
