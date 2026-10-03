@@ -43,7 +43,7 @@ function normalizeCurrentUser(data: CurrentUserResponse): UserProfileDTO {
 
   return {
     id,
-    name: data.name ?? data.displayName ?? email ?? id,
+    name: data.name ?? data.displayName ?? email ?? '',
     email,
     roles: roles.map(normalizeRole).filter(isUserRole),
     tenantId,
