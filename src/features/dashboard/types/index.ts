@@ -24,5 +24,4 @@ export interface DashboardSummary {
   workOrdersByStatus: Array<{ status: WorkOrderStatus; label: string; count: number }>
   mtbfBySector: Array<{ sector: string; hours: number }>
   recentTickets: DashboardTicket[]
-  unreadNotifications: number
 }
