@@ -9,7 +9,8 @@ export function RequireRole({ role, children }: PropsWithChildren<{ role?: UserR
   const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
 
   if (!auth.isAuthenticated || !auth.user) return <Navigate to="/login" replace />
-  if (role && !auth.user.roles.includes(role)) {
+  const isPlatformAdmin = role === 'admin_cliente' && auth.user.roles.includes('super_admin')
+  if (role && !auth.user.roles.includes(role) && !isPlatformAdmin) {
     return <Navigate to={getRoleLandingPath(auth.user.roles) ?? '/login'} replace />
   }
 
