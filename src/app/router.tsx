@@ -1,13 +1,17 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useSyncExternalStore, type PropsWithChildren } from 'react'
 import { createBrowserRouter, Link, Navigate, RouterProvider, useLocation } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RequireRole } from './RequireRole'
+import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
 const HospitalsPage = lazy(() => import('@/features/assets/pages/HospitalsPage').then((module) => ({ default: module.HospitalsPage })))
 const SectorsPage = lazy(() => import('@/features/assets/pages/SectorsPage').then((module) => ({ default: module.SectorsPage })))
 const UsersPage = lazy(() => import('@/features/tenants-users/pages/UsersPage').then((module) => ({ default: module.UsersPage })))
 const ClientsPage = lazy(() => import('@/features/tenants/pages/ClientsPage').then((module) => ({ default: module.ClientsPage })))
+const AssetsPage = lazy(() => import('@/features/assets/pages/AssetsPage').then((module) => ({ default: module.AssetsPage })))
+const EquipmentFormPage = lazy(() => import('@/features/assets/pages/EquipmentFormPage').then((module) => ({ default: module.EquipmentFormPage })))
+const EquipmentDetailPage = lazy(() => import('@/features/assets/pages/EquipmentDetailPage').then((module) => ({ default: module.EquipmentDetailPage })))
 
 const router = createBrowserRouter([
   {
@@ -18,6 +22,10 @@ const router = createBrowserRouter([
   { path: '/platform/clients', element: <RequireRole role="super_admin"><Suspense fallback={<DashboardRouteLoading />}><ClientsPage /></Suspense></RequireRole> },
   { path: '/hospitals', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><HospitalsPage /></Suspense></RequireRole> },
   { path: '/sectors', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><SectorsPage /></Suspense></RequireRole> },
+  { path: '/assets', element: <RequireRole><RequireEquipmentRole><Suspense fallback={<DashboardRouteLoading />}><AssetsPage /></Suspense></RequireEquipmentRole></RequireRole> },
+  { path: '/assets/new', element: <RequireRole><RequireEquipmentRole editorOnly><Suspense fallback={<DashboardRouteLoading />}><EquipmentFormPage /></Suspense></RequireEquipmentRole></RequireRole> },
+  { path: '/assets/:id/edit', element: <RequireRole><RequireEquipmentRole editorOnly><Suspense fallback={<DashboardRouteLoading />}><EquipmentFormPage /></Suspense></RequireEquipmentRole></RequireRole> },
+  { path: '/assets/:id', element: <RequireRole><RequireEquipmentRole><Suspense fallback={<DashboardRouteLoading />}><EquipmentDetailPage /></Suspense></RequireEquipmentRole></RequireRole> },
   { path: '/users', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><UsersPage /></Suspense></RequireRole> },
   {
     path: '/dashboard',
@@ -65,6 +73,15 @@ function DashboardRouteLoading() {
       <span className="text-sm">Abrindo dashboard…</span>
     </main>
   )
+}
+
+function RequireEquipmentRole({ children, editorOnly = false }: PropsWithChildren<{ editorOnly?: boolean }>) {
+  const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
+  const roles = auth.user?.roles ?? []
+  const allowed = editorOnly
+    ? roles.includes('admin_cliente')
+    : roles.includes('admin_cliente') || roles.includes('tecnico')
+  return allowed ? children : <Navigate to="/access-denied" replace />
 }
 
 export function AppRouter() {
