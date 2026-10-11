@@ -2,14 +2,14 @@ import axios from 'axios'
 import { apiClient } from '@/lib/axios'
 import type { CurrentUserResponse, UserProfileDTO } from '../types'
 
-const devTokenUrl = import.meta.env.VITE_DEV_TOKEN_URL ?? 'http://localhost:8080/dev/token/tecnico'
+const devTokenUrl = import.meta.env.VITE_DEV_TOKEN_URL ?? 'http://localhost:8080/dev/token'
 
 const devTokenClient = axios.create({
   headers: { Accept: 'application/json, text/plain' },
 })
 
-export async function getDevelopmentToken() {
-  const { data } = await devTokenClient.get<unknown>(devTokenUrl)
+export async function getDevelopmentToken(profile = 'tecnico') {
+  const { data } = await devTokenClient.get<unknown>(`${getDevTokenBaseUrl()}/${encodeURIComponent(profile)}`)
   const token = typeof data === 'string'
     ? data
     : isRecord(data) && typeof data.access_token === 'string'
@@ -22,6 +22,10 @@ export async function getDevelopmentToken() {
 
   if (!token) throw new Error('A rota de desenvolvimento não retornou um token válido.')
   return token
+}
+
+function getDevTokenBaseUrl() {
+  return devTokenUrl.replace(/\/(super-admin|admin-cliente|tecnico|interno-hospital)\/?$/, '')
 }
 
 export async function getCurrentUser(accessToken: string) {

@@ -39,8 +39,8 @@ export function useLogin() {
   const navigate = useNavigate()
 
   return useMutation({
-    mutationFn: async () => {
-      const accessToken = await getDevelopmentToken()
+    mutationFn: async (profile: string) => {
+      const accessToken = await getDevelopmentToken(profile)
       const user = await getCurrentUser(accessToken)
       return { accessToken, user }
     },

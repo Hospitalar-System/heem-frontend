@@ -50,10 +50,11 @@ function renderLogin() {
 describe('LoginForm', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('apresenta acesso de desenvolvimento como Técnico', () => {
+  it('permite selecionar um perfil de desenvolvimento e inicia como Técnico', () => {
     renderLogin()
 
     expect(screen.getByRole('button', { name: 'Entrar como Técnico' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Perfil de desenvolvimento' })).toHaveValue('tecnico')
     expect(screen.queryByLabelText('Senha')).not.toBeInTheDocument()
   })
 
@@ -65,8 +66,21 @@ describe('LoginForm', () => {
 
     await user.click(screen.getByRole('button', { name: 'Entrar como Técnico' }))
 
-    await waitFor(() => expect(getDevelopmentToken).toHaveBeenCalledOnce())
+    await waitFor(() => expect(getDevelopmentToken).toHaveBeenCalledWith('tecnico'))
     expect(getCurrentUser).toHaveBeenCalledWith('test-access-token')
+    expect(await screen.findByTestId('current-path')).toHaveTextContent('/dashboard')
+  })
+
+  it('permite entrar como Admin do Cliente para acessar relatórios', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getDevelopmentToken).mockResolvedValue('admin-access-token')
+    vi.mocked(getCurrentUser).mockResolvedValue({ ...developmentUser, roles: ['admin_cliente'] })
+    renderLogin()
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Perfil de desenvolvimento' }), 'admin-cliente')
+    await user.click(screen.getByRole('button', { name: 'Entrar como Admin do Cliente' }))
+
+    await waitFor(() => expect(getDevelopmentToken).toHaveBeenCalledWith('admin-cliente'))
     expect(await screen.findByTestId('current-path')).toHaveTextContent('/dashboard')
   })
 

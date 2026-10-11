@@ -29,6 +29,7 @@ function renderDashboard(state: 'default' | 'loading' | 'empty' | 'error' = 'def
           <Route path="/login" element={<h1>Login</h1>} />
           <Route path="/platform/clients" element={<h1>Dashboard da plataforma</h1>} />
           <Route path="/field" element={<h1>Dashboard técnico</h1>} />
+          <Route path="/reports" element={<h1>Relatórios &amp; Indicadores</h1>} />
           <Route
             path="/dashboard"
             element={(
@@ -66,6 +67,17 @@ describe('DashboardPage', () => {
     expect(screen.getByText('Ana Silva')).toBeInTheDocument()
     expect(screen.getByText('Técnico')).toBeInTheDocument()
     expect(screen.getByText('AS')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Relatórios' })).not.toBeInTheDocument()
+  })
+
+  it('navega para Relatórios & Indicadores pelo item da sidenav', async () => {
+    const user = userEvent.setup()
+    setAuthSession('access-token', adminUser)
+    renderDashboard()
+
+    await user.click(screen.getByRole('link', { name: 'Relatórios' }))
+
+    expect(await screen.findByRole('heading', { name: 'Relatórios & Indicadores' })).toBeInTheDocument()
   })
 
   it('mostra os indicadores e chamados demonstrativos para admin_cliente', () => {

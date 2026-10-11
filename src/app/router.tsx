@@ -8,6 +8,7 @@ const HospitalsPage = lazy(() => import('@/features/assets/pages/HospitalsPage')
 const SectorsPage = lazy(() => import('@/features/assets/pages/SectorsPage').then((module) => ({ default: module.SectorsPage })))
 const UsersPage = lazy(() => import('@/features/tenants-users/pages/UsersPage').then((module) => ({ default: module.UsersPage })))
 const ClientsPage = lazy(() => import('@/features/tenants/pages/ClientsPage').then((module) => ({ default: module.ClientsPage })))
+const ReportsPage = lazy(() => import('@/features/reports/pages/ReportsPage').then((module) => ({ default: module.ReportsPage })))
 
 const router = createBrowserRouter([
   {
@@ -19,6 +20,7 @@ const router = createBrowserRouter([
   { path: '/hospitals', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><HospitalsPage /></Suspense></RequireRole> },
   { path: '/sectors', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><SectorsPage /></Suspense></RequireRole> },
   { path: '/users', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><UsersPage /></Suspense></RequireRole> },
+  { path: '/reports', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><ReportsPage /></Suspense></RequireRole> },
   {
     path: '/dashboard',
     element: (
