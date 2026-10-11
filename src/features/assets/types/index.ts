@@ -8,3 +8,70 @@ export type SetorInput = Omit<Setor, 'id' | 'hospitalId'>
 export interface HospitalMetrics { setores: number; equipamentos: number; ordensDevidas: number | null }
 export interface EquipamentoResumo { id: string }
 export interface OrdemResumo { equipamentoId: string; dataAgendada: string; status: 'AGENDADA' | 'EM_EXECUCAO' }
+
+export type EquipmentLifecycle = 'ATIVO' | 'EM_MANUTENCAO' | 'INATIVO' | 'DESATIVADO' | 'DESCARTADO'
+export type EquipmentRiskClass = 'I' | 'II' | 'III' | 'IV'
+export type EquipmentCriticality = 'ALTA' | 'MEDIA' | 'BAIXA'
+export type EquipmentProtection = 'CLASSE_I' | 'CLASSE_II' | 'ALIMENTACAO_INTERNA'
+export type EquipmentAppliedPart = 'TIPO_B' | 'TIPO_BF' | 'TIPO_CF'
+export type EquipmentOperationMode = 'CONTINUO' | 'INTERMITENTE' | 'CURTA_DURACAO'
+
+export interface Equipment {
+  id: string
+  setorId: string
+  codigo: string
+  nome: string
+  modelo: string | null
+  numeroSerie: string | null
+  marca: string | null
+  fotoUrl: string | null
+  dadosGerais: Record<string, unknown> | null
+  classeRiscoAnvisa: EquipmentRiskClass
+  statusCicloVida: EquipmentLifecycle
+  criticidade: EquipmentCriticality
+  tipoProtecao: EquipmentProtection
+  parteAplicada: EquipmentAppliedPart
+  modoOperacao: EquipmentOperationMode
+  dataInstalacao: string | null
+  dataGarantiaFim: string | null
+  nivelRisco: 'ALTO' | 'MEDIO' | 'BAIXO'
+}
+
+export interface EquipmentEditableFields {
+  nome: string
+  modelo: string
+  numeroSerie: string
+  marca: string
+  fotoUrl: string | null
+  dadosGerais: Record<string, unknown>
+  classeRiscoAnvisa: EquipmentRiskClass
+  statusCicloVida: EquipmentLifecycle
+  criticidade: EquipmentCriticality
+  tipoProtecao: EquipmentProtection
+  parteAplicada: EquipmentAppliedPart
+  modoOperacao: EquipmentOperationMode
+  dataInstalacao: string | null
+  dataGarantiaFim: string | null
+}
+
+export type CreateEquipmentInput = EquipmentEditableFields & { setorId: string; codigo: string }
+export type UpdateEquipmentInput = EquipmentEditableFields
+
+export interface WorkOrderSummary {
+  id: string
+  codigo: string
+  tipo: 'PREVENTIVA' | 'CORRETIVA'
+  status: string
+  equipamentoId: string
+  checklistId: string | null
+  local: string | null
+  dataAgendada: string | null
+  iniciadaEm: string | null
+  concluidaEm: string | null
+}
+
+export interface SignedUploadUrl {
+  url: string
+  chave: string
+  expiraEm: string
+}
