@@ -65,3 +65,26 @@ export interface WorkOrderListItem {
   atrasada?: boolean
   planoPreventivoId?: string | null
 }
+
+export interface WorkOrderDetail {
+  id: string
+  codigo: string
+  tipo: string
+  status: string
+  equipamentoId: string
+  checklistId: string | null
+  tecnicoId?: string | null
+  chamadoId?: string | null
+  local: string | null
+  dataAgendada: string | null
+  iniciadaEm: string | null
+  concluidaEm: string | null
+}
+
+export interface WorkOrderChecklistItem {
+  id: string
+  descricao: string
+  obrigatorio?: boolean
+  concluido?: boolean
+  ordem?: number
+}
