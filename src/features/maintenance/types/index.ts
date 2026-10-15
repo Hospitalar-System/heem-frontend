@@ -40,6 +40,28 @@ export interface ChecklistSummary {
   id: string
   nome: string
   ativo?: boolean
+  descricao?: string | null
+  quantidadeItens?: number
+}
+
+export interface ChecklistItem {
+  id: string
+  descricao: string
+  tipo: string
+  unidade?: string | null
+  obrigatorio: boolean
+  ordem: number
+}
+
+export interface CreateChecklistInput {
+  nome: string
+}
+
+export interface SaveChecklistItemInput {
+  descricao: string
+  tipo: string
+  unidade?: string | null
+  obrigatorio: boolean
 }
 
 export interface PreventiveWorkOrderInput {

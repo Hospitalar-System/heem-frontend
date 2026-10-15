@@ -17,6 +17,7 @@ const TicketsPage = lazy(() => import('@/features/maintenance/pages/TicketsPage'
 const TicketDetailPage = lazy(() => import('@/features/maintenance/pages/TicketDetailPage').then((module) => ({ default: module.TicketDetailPage })))
 const WorkOrdersPage = lazy(() => import('@/features/maintenance/pages/WorkOrdersPage').then((module) => ({ default: module.WorkOrdersPage })))
 const WorkOrderDetailPage = lazy(() => import('@/features/maintenance/pages/WorkOrderDetailPage').then((module) => ({ default: module.WorkOrderDetailPage })))
+const ChecklistsPage = lazy(() => import('@/features/maintenance/pages/ChecklistsPage').then((module) => ({ default: module.ChecklistsPage })))
 
 const router = createBrowserRouter([
   {
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
   { path: '/work-orders', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrdersPage /></Suspense></RequireRole> },
   { path: '/work-orders/new', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrdersPage /></Suspense></RequireRole> },
   { path: '/work-orders/:id', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrderDetailPage /></Suspense></RequireRole> },
+  { path: '/checklists', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><ChecklistsPage /></Suspense></RequireRole> },
   {
     path: '/dashboard',
     element: (
