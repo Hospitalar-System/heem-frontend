@@ -54,7 +54,9 @@ export interface ChecklistItem {
 }
 
 export interface CreateChecklistInput {
+  codigo: string
   nome: string
+  itens: SaveChecklistItemInput[]
 }
 
 export interface SaveChecklistItemInput {

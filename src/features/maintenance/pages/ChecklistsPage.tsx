@@ -11,6 +11,7 @@ import type { ChecklistItem } from '../types'
 
 const inputClass = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const initialItem = { descricao: '', tipo: '', unidade: '', obrigatorio: false }
+const initialRequiredItem = { ...initialItem, obrigatorio: true }
 
 function apiError(error: unknown, fallback: string) {
   if (typeof error === 'object' && error !== null && 'response' in error) {
@@ -25,7 +26,9 @@ export function ChecklistsPage() {
   const createChecklist = useCreateChecklist()
   const [selectedId, setSelectedId] = useState('')
   const [search, setSearch] = useState('')
+  const [checklistCode, setChecklistCode] = useState('')
   const [checklistName, setChecklistName] = useState('')
+  const [firstItem, setFirstItem] = useState(initialRequiredItem)
   const [showCreate, setShowCreate] = useState(false)
   const [selectedItemId, setSelectedItemId] = useState('')
   const [draft, setDraft] = useState(initialItem)
@@ -70,13 +73,22 @@ export function ChecklistsPage() {
 
   async function saveChecklist(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const parsed = createChecklistSchema.safeParse({ nome: checklistName })
-    if (!parsed.success) return
+    const parsed = createChecklistSchema.safeParse({ codigo: checklistCode, nome: checklistName, itens: [firstItem] })
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message ?? 'Revise os dados do checklist.')
+      return
+    }
+    const input = {
+      ...parsed.data,
+      itens: parsed.data.itens.map((item) => ({ ...item, unidade: item.unidade || null })),
+    }
     try {
-      const created = await createChecklist.mutateAsync(parsed.data)
+      const created = await createChecklist.mutateAsync(input)
       setSelectedId(created.id)
       setShowCreate(false)
+      setChecklistCode('')
       setChecklistName('')
+      setFirstItem(initialRequiredItem)
       toast.success('Checklist criado.')
     } catch (error) {
       toast.error(apiError(error, 'Não foi possível criar o checklist.'))
@@ -141,7 +153,22 @@ export function ChecklistsPage() {
       </section>
 
       <section aria-label={showCreate ? 'Criar checklist' : 'Construtor de checklist'} className="min-w-0 rounded-lg border border-border bg-surface">
-        {showCreate ? <div className="max-w-xl p-5"><h2 className="text-sm font-semibold">Novo checklist</h2><p className="mt-1 text-xs text-text-secondary">Crie o modelo antes de adicionar seus itens.</p><form className="mt-5 space-y-4" onSubmit={(event) => void saveChecklist(event)}><label className="grid gap-1.5 text-xs font-medium text-text-secondary">Nome do checklist<input autoFocus required maxLength={120} value={checklistName} onChange={(event) => setChecklistName(event.target.value)} className={inputClass} placeholder="Ex.: Inspeção preventiva mensal" /></label><div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" onClick={() => setShowCreate(false)} disabled={createChecklist.isPending} className="h-8 rounded-md border border-border px-3 text-xs text-text-secondary">Cancelar</button><button type="submit" disabled={!checklistName.trim() || createChecklist.isPending} className="h-8 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand disabled:opacity-50">{createChecklist.isPending ? 'Criando…' : 'Criar checklist'}</button></div></form></div> : !currentChecklist ? <div className="grid min-h-64 place-items-center p-8 text-center"><div><ClipboardCheck aria-hidden="true" className="mx-auto text-text-muted" size={24} /><h2 className="mt-3 text-sm font-semibold text-text-primary">Selecione um checklist</h2><p className="mt-1 text-xs text-text-secondary">Os itens e suas configurações aparecerão aqui.</p></div></div> : <>
+        {showCreate ? <div className="max-w-xl p-5">
+          <h2 className="text-sm font-semibold">Novo checklist</h2>
+          <p className="mt-1 text-xs text-text-secondary">Informe o código, o nome e configure o primeiro item.</p>
+          <form className="mt-5 space-y-4" onSubmit={(event) => void saveChecklist(event)}>
+            <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Código do checklist<input autoFocus required maxLength={40} value={checklistCode} onChange={(event) => setChecklistCode(event.target.value)} className={inputClass} placeholder="Ex.: CL-INS-001" /></label>
+            <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Nome do checklist<input required maxLength={120} value={checklistName} onChange={(event) => setChecklistName(event.target.value)} className={inputClass} placeholder="Ex.: Inspeção preventiva mensal" /></label>
+            <fieldset className="space-y-3 rounded-md border border-border p-4">
+              <legend className="px-1 text-xs font-semibold text-text-primary">Primeiro item obrigatório</legend>
+              <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Descrição<input required maxLength={240} value={firstItem.descricao} onChange={(event) => setFirstItem((item) => ({ ...item, descricao: event.target.value }))} className={inputClass} placeholder="O que deve ser verificado?" /></label>
+              <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Tipo<input required maxLength={60} value={firstItem.tipo} onChange={(event) => setFirstItem((item) => ({ ...item, tipo: event.target.value }))} className={inputClass} placeholder="Conforme o tipo aceito pela API" /></label>
+              <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Unidade<input maxLength={40} value={firstItem.unidade} onChange={(event) => setFirstItem((item) => ({ ...item, unidade: event.target.value }))} className={inputClass} placeholder="Opcional" /></label>
+              <label className="flex min-h-8 items-center gap-2 text-xs text-text-secondary"><input type="checkbox" checked={firstItem.obrigatorio} onChange={(event) => setFirstItem((item) => ({ ...item, obrigatorio: event.target.checked }))} className="size-4 accent-primary" />Item obrigatório</label>
+            </fieldset>
+            <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" onClick={() => setShowCreate(false)} disabled={createChecklist.isPending} className="h-8 rounded-md border border-border px-3 text-xs text-text-secondary">Cancelar</button><button type="submit" disabled={createChecklist.isPending} className="h-8 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand disabled:opacity-50">{createChecklist.isPending ? 'Criando…' : 'Criar checklist'}</button></div>
+          </form>
+        </div> : !currentChecklist ? <div className="grid min-h-64 place-items-center p-8 text-center"><div><ClipboardCheck aria-hidden="true" className="mx-auto text-text-muted" size={24} /><h2 className="mt-3 text-sm font-semibold text-text-primary">Selecione um checklist</h2><p className="mt-1 text-xs text-text-secondary">Os itens e suas configurações aparecerão aqui.</p></div></div> : <>
           <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4"><div className="min-w-0"><h2 className="truncate text-sm font-semibold text-text-primary">{currentChecklist.nome}</h2><p className="mt-1 text-xs text-text-muted">{items.length} item(ns) · ordem usada no formulário da OT</p></div><span className={`rounded-md border px-2 py-1 text-[10px] font-medium ${currentChecklist.ativo === false ? 'border-border bg-bg text-text-muted' : 'border-primary/30 bg-primary/10 text-primary'}`}>{currentChecklist.ativo === false ? 'Inativo' : 'Ativo'}</span></header>
           <div className="grid gap-5 p-4 lg:grid-cols-[minmax(260px,1fr)_minmax(230px,0.8fr)] lg:p-5">
             <div className="min-w-0">

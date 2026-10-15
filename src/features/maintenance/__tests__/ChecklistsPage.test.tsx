@@ -58,10 +58,18 @@ describe('ChecklistsPage', () => {
     const user = userEvent.setup()
     render(<ChecklistsPage />, { wrapper: TestProviders })
     await user.click(await screen.findByRole('button', { name: 'Novo' }))
+    await user.type(screen.getByRole('textbox', { name: 'Código do checklist' }), 'CL-001')
     await user.type(screen.getByRole('textbox', { name: 'Nome do checklist' }), 'Novo modelo')
+    await user.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Verificar cabo')
+    await user.type(screen.getByRole('textbox', { name: 'Tipo' }), 'BOOLEANO')
     await user.click(screen.getByRole('button', { name: 'Criar checklist' }))
-    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/checklists', { nome: 'Novo modelo' }))
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/checklists', {
+      codigo: 'CL-001', nome: 'Novo modelo', itens: [
+        { descricao: 'Verificar cabo', tipo: 'BOOLEANO', unidade: null, obrigatorio: true },
+      ],
+    }))
 
+    await user.click((await screen.findAllByRole('button', { name: 'Adicionar item' }))[0])
     await user.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Teste funcional')
     await user.type(screen.getByRole('textbox', { name: 'Tipo' }), 'SIM_NAO')
     await user.click(screen.getByRole('checkbox', { name: 'Item obrigatório' }))
