@@ -20,7 +20,7 @@ const developmentUser = {
   id: 'user-1',
   name: 'Ana Silva',
   email: 'ana@hospital.com.br',
-  roles: ['tecnico' as const],
+  roles: ['admin_cliente' as const],
   tenantId: 'hospital-1',
 }
 
@@ -50,10 +50,11 @@ function renderLogin() {
 describe('LoginForm', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('apresenta acesso de desenvolvimento como Técnico', () => {
+  it('apresenta acesso de desenvolvimento como Admin do Cliente', () => {
     renderLogin()
 
-    expect(screen.getByRole('button', { name: 'Entrar como Técnico' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Entrar como Admin do Cliente' })).toBeInTheDocument()
+    expect(screen.getByText('Admin do Cliente')).toBeInTheDocument()
     expect(screen.queryByLabelText('Senha')).not.toBeInTheDocument()
   })
 
@@ -63,11 +64,12 @@ describe('LoginForm', () => {
     vi.mocked(getCurrentUser).mockResolvedValue(developmentUser)
     renderLogin()
 
-    await user.click(screen.getByRole('button', { name: 'Entrar como Técnico' }))
+    await user.click(screen.getByRole('button', { name: 'Entrar como Admin do Cliente' }))
 
     await waitFor(() => expect(getDevelopmentToken).toHaveBeenCalledOnce())
     expect(getCurrentUser).toHaveBeenCalledWith('test-access-token')
     expect(await screen.findByTestId('current-path')).toHaveTextContent('/dashboard')
+    expect(developmentUser.roles).toContain('admin_cliente')
   })
 
   it('mostra falha retornada pelo backend', async () => {
@@ -79,7 +81,7 @@ describe('LoginForm', () => {
     })
     renderLogin()
 
-    await user.click(screen.getByRole('button', { name: 'Entrar como Técnico' }))
+    await user.click(screen.getByRole('button', { name: 'Entrar como Admin do Cliente' }))
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Token inválido.'))
   })
