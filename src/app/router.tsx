@@ -16,6 +16,7 @@ const ReportsPage = lazy(() => import('@/features/dashboard/pages/ReportsPage').
 const TicketsPage = lazy(() => import('@/features/maintenance/pages/TicketsPage').then((module) => ({ default: module.TicketsPage })))
 const TicketDetailPage = lazy(() => import('@/features/maintenance/pages/TicketDetailPage').then((module) => ({ default: module.TicketDetailPage })))
 const WorkOrdersPage = lazy(() => import('@/features/maintenance/pages/WorkOrdersPage').then((module) => ({ default: module.WorkOrdersPage })))
+const WorkOrderDetailPage = lazy(() => import('@/features/maintenance/pages/WorkOrderDetailPage').then((module) => ({ default: module.WorkOrderDetailPage })))
 
 const router = createBrowserRouter([
   {
@@ -37,6 +38,7 @@ const router = createBrowserRouter([
   { path: '/tickets/:id', element: <RequireTicketAccess><Suspense fallback={<DashboardRouteLoading />}><TicketDetailPage /></Suspense></RequireTicketAccess> },
   { path: '/work-orders', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrdersPage /></Suspense></RequireRole> },
   { path: '/work-orders/new', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrdersPage /></Suspense></RequireRole> },
+  { path: '/work-orders/:id', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrderDetailPage /></Suspense></RequireRole> },
   {
     path: '/dashboard',
     element: (
