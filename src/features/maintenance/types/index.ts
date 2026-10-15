@@ -13,6 +13,12 @@ export interface Ticket {
   abertoEm: string
 }
 
+export interface TicketHistoryEvent {
+  acao: string
+  atorId: string | null
+  ocorridoEm: string
+}
+
 export interface CorrectiveWorkOrderInput {
   codigo: string
   chamadoId: string

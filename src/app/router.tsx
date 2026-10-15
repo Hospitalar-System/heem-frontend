@@ -14,6 +14,7 @@ const EquipmentFormPage = lazy(() => import('@/features/assets/pages/EquipmentFo
 const EquipmentDetailPage = lazy(() => import('@/features/assets/pages/EquipmentDetailPage').then((module) => ({ default: module.EquipmentDetailPage })))
 const ReportsPage = lazy(() => import('@/features/dashboard/pages/ReportsPage').then((module) => ({ default: module.ReportsPage })))
 const TicketsPage = lazy(() => import('@/features/maintenance/pages/TicketsPage').then((module) => ({ default: module.TicketsPage })))
+const TicketDetailPage = lazy(() => import('@/features/maintenance/pages/TicketDetailPage').then((module) => ({ default: module.TicketDetailPage })))
 
 const router = createBrowserRouter([
   {
@@ -30,7 +31,9 @@ const router = createBrowserRouter([
   { path: '/assets/:id', element: <RequireRole><RequireEquipmentRole><Suspense fallback={<DashboardRouteLoading />}><EquipmentDetailPage /></Suspense></RequireEquipmentRole></RequireRole> },
   { path: '/users', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><UsersPage /></Suspense></RequireRole> },
   { path: '/reports', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><ReportsPage /></Suspense></RequireRole> },
-  { path: '/tickets', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><TicketsPage /></Suspense></RequireRole> },
+  { path: '/access-denied', element: <AccessDeniedRoute /> },
+  { path: '/tickets', element: <RequireTicketListAccess><Suspense fallback={<DashboardRouteLoading />}><TicketsPage /></Suspense></RequireTicketListAccess> },
+  { path: '/tickets/:id', element: <RequireTicketAccess><Suspense fallback={<DashboardRouteLoading />}><TicketDetailPage /></Suspense></RequireTicketAccess> },
   {
     path: '/dashboard',
     element: (
@@ -71,6 +74,18 @@ function UnimplementedRoute() {
   )
 }
 
+function AccessDeniedRoute() {
+  return (
+    <main className="grid min-h-screen place-items-center bg-bg p-6 text-center text-text-primary">
+      <div className="max-w-md rounded-lg border border-border bg-surface p-8">
+        <h1 className="text-xl font-semibold">Acesso não permitido</h1>
+        <p className="mt-2 text-sm text-text-secondary">Seu perfil não tem permissão para acessar esta área.</p>
+        <Link to="/dashboard" className="mt-5 inline-block text-sm text-primary underline">Voltar ao Dashboard</Link>
+      </div>
+    </main>
+  )
+}
+
 function DashboardRouteLoading() {
   return (
     <main aria-busy="true" className="grid min-h-screen place-items-center bg-bg text-text-secondary">
@@ -86,6 +101,19 @@ function RequireEquipmentRole({ children, editorOnly = false }: PropsWithChildre
     ? roles.includes('admin_cliente')
     : roles.includes('admin_cliente') || roles.includes('tecnico')
   return allowed ? children : <Navigate to="/access-denied" replace />
+}
+
+function RequireTicketListAccess({ children }: PropsWithChildren) {
+  const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
+  if (!auth.isAuthenticated || !auth.user) return <Navigate to="/login" replace />
+  return auth.user.roles.includes('admin_cliente') ? children : <Navigate to="/access-denied" replace />
+}
+
+function RequireTicketAccess({ children }: PropsWithChildren) {
+  const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
+  if (!auth.isAuthenticated || !auth.user) return <Navigate to="/login" replace />
+  const canReadTicket = auth.user.roles.some((role) => ['admin_cliente', 'tecnico', 'interno_hospital'].includes(role))
+  return canReadTicket ? children : <Navigate to="/access-denied" replace />
 }
 
 export function AppRouter() {
