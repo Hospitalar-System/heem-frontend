@@ -12,7 +12,7 @@ Permitir que usuários acessem o painel pelo provedor de identidade. No desenvol
 ## Escopo
 
 - Tela de entrada para desktop e telas estreitas.
-- Em desenvolvimento local, chamada a `GET /dev/token/tecnico` em `http://localhost:8080`, seguida por `GET /api/v1/me` com bearer token.
+- Em desenvolvimento local, chamada a `GET /dev/token/admin-cliente` em `http://localhost:8080`, seguida por `GET /api/v1/me` com bearer token.
 - Armazenamento do access token somente em memória.
 - Integração futura com Auth0 Universal Login; o frontend não coleta senha nem chama uma rota de login do backend.
 - Redirecionamento por papel a destinos definidos centralmente.
@@ -34,7 +34,7 @@ Elementos de produto solicitados além do frame: checkbox “Lembrar-me”, sele
 
 ## Requisitos funcionais e regras de negócio
 
-1. No modo local atual, o botão solicita um token para o perfil `tecnico` em `GET /dev/token/tecnico`.
+1. No modo local atual, o botão solicita sempre o token do perfil `admin-cliente` em `GET /dev/token/admin-cliente`.
 2. O frontend consulta `GET /api/v1/me` usando `Authorization: Bearer <token>`.
 3. Em sucesso, guardar o access token e a identidade apenas em memória e navegar para `/dashboard` para qualquer papel reconhecido.
 4. Papéis aceitos: `super_admin`, `admin_cliente`, `tecnico` e `interno_hospital`. O dashboard exige uma sessão autenticada, mas não restringe a visualização pelo papel.
@@ -45,7 +45,7 @@ Elementos de produto solicitados além do frame: checkbox “Lembrar-me”, sele
 
 O token local pode ser retornado como texto ou objeto com `access_token`, `accessToken` ou `token`. `/api/v1/me` atualmente retorna `subject`, `papeis` (por exemplo, `ROLE_TECNICO`, `FACTOR_BEARER`) e `tenantId`; o frontend usa `subject` como identificador, remove o prefixo `ROLE_` e ignora autoridades que não são papéis da aplicação. O contrato Auth0 futuro também poderá fornecer os claims namespaced `https://heem.app/roles` e `https://heem.app/tenant_id`, além do e-mail.
 
-O cliente usa `VITE_API_BASE_URL` quando definido; o padrão local é `http://localhost:8080/api/v1`. O endpoint de token pode ser sobrescrito por `VITE_DEV_TOKEN_URL`. O access token nunca é gravado em `localStorage` ou `sessionStorage`.
+O cliente usa `VITE_API_BASE_URL` quando definido; o padrão local é `http://localhost:8080/api/v1`. O perfil do login de desenvolvimento é fixo em `admin-cliente`. O access token nunca é gravado em `localStorage` ou `sessionStorage`.
 
 ## Erros RFC 7807
 
@@ -80,7 +80,7 @@ interface ProblemDetail {
 ## Critérios de aceite
 
 - [ ] A tela reflete a composição de duas colunas do frame Figma e se adapta a telas estreitas.
-- [ ] O modo de desenvolvimento solicita token de teste, consulta `/api/v1/me` com bearer e bloqueia cliques repetidos durante o carregamento.
+- [x] O modo de desenvolvimento solicita token do perfil `admin-cliente`, consulta `/api/v1/me` com bearer e bloqueia cliques repetidos durante o carregamento.
 - [ ] Sucesso armazena access token apenas em memória e navega conforme roles reconhecidas.
 - [ ] Falhas exibem erro útil, preferindo `detail`/`code` de RFC 7807.
 - [ ] Dark, Light e Auto alteram os tokens visuais e o tema não afeta a sessão.
