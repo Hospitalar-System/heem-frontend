@@ -7,7 +7,7 @@ export function LoginForm() {
   return (
     <div className="w-full space-y-4">
       <p className="text-sm leading-6 text-text-secondary">
-        A autenticação local usa o perfil de desenvolvimento <span className="font-medium text-text-primary">Técnico</span>.
+        A autenticação local usa o perfil de desenvolvimento <span className="font-medium text-text-primary">Admin do Cliente</span>.
       </p>
       <button
         type="button"
@@ -18,7 +18,7 @@ export function LoginForm() {
         {mutation.isPending
           ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
           : <LogIn aria-hidden="true" className="size-4" />}
-        {mutation.isPending ? 'Conectando…' : 'Entrar como Técnico'}
+        {mutation.isPending ? 'Conectando…' : 'Entrar como Admin do Cliente'}
       </button>
     </div>
   )

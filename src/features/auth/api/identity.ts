@@ -2,7 +2,7 @@ import axios from 'axios'
 import { apiClient } from '@/lib/axios'
 import type { CurrentUserResponse, UserProfileDTO } from '../types'
 
-const devTokenUrl = import.meta.env.VITE_DEV_TOKEN_URL ?? 'http://localhost:8080/dev/token/tecnico'
+const devTokenUrl = 'http://localhost:8080/dev/token/admin-cliente'
 
 const devTokenClient = axios.create({
   headers: { Accept: 'application/json, text/plain' },
