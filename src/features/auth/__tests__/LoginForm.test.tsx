@@ -50,10 +50,11 @@ function renderLogin() {
 describe('LoginForm', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('apresenta acesso de desenvolvimento como Admin do Cliente', () => {
+  it('apresenta acesso de demonstração como Admin do Cliente', () => {
     renderLogin()
 
-    expect(screen.getByRole('button', { name: 'Entrar como Admin do Cliente' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Entrar na demonstração' })).toBeInTheDocument()
+    expect(screen.getByText(/Modo demonstração/)).toBeInTheDocument()
     expect(screen.getByText('Admin do Cliente')).toBeInTheDocument()
     expect(screen.queryByLabelText('Senha')).not.toBeInTheDocument()
   })
@@ -64,7 +65,7 @@ describe('LoginForm', () => {
     vi.mocked(getCurrentUser).mockResolvedValue(developmentUser)
     renderLogin()
 
-    await user.click(screen.getByRole('button', { name: 'Entrar como Admin do Cliente' }))
+    await user.click(screen.getByRole('button', { name: 'Entrar na demonstração' }))
 
     await waitFor(() => expect(getDevelopmentToken).toHaveBeenCalledOnce())
     expect(getCurrentUser).toHaveBeenCalledWith('test-access-token')
@@ -81,7 +82,7 @@ describe('LoginForm', () => {
     })
     renderLogin()
 
-    await user.click(screen.getByRole('button', { name: 'Entrar como Admin do Cliente' }))
+    await user.click(screen.getByRole('button', { name: 'Entrar na demonstração' }))
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Token inválido.'))
   })

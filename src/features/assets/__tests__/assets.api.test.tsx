@@ -6,6 +6,7 @@ import { apiClient } from '@/lib/axios'
 import { useEquipments, useHospitals, useSaveEquipment, useSectors, useUploadEquipmentPhoto } from '../api/assets'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
+vi.mock('@/lib/demo-mode', () => ({ isDemoMode: false }))
 
 function wrapper({ children }: PropsWithChildren) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })

@@ -73,4 +73,6 @@ As funcionalidades devem ser organizadas por domínio em `src/features/`, com p�
 
 ## Integração com o backend
 
-O front-end consumirá o contrato REST/OpenAPI do [`heem-backend`](https://github.com/Hospitalar-System/heem-backend), com endpoints sob `/api/v1/`. A configuração de ambiente e a integração das chamadas serão feitas junto às primeiras funcionalidades; atualmente não há variável de ambiente obrigatória para iniciar a base local.
+O front-end consome o contrato REST/OpenAPI do [`heem-backend`](https://github.com/Hospitalar-System/heem-backend), com endpoints sob `/api/v1/`.
+
+Sem `VITE_API_BASE_URL`, a aplicação inicia em modo de demonstração: o login usa um perfil local e as telas recebem dados sintéticos mantidos em memória, sem chamadas ao backend. As alterações feitas nesse modo não são persistidas. Para conectar uma API, configure `VITE_API_BASE_URL` (por exemplo, `http://localhost:8080/api/v1`). `VITE_DEMO_MODE=true` força a demonstração mesmo com uma URL configurada; `VITE_DEMO_MODE=false` desativa o modo local.
