@@ -6,13 +6,14 @@ import {
   ClipboardCheck,
   ClipboardList,
   LayoutDashboard,
+  LogOut,
   Package,
   UsersRound,
   Wrench,
 } from 'lucide-react'
 import { useSyncExternalStore } from 'react'
-import { NavLink } from 'react-router-dom'
-import { getAuthState, subscribeAuthState } from '@/features/auth/session'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { clearAuthSession, getAuthState, subscribeAuthState } from '@/features/auth/session'
 import type { UserRole } from '@/features/auth/types'
 
 const roleLabels: Record<UserRole, string> = {
@@ -35,6 +36,7 @@ const navItems = [
 ]
 
 export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const navigate = useNavigate()
   const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
   const user = auth.user
   const isSuperAdmin = user?.roles.includes('super_admin') ?? false
@@ -44,6 +46,12 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
     || user?.id
     || roleLabel
     || 'Usuário'
+
+  function handleLogout() {
+    clearAuthSession()
+    onNavigate?.()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <aside aria-label="Navegação principal" className="flex h-full w-[248px] shrink-0 flex-col border-r border-border bg-bg-brand">
@@ -68,12 +76,15 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      <div className="mt-auto flex h-[55px] items-center gap-2 border-t border-border px-3">
+      <div className="mt-auto flex min-h-[60px] items-center gap-2 border-t border-border px-3">
         <span aria-hidden="true" className="grid size-[34px] shrink-0 place-items-center rounded-full bg-primary text-[10px] font-semibold text-bg-brand">{getInitials(displayName)}</span>
-        <span className="min-w-0">
+        <span className="min-w-0 flex-1">
           <span className="block truncate text-[10px] font-semibold text-text-primary">{displayName}</span>
           <span className="block truncate text-[9px] text-text-muted">{roleLabel}</span>
         </span>
+        <button type="button" aria-label="Sair" title="Sair" onClick={handleLogout} className="grid size-8 shrink-0 place-items-center rounded-md text-text-secondary outline-none hover:bg-surface hover:text-danger focus-visible:ring-2 focus-visible:ring-primary">
+          <LogOut aria-hidden="true" size={15} />
+        </button>
       </div>
     </aside>
   )
