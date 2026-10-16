@@ -76,7 +76,7 @@ export function ReportsPage() {
     : exportStatus.data?.status === 'falhou'
       ? 'Não foi possível gerar a exportação.'
       : exportStatus.data?.status === 'concluido'
-        ? 'Arquivo pronto para download.'
+        ? exportStatus.data.urlDownload ? 'Arquivo pronto para download.' : 'Exportação concluída, mas o link de download não foi fornecido.'
         : null
 
   return (
@@ -115,15 +115,16 @@ export function ReportsPage() {
             <label className="grid gap-1 text-xs text-text-secondary">
               <span>Conteúdo</span>
               <select aria-label="Conteúdo da exportação" value={conteudo} onChange={(event) => setConteudo(event.target.value as ExportContent)} className="h-[38px] rounded-md border border-border bg-surface px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                <option value="INDICADORES">Indicadores</option>
                 <option value="chamados">Chamados</option>
                 <option value="ordens_trabalho">Ordens de trabalho</option>
                 <option value="medicoes">Medições</option>
               </select>
             </label>
-            <button type="button" disabled={invalidRange || requestExport.isPending} onClick={() => void handleExport('xlsx')} className="inline-flex h-[38px] items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
+            <button type="button" aria-label="Exportar Excel" disabled={invalidRange || requestExport.isPending} onClick={() => void handleExport('xlsx')} className="inline-flex h-[38px] items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
               <FileSpreadsheet aria-hidden="true" size={14} /> Excel
             </button>
-            <button type="button" disabled={invalidRange || requestExport.isPending} onClick={() => void handleExport('pdf')} className="inline-flex h-[38px] items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand outline-none hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
+            <button type="button" aria-label="Exportar PDF" disabled={invalidRange || requestExport.isPending} onClick={() => void handleExport('pdf')} className="inline-flex h-[38px] items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand outline-none hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
               <FileText aria-hidden="true" size={14} /> PDF
             </button>
           </div>
@@ -131,7 +132,8 @@ export function ReportsPage() {
 
         {invalidRange && <p role="alert" className="text-xs text-danger">Informe um período válido: a data inicial deve ser anterior ou igual à data final.</p>}
         {requestExport.isError && <p role="alert" className="text-xs text-danger">{getErrorMessage(requestExport.error, 'Falha ao solicitar exportação.')}</p>}
-        {exportStatus.isError && <p role="alert" className="text-xs text-danger">Não foi possível consultar o andamento da exportação.</p>}
+        {requestExport.isPending && <div role="status" className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary"><RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />Solicitando exportação…</div>}
+        {exportStatus.isError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-xs text-text-primary"><span>Não foi possível consultar o andamento da exportação.</span><button type="button" onClick={() => void exportStatus.refetch()} className="rounded-md border border-border bg-surface px-3 py-1.5 font-medium outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary">Tentar novamente</button></div>}
         {exportMessage && (
           <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
             <span>{exportMessage}</span>

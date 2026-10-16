@@ -28,6 +28,7 @@ describe('ReportsPage', () => {
       if (url === '/relatorios/indicadores') return { data: { mtbfHoras: 286, tempoMedioAtendimentoHoras: 2.4, tempoMedioResolucaoHoras: 8.1, disponibilidadePercentual: 97.4, qtdOtsPreventivas: 23, qtdOtsCorretivas: 8 } } as never
       if (url === '/relatorios/conformidade') return { data: [{ nivelRisco: 'CRITICO', percentualConforme: 94, totalMedicoes: 16 }] } as never
       if (url === '/relatorios/exportacoes/export-1') return { data: { id: 'export-1', status: 'concluido', urlDownload: 'https://storage.test/export.pdf' } } as never
+      if (url === '/relatorios/exportacoes/export-xlsx') return { data: { id: 'export-xlsx', status: 'concluido', urlDownload: 'https://storage.test/export.xlsx' } } as never
       return { data: [] } as never
     })
     vi.mocked(apiClient.post).mockResolvedValue({ data: { id: 'export-1', status: 'pendente', urlDownload: null } } as never)
@@ -51,11 +52,41 @@ describe('ReportsPage', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: 'Hospital' }), 'hospital-1')
     await user.selectOptions(screen.getByRole('combobox', { name: 'Setor' }), 'sector-1')
     await user.selectOptions(screen.getByRole('combobox', { name: 'Conteúdo da exportação' }), 'ordens_trabalho')
-    await user.click(screen.getByRole('button', { name: 'PDF' }))
+    await user.click(screen.getByRole('button', { name: 'Exportar PDF' }))
 
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', expect.objectContaining({
       hospitalId: 'hospital-1', setorId: 'sector-1', conteudo: 'ordens_trabalho', formato: 'pdf',
     })))
+    expect(await screen.findByRole('link', { name: 'Baixar arquivo' })).toHaveAttribute('href', 'https://storage.test/export.pdf')
+  })
+
+  it('exporta os indicadores filtrados com o conteúdo INDICADORES sem bloquear a tela', async () => {
+    const user = userEvent.setup()
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { id: 'export-xlsx', status: 'pendente', urlDownload: null } } as never)
+    render(<ReportsPage />, { wrapper: TestProviders })
+    expect(await screen.findByText('286 h')).toBeInTheDocument()
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Conteúdo da exportação' }), 'INDICADORES')
+    await user.click(screen.getByRole('button', { name: 'Exportar Excel' }))
+
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', expect.objectContaining({
+      conteudo: 'INDICADORES', formato: 'xlsx',
+    })))
+    expect(await screen.findByRole('link', { name: 'Baixar arquivo' })).toHaveAttribute('href', 'https://storage.test/export.xlsx')
+    expect(screen.getByRole('region', { name: 'Indicadores do período' })).toBeInTheDocument()
+  })
+
+  it('informa que a solicitação está sendo enviada sem bloquear os indicadores', async () => {
+    const user = userEvent.setup()
+    let resolvePost!: (value: { data: { id: string; status: string; urlDownload: null } }) => void
+    const pendingPost = new Promise<{ data: { id: string; status: string; urlDownload: null } }>((resolve) => { resolvePost = resolve })
+    vi.mocked(apiClient.post).mockReturnValueOnce(pendingPost as never)
+    render(<ReportsPage />, { wrapper: TestProviders })
+    await screen.findByText('286 h')
+
+    await user.click(screen.getByRole('button', { name: 'Exportar PDF' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Solicitando exportação')
+    expect(screen.getByRole('region', { name: 'Indicadores do período' })).toBeInTheDocument()
+    resolvePost({ data: { id: 'export-1', status: 'pendente', urlDownload: null } })
     expect(await screen.findByRole('link', { name: 'Baixar arquivo' })).toHaveAttribute('href', 'https://storage.test/export.pdf')
   })
 

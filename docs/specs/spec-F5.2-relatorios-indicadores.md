@@ -2,7 +2,7 @@
 
 **Status:** implementação em andamento conforme os contratos disponíveis; agregações por hospital/setor e séries temporais não são fornecidas pelos endpoints atuais.  
 **Story:** F5.2 — Relatórios & Indicadores (`docs/epics.md`)  
-**Issue:** [#18](https://github.com/Hospitalar-System/heem-frontend/issues/18) (indisponível nesta sessão: GitHub retorna 404)  
+**Issue:** [#17 — Story F5.2: Relatórios & Indicadores](https://github.com/Hospitalar-System/heem-frontend/issues/17)
 **Referência visual:** [Figma, seção Relatórios](https://www.figma.com/design/EDy6hci8DTe0hniabXwsqi/HEMM?node-id=2411-8)  
 **Frame:** `W17-Relatorios/Default` (`2404:14074`)
 

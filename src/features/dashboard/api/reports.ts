@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { z } from 'zod'
 import { apiClient } from '@/lib/axios'
 
 export interface ReportFilters {
@@ -23,16 +24,24 @@ export interface RiskCompliance {
   totalMedicoes: number
 }
 
-export interface ExportRequest extends ReportFilters {
-  conteudo: 'chamados' | 'ordens_trabalho' | 'medicoes'
-  formato: 'xlsx' | 'pdf'
-}
+export const exportRequestSchema = z.object({
+  desde: z.string().datetime({ offset: true }),
+  ate: z.string().datetime({ offset: true }),
+  hospitalId: z.string().optional(),
+  setorId: z.string().optional(),
+  conteudo: z.enum(['chamados', 'ordens_trabalho', 'medicoes', 'INDICADORES']),
+  formato: z.enum(['xlsx', 'pdf']),
+}).refine(({ desde, ate }) => desde <= ate, { message: 'A data inicial deve ser anterior ou igual à data final.' })
 
-export interface ExportStatus {
-  id: string
-  status: 'pendente' | 'concluido' | 'falhou'
-  urlDownload: string | null
-}
+export type ExportRequest = z.infer<typeof exportRequestSchema>
+
+export const exportStatusSchema = z.object({
+  id: z.string().min(1),
+  status: z.enum(['pendente', 'concluido', 'falhou']),
+  urlDownload: z.string().url().nullable(),
+})
+
+export type ExportStatus = z.infer<typeof exportStatusSchema>
 
 export function useReportIndicators(filters: ReportFilters) {
   return useQuery({
@@ -53,7 +62,11 @@ export function useRiskCompliance(filters: ReportFilters) {
 export function useRequestReportExport() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (request: ExportRequest) => (await apiClient.post<ExportStatus>('/relatorios/exportacoes', request)).data,
+    mutationFn: async (request: ExportRequest) => {
+      const validRequest = exportRequestSchema.parse(request)
+      const { data } = await apiClient.post<unknown>('/relatorios/exportacoes', validRequest)
+      return exportStatusSchema.parse(data)
+    },
     onSuccess: (exportation) => queryClient.setQueryData(['report-export', exportation.id], exportation),
   })
 }
@@ -61,7 +74,7 @@ export function useRequestReportExport() {
 export function useReportExport(id: string | null) {
   return useQuery({
     queryKey: ['report-export', id],
-    queryFn: async () => (await apiClient.get<ExportStatus>(`/relatorios/exportacoes/${id}`)).data,
+    queryFn: async () => exportStatusSchema.parse((await apiClient.get<unknown>(`/relatorios/exportacoes/${id}`)).data),
     enabled: Boolean(id),
     refetchInterval: (query) => query.state.data?.status === 'pendente' ? 2000 : false,
     retry: false,
