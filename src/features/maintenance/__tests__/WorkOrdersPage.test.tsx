@@ -16,9 +16,9 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
 const orders = [{ id: 'ot-1', codigo: 'OT-1001', tipo: 'PREVENTIVA', status: 'AGENDADA', equipamentoId: 'equipment-1', checklistId: 'checklist-1', tecnicoId: 'tech-1', local: null, dataAgendada: '2026-10-20T13:00:00Z', iniciadaEm: null, concluidaEm: null, atrasada: true, planoPreventivoId: 'plan-1' }]
 
-function TestProviders({ children }: PropsWithChildren) {
+function TestProviders({ children, initialEntry = '/work-orders' }: PropsWithChildren<{ initialEntry?: string }>) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
-  return <QueryClientProvider client={client}><MemoryRouter initialEntries={['/work-orders']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Routes><Route path="/work-orders" element={children} /><Route path="/work-orders/:id" element={<RouteLocation />} /></Routes></MemoryRouter></QueryClientProvider>
+  return <QueryClientProvider client={client}><MemoryRouter initialEntries={[initialEntry]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Routes><Route path="/work-orders" element={children} /><Route path="/work-orders/new" element={children} /><Route path="/work-orders/:id" element={<RouteLocation />} /></Routes></MemoryRouter></QueryClientProvider>
 }
 function RouteLocation() { const location = useLocation(); return <div data-testid="current-route">{location.pathname}</div> }
 
@@ -76,6 +76,12 @@ describe('WorkOrdersPage', () => {
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/ordens-de-trabalho/preventivas', {
       codigo: 'OT-2042', equipamentoId: 'equipment-1', checklistId: 'checklist-1', tecnicoId: 'tech-1', dataAgendada: new Date('2026-10-22T10:30').toISOString(),
     }))
+  })
+
+  it('preselects the equipment when the form is opened from an equipment detail link', async () => {
+    render(<WorkOrdersPage />, { wrapper: ({ children }) => <TestProviders initialEntry="/work-orders/new?equipamentoId=equipment-1">{children}</TestProviders> })
+    const equipmentSelect = await screen.findByRole('combobox', { name: 'Equipamento' })
+    await waitFor(() => expect((equipmentSelect as HTMLSelectElement).value).toBe('equipment-1'))
   })
 })
 

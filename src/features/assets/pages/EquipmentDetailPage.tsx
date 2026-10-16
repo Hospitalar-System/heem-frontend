@@ -77,8 +77,7 @@ function EquipmentData({ equipment, photoUrl, photoLoading, order, ordersLoading
       <section className="rounded-lg border border-border bg-surface p-5">
         <div className="flex items-center gap-2"><CalendarClock size={16} className="text-text-secondary" /><h3 className="text-sm font-semibold">Próxima manutenção preventiva</h3></div>
         {ordersLoading ? <div aria-busy="true" className="mt-4 h-14 animate-pulse rounded-md bg-bg" /> : order ? <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-medium">{order.codigo}</p><p className="mt-1 text-xs text-text-secondary">Agendada para {formatDate(order.dataAgendada)}{order.checklistId ? ' · Checklist vinculado' : ''}</p></div><span className="rounded-full bg-warning/10 px-2.5 py-1 text-[11px] font-medium text-warning">Agendada</span></div> : <p className="mt-3 text-xs text-text-secondary">Nenhuma OT preventiva agendada.</p>}
-        <button type="button" disabled title="O fluxo de agendamento de OT ainda não está disponível nesta tela." className="mt-4 h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand opacity-50">Agendar OT preventiva</button>
-        {!isAdmin ? <p className="mt-2 text-[11px] text-text-muted">Apenas Admin do Cliente pode agendar uma OT.</p> : null}
+        {isAdmin ? <Link to={`/work-orders/new?equipamentoId=${encodeURIComponent(equipment.id)}`} className="mt-4 inline-flex h-9 items-center rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Agendar OT preventiva</Link> : <p className="mt-2 text-[11px] text-text-muted">Apenas Admin do Cliente pode agendar uma OT.</p>}
       </section>
     </div>
   </div>
