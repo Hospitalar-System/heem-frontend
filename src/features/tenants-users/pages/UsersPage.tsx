@@ -12,6 +12,14 @@ import type { TenantRole, TenantUser, TenantUserInput } from '../types'
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const roles: Record<TenantRole, string> = { admin_cliente: 'Admin do Cliente', tecnico: 'Técnico', interno_hospital: 'Interno do Hospital' }
 
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const response = (error as { response?: { data?: { detail?: string; code?: string } } }).response
+    return response?.data?.detail ?? response?.data?.code ?? fallback
+  }
+  return fallback
+}
+
 export function UsersPage() {
   const users = useTenantUsers()
   const hospitals = useHospitalChoices()
@@ -24,7 +32,7 @@ export function UsersPage() {
 
   async function deactivateUser(user: TenantUser) {
     if (!window.confirm(`Desativar ${user.nome}? A pessoa perderá acesso ao HEMM.`)) return
-    try { await deactivate.mutateAsync(user.id); toast.success('Usuário desativado.') } catch { toast.error('Não foi possível desativar o usuário.') }
+    try { await deactivate.mutateAsync(user.id); toast.success('Usuário desativado.') } catch (error) { toast.error(getApiErrorMessage(error, 'Não foi possível desativar o usuário.')) }
   }
 
   return <AdminPageShell title="Usuários & Papéis" subtitle="Acessos do tenant" action={<button type="button" onClick={() => setModal('create')} className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand"><Plus size={15} /> Convidar usuário</button>}>
@@ -44,42 +52,58 @@ export function UsersPage() {
 }
 
 function UserForm({ user, hospitals, hospitalsLoading, onClose, onSaved }: { user?: TenantUser; hospitals: { id: string; nome: string }[]; hospitalsLoading: boolean; onClose: () => void; onSaved: () => void }) {
-  const detail = useTenantUser(user?.id ?? '')
-  const existingLinks = useUserHospitals(user?.id ?? '')
+  const [createdUser, setCreatedUser] = useState<TenantUser>()
+  const [serverError, setServerError] = useState<string | null>(null)
+  const activeUser = user ?? createdUser
+  const detail = useTenantUser(activeUser?.id ?? '')
+  const existingLinks = useUserHospitals(activeUser?.id ?? '')
   const save = useSaveTenantUser()
   const linkMutation = useSetUserHospitals()
   const [selected, setSelected] = useState<string[]>([])
-  const form = useForm<TenantUserInput>({ resolver: zodResolver(userSchema), values: user ? { codigo: detail.data?.codigo ?? user.codigo, nome: detail.data?.nome ?? user.nome, email: detail.data?.email ?? user.email, role: detail.data?.role ?? user.role } : { codigo: '', nome: '', email: '', role: 'tecnico' } })
+  const form = useForm<TenantUserInput>({ resolver: zodResolver(userSchema), values: activeUser ? { codigo: detail.data?.codigo ?? activeUser.codigo, nome: detail.data?.nome ?? activeUser.nome, email: detail.data?.email ?? activeUser.email, role: detail.data?.role ?? activeUser.role } : { codigo: '', nome: '', email: '', role: 'tecnico' } })
   useEffect(() => { if (user && existingLinks.data) setSelected(existingLinks.data) }, [user, existingLinks.data])
 
   function toggle(hospitalId: string) { setSelected((current) => current.includes(hospitalId) ? current.filter((id) => id !== hospitalId) : [...current, hospitalId]) }
   const submit = form.handleSubmit(async (data) => {
+    setServerError(null)
     try {
-      const saved = await save.mutateAsync({ id: user?.id, data })
+      const saved = activeUser ?? await save.mutateAsync({ data })
+      if (!user && !createdUser) setCreatedUser(saved)
       const userId = saved.id
       const before = existingLinks.data ?? []
-      const operations = user ? [
+      const operations = activeUser ? [
         ...selected.filter((id) => !before.includes(id)).map((hospitalId) => ({ hospitalId, attach: true })),
         ...before.filter((id) => !selected.includes(id)).map((hospitalId) => ({ hospitalId, attach: false })),
       ] : selected.map((hospitalId) => ({ hospitalId, attach: true }))
       const results = await Promise.allSettled(operations.map((operation) => linkMutation.mutateAsync({ userId, ...operation })))
       const failures = results.filter((result) => result.status === 'rejected').length
-      if (failures) { toast.error(`Usuário salvo, mas ${failures} vínculo(s) de hospital não foram atualizados.`) }
-      else toast.success(user ? 'Usuário atualizado.' : 'Registro de usuário criado. O envio do convite pelo provedor ainda não está disponível.')
+      if (failures) {
+        const message = `Usuário salvo, mas ${failures} vínculo(s) de hospital não foram atualizados. Revise a seleção e tente novamente.`
+        setServerError(message)
+        toast.error(message)
+        return
+      }
+      toast.success(user ? 'Usuário atualizado.' : 'Registro de usuário criado. O envio do convite pelo provedor ainda não está disponível.')
       onSaved()
-    } catch { toast.error('Não foi possível salvar o usuário.') }
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Não foi possível salvar o usuário.')
+      setServerError(message)
+      toast.error(message)
+    }
   })
 
   const busy = save.isPending || linkMutation.isPending
-  return <Modal title={user ? 'Editar usuário' : 'Convidar usuário'} description={user ? 'Atualize o perfil e os hospitais vinculados.' : 'O registro será criado. O convite por e-mail depende da integração com o provedor de identidade.'} onClose={onClose} busy={busy}>
+  const isExistingUser = Boolean(activeUser)
+  return <Modal title={user ? 'Editar usuário' : createdUser ? 'Concluir vínculos do usuário' : 'Convidar usuário'} description={user ? 'Atualize o perfil e os hospitais vinculados.' : 'O registro será criado. O convite por e-mail depende da integração com o provedor de identidade.'} onClose={onClose} busy={busy}>
     <form onSubmit={submit} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2"><Field label="Código" error={form.formState.errors.codigo?.message}><input autoFocus={!user} className={inputClass} disabled={Boolean(user)} {...form.register('codigo')} /></Field><Field label="Nome" error={form.formState.errors.nome?.message}><input autoFocus={Boolean(user)} className={inputClass} {...form.register('nome')} /></Field></div>
-      <Field label="E-mail" error={form.formState.errors.email?.message}><input type="email" autoComplete="email" className={inputClass} {...form.register('email')} /></Field>
-      <Field label="Papel"><select className={inputClass} {...form.register('role')}>{Object.entries(roles).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
+      {serverError && <p role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">{serverError}</p>}
+      <div className="grid gap-4 sm:grid-cols-2"><Field label="Código" error={form.formState.errors.codigo?.message}><input autoFocus={!user} className={inputClass} disabled={isExistingUser} {...form.register('codigo')} /></Field><Field label="Nome" error={form.formState.errors.nome?.message}><input autoFocus={Boolean(user)} className={inputClass} disabled={Boolean(createdUser)} {...form.register('nome')} /></Field></div>
+      <Field label="E-mail" error={form.formState.errors.email?.message}><input type="email" autoComplete="email" className={inputClass} disabled={Boolean(createdUser)} {...form.register('email')} /></Field>
+      <Field label="Papel"><select className={inputClass} disabled={Boolean(createdUser)} {...form.register('role')}>{Object.entries(roles).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
       <div className="space-y-2"><span className="block text-xs font-medium text-text-secondary">Hospitais vinculados</span>{selected.length > 0 ? <ul className="flex flex-wrap gap-2">{selected.map((id) => { const hospital = hospitals.find((item) => item.id === id); return <li key={id} className="inline-flex items-center gap-1 rounded-md border border-border bg-bg px-2 py-1 text-xs">{hospital?.nome ?? 'Hospital'}<button type="button" aria-label={`Remover vínculo ${hospital?.nome ?? 'hospital'}`} onClick={() => toggle(id)} className="text-text-muted hover:text-danger"><X size={13} /></button></li> })}</ul> : <p className="text-xs text-text-muted">Nenhum hospital selecionado.</p>}
         <details className="group relative"><summary className="inline-flex h-9 cursor-pointer list-none items-center gap-2 rounded-md border border-border px-3 text-xs text-text-secondary hover:bg-bg"><Plus size={14} /> Adicionar hospital <ChevronDown size={13} /></summary><div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-border bg-surface p-1 shadow-xl">{hospitalsLoading ? <p className="p-2 text-xs text-text-muted">Carregando hospitais…</p> : hospitals.length ? hospitals.map((hospital) => <button key={hospital.id} type="button" disabled={selected.includes(hospital.id)} onClick={() => toggle(hospital.id)} className="flex w-full items-center justify-between rounded px-2 py-2 text-left text-xs hover:bg-bg disabled:opacity-50">{hospital.nome}{selected.includes(hospital.id) && <Check size={14} className="text-primary" />}</button>) : <p className="p-2 text-xs text-text-muted">Nenhum hospital disponível.</p>}</div></details></div>
       {detail.isError && <p role="alert" className="text-xs text-danger">Não foi possível obter os dados atualizados do usuário.</p>}{existingLinks.isError && <p role="alert" className="text-xs text-danger">Não foi possível obter os hospitais vinculados. Não altere os vínculos antes de tentar novamente.</p>}
-      <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" disabled={busy} onClick={onClose} className="h-9 rounded-md border border-border px-3 text-xs">Cancelar</button><button type="submit" disabled={busy || detail.isLoading || detail.isError || existingLinks.isLoading || existingLinks.isError || hospitalsLoading} className="h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand disabled:opacity-50">{busy ? 'Salvando…' : user ? 'Salvar alterações' : 'Criar usuário'}</button></div>
+      <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" disabled={busy} onClick={onClose} className="h-9 rounded-md border border-border px-3 text-xs">Cancelar</button><button type="submit" disabled={busy || detail.isLoading || detail.isError || (isExistingUser && (existingLinks.isLoading || existingLinks.isError)) || hospitalsLoading} className="h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand disabled:opacity-50">{busy ? 'Salvando…' : user ? 'Salvar alterações' : createdUser ? 'Tentar vínculos novamente' : 'Criar usuário'}</button></div>
     </form>
   </Modal>
 }
