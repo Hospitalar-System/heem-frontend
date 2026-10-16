@@ -9,6 +9,7 @@ const HospitalsPage = lazy(() => import('@/features/assets/pages/HospitalsPage')
 const SectorsPage = lazy(() => import('@/features/assets/pages/SectorsPage').then((module) => ({ default: module.SectorsPage })))
 const UsersPage = lazy(() => import('@/features/tenants-users/pages/UsersPage').then((module) => ({ default: module.UsersPage })))
 const ClientsPage = lazy(() => import('@/features/tenants/pages/ClientsPage').then((module) => ({ default: module.ClientsPage })))
+const PlatformUsersPage = lazy(() => import('@/features/platform-users/pages/PlatformUsersPage').then((module) => ({ default: module.PlatformUsersPage })))
 const AssetsPage = lazy(() => import('@/features/assets/pages/AssetsPage').then((module) => ({ default: module.AssetsPage })))
 const EquipmentFormPage = lazy(() => import('@/features/assets/pages/EquipmentFormPage').then((module) => ({ default: module.EquipmentFormPage })))
 const EquipmentDetailPage = lazy(() => import('@/features/assets/pages/EquipmentDetailPage').then((module) => ({ default: module.EquipmentDetailPage })))
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
   },
   { path: '/login', element: <LoginPage /> },
   { path: '/platform/clients', element: <RequireRole role="super_admin"><Suspense fallback={<DashboardRouteLoading />}><ClientsPage /></Suspense></RequireRole> },
+  { path: '/platform/users', element: <RequireRole role="super_admin"><Suspense fallback={<DashboardRouteLoading />}><PlatformUsersPage /></Suspense></RequireRole> },
   { path: '/hospitals', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><HospitalsPage /></Suspense></RequireRole> },
   { path: '/sectors', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><SectorsPage /></Suspense></RequireRole> },
   { path: '/assets', element: <RequireRole><RequireEquipmentRole><Suspense fallback={<DashboardRouteLoading />}><AssetsPage /></Suspense></RequireEquipmentRole></RequireRole> },
