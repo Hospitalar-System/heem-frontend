@@ -1,1 +1,16 @@
-{"projectId":"prj_3IZquXGevWI4ejMaAy81mcqSlvAz","orgId":"team_zxzSApFlcwYJ5ancPE9x8x22","projectName":"heem-frontend"}
+{
+  "projectId": "prj_3IZquXGevWI4ejMaAy81mcqSlvAz",
+  "orgId": "team_zxzSApFlcwYJ5ancPE9x8x22",
+  "projectName": "heem-frontend",
+  "settings": {
+    "createdAt": 1792184767549,
+    "framework": "vite",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}
