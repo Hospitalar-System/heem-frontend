@@ -5,6 +5,7 @@ import {
   ChartNoAxesColumn,
   ClipboardCheck,
   ClipboardList,
+  CalendarClock,
   FileUp,
   LayoutDashboard,
   LogOut,
@@ -36,6 +37,7 @@ const navItems = [
   { label: 'Relatórios', to: '/reports', Icon: ChartNoAxesColumn },
   { label: 'Política de SLA', to: '/settings/sla', Icon: Timer },
   { label: 'Importação em lote', to: '/imports', Icon: FileUp },
+  { label: 'Planos preventivos', to: '/preventive-plans', Icon: CalendarClock },
   { label: 'Usuários & Papéis', to: '/users', Icon: UsersRound },
 ]
 
@@ -67,7 +69,7 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
       {isSuperAdmin && <div className="mb-3 mt-3 space-y-1 px-3"><p className="mb-2 px-[14px] text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">Administração</p><NavLink to="/platform/clients" onClick={onNavigate} className={({ isActive }) => `flex min-h-[39px] items-center gap-3 rounded-md px-3 text-[14px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive ? 'bg-primary/15 text-primary' : 'text-text-secondary hover:bg-surface hover:text-text-primary'}`}><BriefcaseBusiness aria-hidden="true" className="size-[14px] shrink-0" strokeWidth={1.8} /><span>Clientes</span></NavLink><NavLink to="/platform/users" onClick={onNavigate} className={({ isActive }) => `flex min-h-[39px] items-center gap-3 rounded-md px-3 text-[14px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive ? 'bg-primary/15 text-primary' : 'text-text-secondary hover:bg-surface hover:text-text-primary'}`}><UsersRound aria-hidden="true" className="size-[14px] shrink-0" strokeWidth={1.8} /><span>Usuários da Plataforma</span></NavLink></div>}
       <p className="mb-2 mt-3 px-[26px] text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">Operação</p>
       <nav className="space-y-1 px-3">
-        {navItems.filter(({ to }) => !['/users', '/settings/sla', '/imports'].includes(to) || user?.roles.includes('admin_cliente')).map(({ label, to, Icon }) => (
+        {navItems.filter(({ to }) => !['/users', '/settings/sla', '/imports', '/preventive-plans'].includes(to) || user?.roles.includes('admin_cliente')).map(({ label, to, Icon }) => (
           <NavLink
             key={to}
             to={to}
