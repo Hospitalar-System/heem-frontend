@@ -2,6 +2,8 @@ import { Menu, Plus, Search, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ThemeSwitcher } from '@/app/ThemeSwitcher'
+import { useDashboardSummary } from '../api/dashboard'
+import { DashboardAttention } from '../components/DashboardAttention'
 import { DashboardKpis } from '../components/DashboardKpis'
 import { DashboardSidebar } from '../components/DashboardSidebar'
 import { DashboardEmptyState, DashboardErrorState, DashboardLoadingState } from '../components/DashboardStates'
@@ -9,17 +11,14 @@ import { MtbfChart } from '../components/MtbfChart'
 import { NotificationsPopover } from '../components/NotificationsPopover'
 import { RecentTicketsTable } from '../components/RecentTicketsTable'
 import { WorkOrdersChart } from '../components/WorkOrdersChart'
-import { dashboardDemoData } from '../data/dashboard.demo'
+import { isDashboardSummaryEmpty } from '../types'
 
-export type DashboardViewState = 'default' | 'loading' | 'empty' | 'error'
-
-/**
- * The default route currently presents Figma sample data until the dashboard
- * aggregation endpoint and DTO are confirmed with the backend.
- */
-export function DashboardPage({ state = 'default' }: { state?: DashboardViewState }) {
+export function DashboardPage() {
   const [search, setSearch] = useState('')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const dashboard = useDashboardSummary()
+  const summary = dashboard.data
+  const isEmpty = summary ? isDashboardSummaryEmpty(summary) : false
 
   return (
     <main className="flex h-[100dvh] min-h-[600px] w-full overflow-hidden border border-border bg-bg text-text-primary md:rounded-2xl">
@@ -45,7 +44,9 @@ export function DashboardPage({ state = 'default' }: { state?: DashboardViewStat
             </button>
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold leading-5 text-text-primary">Dashboard</h1>
-              <p className="truncate text-[9px] leading-3 text-text-muted">{dashboardDemoData.tenantName} · {dashboardDemoData.hospitalCount} hospitais</p>
+              <p className="truncate text-[9px] leading-3 text-text-muted">
+                {summary ? `${summary.tenantName} · ${summary.hospitalCount} hospitais` : 'Resumo operacional'}
+              </p>
             </div>
           </div>
 
@@ -70,17 +71,18 @@ export function DashboardPage({ state = 'default' }: { state?: DashboardViewStat
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6 xl:px-8 xl:py-7">
-          {state === 'loading' ? <DashboardLoadingState /> : null}
-          {state === 'empty' ? <DashboardEmptyState /> : null}
-          {state === 'error' ? <DashboardErrorState onRetry={() => window.location.reload()} /> : null}
-          {state === 'default' && (
+          {dashboard.isPending ? <DashboardLoadingState /> : null}
+          {dashboard.isError ? <DashboardErrorState onRetry={() => void dashboard.refetch()} /> : null}
+          {!dashboard.isPending && !dashboard.isError && isEmpty ? <DashboardEmptyState /> : null}
+          {!dashboard.isPending && !dashboard.isError && summary && !isEmpty && (
             <div className="space-y-4 xl:space-y-5">
-              <DashboardKpis data={dashboardDemoData} />
+              <DashboardKpis data={summary} />
+              <DashboardAttention data={summary} />
               <div className="grid gap-4 xl:grid-cols-2 xl:gap-5">
-                <WorkOrdersChart data={dashboardDemoData.workOrdersByStatus} />
-                <MtbfChart data={dashboardDemoData.mtbfBySector} />
+                <WorkOrdersChart data={summary.workOrdersByStatus} />
+                <MtbfChart data={summary.mtbfBySector} />
               </div>
-              <RecentTicketsTable tickets={dashboardDemoData.recentTickets} query={search} />
+              <RecentTicketsTable tickets={summary.recentTickets} query={search} />
             </div>
           )}
         </div>
