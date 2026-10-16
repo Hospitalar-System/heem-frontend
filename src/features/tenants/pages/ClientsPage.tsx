@@ -43,7 +43,7 @@ export function ClientsPage() {
 function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const create = useCreateTenant()
   const [serverError, setServerError] = useState<string | null>(null)
-  const form = useForm<CreateTenantInput>({ resolver: zodResolver(createTenantSchema), defaultValues: { nome: '', cnpj: '', adminNome: '', adminEmail: '', adminCodigo: '' } })
+  const form = useForm<CreateTenantInput>({ resolver: zodResolver(createTenantSchema), defaultValues: { tipo: 'PJ', nome: '', cnpj: '', adminNome: '', adminEmail: '', adminCodigo: '' } })
   const submit = form.handleSubmit(async (input) => {
     setServerError(null)
     try {
@@ -57,6 +57,7 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
   return <Modal title="Novo cliente" description="O tenant e seu Admin do Cliente inicial serão provisionados juntos." onClose={onClose} busy={create.isPending}>
     <form onSubmit={submit} className="space-y-4">
       {serverError && <p role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">{serverError}</p>}
+      <Field label="Tipo do cliente" error={form.formState.errors.tipo?.message}><select className={inputClass} {...form.register('tipo')}><option value="PF">Pessoa Física (PF)</option><option value="PJ">Pessoa Jurídica (PJ)</option></select></Field>
       <Field label="Razão social" error={form.formState.errors.nome?.message}><input autoFocus className={inputClass} placeholder="Grupo Hospitalar…" {...form.register('nome')} /></Field>
       <Field label="CNPJ" error={form.formState.errors.cnpj?.message}><input inputMode="numeric" autoComplete="off" className={inputClass} placeholder="00.000.000/0001-00" {...form.register('cnpj')} /></Field>
       <div className="grid gap-4 sm:grid-cols-2"><Field label="Nome do Admin do Cliente" error={form.formState.errors.adminNome?.message}><input className={inputClass} {...form.register('adminNome')} /></Field><Field label="Código do Admin" error={form.formState.errors.adminCodigo?.message}><input className={inputClass} {...form.register('adminCodigo')} /></Field></div>

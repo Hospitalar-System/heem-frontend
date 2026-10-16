@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const createTenantSchema = z.object({
+  tipo: z.enum(['PF', 'PJ'], 'Selecione o tipo do cliente.'),
   nome: z.string().trim().min(1, 'Informe a razão social.'),
   cnpj: z.string().refine((value) => normalizeCnpj(value).length === 14, 'Informe um CNPJ com 14 dígitos.'),
   adminNome: z.string().trim().min(1, 'Informe o nome do Admin do Cliente.'),

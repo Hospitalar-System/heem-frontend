@@ -7,6 +7,7 @@ export interface Tenant {
 }
 
 export interface CreateTenantInput {
+  tipo: 'PF' | 'PJ'
   cnpj: string
   nome: string
   adminNome: string

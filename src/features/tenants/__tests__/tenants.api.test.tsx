@@ -23,7 +23,7 @@ describe('tenant API', () => {
   })
 
   it('creates a tenant using the backend request contract', async () => {
-    const input = { cnpj: '12345678000190', nome: 'Grupo Hospitalar', adminNome: 'Clara Mendes', adminEmail: 'clara@example.com', adminCodigo: 'ADM-001' }
+    const input = { tipo: 'PJ' as const, cnpj: '12345678000190', nome: 'Grupo Hospitalar', adminNome: 'Clara Mendes', adminEmail: 'clara@example.com', adminCodigo: 'ADM-001' }
     vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { tenantId: 'tenant-1', ...input, createdAt: '2026-10-08T12:00:00Z', adminInicialId: 'user-1', adminInicialEmail: input.adminEmail } })
     const { result } = renderHook(() => useCreateTenant(), { wrapper: createWrapper() })
     await act(async () => { await result.current.mutateAsync(input) })
