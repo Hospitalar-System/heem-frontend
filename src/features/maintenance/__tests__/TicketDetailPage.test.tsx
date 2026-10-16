@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -17,6 +17,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 const ticket = {
   id: 'ticket-12345678', hospitalId: 'hospital-1', setorId: 'sector-1', equipamentoId: 'equipment-1',
   abertoPor: 'user-opener', descricao: 'Bomba apresenta falha de fluxo.', severidade: 'CRITICA', status: 'ABERTO', abertoEm: '2026-10-14T10:00:00Z',
+  slaAtendimentoAte: '2026-10-14T10:15:00Z', slaResolucaoAte: '2026-10-14T14:00:00Z', slaStatus: 'em_risco',
 }
 const timeline = [
   { acao: 'ABRIR_CHAMADO', atorId: 'user-opener', ocorridoEm: '2026-10-14T10:00:00Z' },
@@ -55,6 +56,8 @@ describe('TicketDetailPage', () => {
     expect(screen.getByText('Bomba apresenta falha de fluxo.')).toBeInTheDocument()
     expect(screen.getByText('Hospital Central · UTI Adulto')).toBeInTheDocument()
     expect(screen.getByText('Chamado aberto')).toBeInTheDocument()
+    expect(screen.getByText('SLA em risco')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Prazos de SLA' })).getByText('14/10/2026, 07:15:00')).toBeInTheDocument()
     expect(screen.getByText('Status atualizado')).toBeInTheDocument()
     expect(screen.getByText('Ana')).toBeInTheDocument()
     expect(apiClient.get).toHaveBeenCalledWith('/chamados/ticket-12345678')

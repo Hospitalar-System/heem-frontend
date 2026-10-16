@@ -11,6 +11,8 @@ import { useUserHospitalLinks } from '@/features/tenants-users/api/users'
 import type { TenantUser } from '@/features/tenants-users/types'
 import { apiClient } from '@/lib/axios'
 import { useCreateCorrectiveWorkOrder, useTicket, useTicketHistory } from '../api/tickets'
+import { TicketSlaBadge } from '../components/TicketSlaBadge'
+import { formatSlaDeadline } from '../utils/sla'
 import type { TicketStatus } from '../types'
 
 const fieldClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
@@ -118,6 +120,17 @@ export function TicketDetailPage() {
           <Metadata icon={<AlertTriangle size={15} />} label="Equipamento" value={equipment.data ? `${equipment.data.codigo} · ${equipment.data.nome}` : ticket.data.equipamentoId} />
         </div>
       </section>
+
+      {ticket.data.slaStatus && <section aria-label="Prazos de SLA" className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface px-5 py-4">
+        <div>
+          <div className="flex flex-wrap items-center gap-2"><h3 className="text-sm font-semibold text-text-primary">Acordo de nível de serviço</h3><TicketSlaBadge status={ticket.data.slaStatus} /></div>
+          <p className="mt-1 text-[11px] text-text-muted">Situação calculada pelo backend; os prazos são congelados na abertura do chamado.</p>
+        </div>
+        <dl className="grid gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
+          <div><dt className="text-text-muted">Atendimento até</dt><dd className="mt-0.5 font-medium text-text-primary">{formatSlaDeadline(ticket.data.slaAtendimentoAte) ?? '—'}</dd></div>
+          <div><dt className="text-text-muted">Resolução até</dt><dd className="mt-0.5 font-medium text-text-primary">{formatSlaDeadline(ticket.data.slaResolucaoAte) ?? '—'}</dd></div>
+        </dl>
+      </section>}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.8fr)]">
         <div className="space-y-4">

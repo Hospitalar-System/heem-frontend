@@ -1,5 +1,6 @@
 export type TicketStatus = 'ABERTO' | 'EM_ANDAMENTO' | 'AGUARDANDO_PECA' | 'RESOLVIDO' | 'CANCELADO' | string
 export type TicketSeverity = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA' | string
+export type TicketSlaStatus = 'no_prazo' | 'em_risco' | 'vencido' | null
 
 export interface Ticket {
   id: string
@@ -11,6 +12,9 @@ export interface Ticket {
   severidade: TicketSeverity
   status: TicketStatus
   abertoEm: string
+  slaAtendimentoAte?: string | null
+  slaResolucaoAte?: string | null
+  slaStatus?: TicketSlaStatus
 }
 
 export interface TicketHistoryEvent {
