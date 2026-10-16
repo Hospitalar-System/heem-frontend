@@ -1,13 +1,14 @@
 import { useMemo, useState, type KeyboardEvent } from 'react'
-import { ArrowLeft, CalendarClock, ClipboardList, Edit3, Gauge, History, ListChecks } from 'lucide-react'
+import { ArrowLeft, CalendarClock, ClipboardList, Edit3, Gauge, History, ListChecks, Tag } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { getAuthState } from '@/features/auth/session'
 import { EquipmentStatusBadge } from '../components/EquipmentStatusBadge'
+import { EquipmentLabelsSection } from '../components/EquipmentLabelsSection'
 import { useEquipment, useEquipmentPhoto, useEquipmentWorkOrders, useHospital, useSector } from '../api/assets'
 import type { Equipment } from '../types'
 
-type EquipmentTab = 'dados' | 'medicoes' | 'checklists' | 'ots'
+type EquipmentTab = 'dados' | 'medicoes' | 'checklists' | 'ots' | 'etiquetas'
 const tabs: Array<{ id: EquipmentTab; label: string; Icon: typeof Gauge }> = [
   { id: 'dados', label: 'Dados', Icon: Gauge },
   { id: 'medicoes', label: 'Histórico de medições', Icon: History },
@@ -25,6 +26,7 @@ export function EquipmentDetailPage() {
   const photo = useEquipmentPhoto(id, Boolean(equipment.data?.fotoUrl))
   const orders = useEquipmentWorkOrders(id)
   const isAdmin = getAuthState().user?.roles.includes('admin_cliente') ?? false
+  const visibleTabs = isAdmin ? [...tabs, { id: 'etiquetas' as const, label: 'Etiquetas', Icon: Tag }] : tabs
   const nextPreventive = useMemo(() => (orders.data ?? [])
     .filter((order) => order.tipo === 'PREVENTIVA' && order.status === 'AGENDADA' && order.dataAgendada)
     .sort((left, right) => Date.parse(left.dataAgendada ?? '') - Date.parse(right.dataAgendada ?? ''))[0], [orders.data])
@@ -44,7 +46,7 @@ export function EquipmentDetailPage() {
       </div>
 
       <div role="tablist" aria-label="Seções do equipamento" className="mt-5 flex max-w-full gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
-        {tabs.map(({ id: tabId, label, Icon }, index) => <button key={tabId} type="button" role="tab" id={`equipment-tab-${tabId}`} aria-selected={activeTab === tabId} aria-controls="equipment-tab-panel" tabIndex={activeTab === tabId ? 0 : -1} onClick={() => setActiveTab(tabId)} onKeyDown={(event) => handleTabKeyDown(event, index, setActiveTab)} className={`inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === tabId ? 'bg-primary text-bg-brand' : 'text-text-secondary hover:bg-bg hover:text-text-primary'}`}><Icon size={14} />{label}</button>)}
+        {visibleTabs.map(({ id: tabId, label, Icon }, index) => <button key={tabId} type="button" role="tab" id={`equipment-tab-${tabId}`} aria-selected={activeTab === tabId} aria-controls="equipment-tab-panel" tabIndex={activeTab === tabId ? 0 : -1} onClick={() => setActiveTab(tabId)} onKeyDown={(event) => handleTabKeyDown(event, index, setActiveTab, visibleTabs)} className={`inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === tabId ? 'bg-primary text-bg-brand' : 'text-text-secondary hover:bg-bg hover:text-text-primary'}`}><Icon size={14} />{label}</button>)}
       </div>
 
       <section id="equipment-tab-panel" role="tabpanel" aria-labelledby={`equipment-tab-${activeTab}`} className="mt-4 outline-none">
@@ -52,6 +54,7 @@ export function EquipmentDetailPage() {
         {activeTab === 'medicoes' ? <UnavailablePanel title="Histórico de medições indisponível" detail="A API ainda não fornece uma rota de consulta de medições por equipamento." /> : null}
         {activeTab === 'checklists' ? <UnavailablePanel title="Checklists vinculados indisponíveis" detail="A API ainda não fornece uma consulta dos checklists associados a este equipamento." /> : null}
         {activeTab === 'ots' ? <WorkOrdersPanel orders={orders.data ?? []} loading={orders.isLoading} error={orders.isError} retry={() => void orders.refetch()} /> : null}
+        {activeTab === 'etiquetas' && isAdmin ? <EquipmentLabelsSection equipmentId={id} /> : null}
       </section>
     </div>
   </AdminPageShell>
@@ -98,13 +101,13 @@ function UnavailablePanel({ title, detail }: { title: string; detail: string }) 
   return <section className="rounded-lg border border-border bg-surface p-5"><h3 className="text-sm font-semibold">{title}</h3><p className="mt-2 text-xs text-text-secondary">{detail}</p></section>
 }
 
-function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, current: number, setActive: (tab: EquipmentTab) => void) {
+function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, current: number, setActive: (tab: EquipmentTab) => void, availableTabs: typeof tabs) {
   if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
   event.preventDefault()
   const offset = event.key === 'ArrowRight' ? 1 : -1
-  const next = (current + offset + tabs.length) % tabs.length
-  setActive(tabs[next].id)
-  document.getElementById(`equipment-tab-${tabs[next].id}`)?.focus()
+  const next = (current + offset + availableTabs.length) % availableTabs.length
+  setActive(availableTabs[next].id)
+  document.getElementById(`equipment-tab-${availableTabs[next].id}`)?.focus()
 }
 
 function formatDate(value: string | null) {

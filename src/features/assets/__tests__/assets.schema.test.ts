@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hospitalSchema, setorSchema } from '../schemas/assets.schema'
+import { equipmentLabelSchema, hospitalSchema, setorSchema } from '../schemas/assets.schema'
 
 describe('hospitalSchema', () => {
   it('requires the fields defined by the backend request', () => {
@@ -14,5 +14,18 @@ describe('setorSchema', () => {
     expect(setorSchema.safeParse(valid).success).toBe(true)
     expect(setorSchema.safeParse({ ...valid, classificacaoRisco: 'BAIXO' }).success).toBe(false)
     expect(setorSchema.safeParse({ ...valid, codigo: ' ' }).success).toBe(false)
+  })
+})
+
+describe('equipmentLabelSchema', () => {
+  it('trims the value and accepts only supported label types', () => {
+    expect(equipmentLabelSchema.parse({ valor: '  EQ-01  ', tipo: 'barras' })).toEqual({ valor: 'EQ-01', tipo: 'barras' })
+    expect(equipmentLabelSchema.safeParse({ valor: 'EQ-01', tipo: 'nfc' }).success).toBe(false)
+  })
+
+  it('rejects empty, oversized, and control-character values', () => {
+    expect(equipmentLabelSchema.safeParse({ valor: '  ', tipo: 'qr' }).success).toBe(false)
+    expect(equipmentLabelSchema.safeParse({ valor: 'a'.repeat(201), tipo: 'qr' }).success).toBe(false)
+    expect(equipmentLabelSchema.safeParse({ valor: 'EQ-\n01', tipo: 'qr' }).success).toBe(false)
   })
 })
