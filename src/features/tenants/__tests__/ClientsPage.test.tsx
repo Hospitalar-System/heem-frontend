@@ -43,6 +43,7 @@ describe('ClientsPage', () => {
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: [] } as never)
     renderPage()
     await user.click(await screen.findByRole('button', { name: 'Novo cliente' }))
+    await user.selectOptions(screen.getByLabelText('Tipo do cliente'), 'PJ')
     await user.type(screen.getByLabelText('Razão social'), 'Grupo')
     await user.type(screen.getByLabelText('CNPJ'), '123')
     await user.type(screen.getByLabelText('Nome do Admin do Cliente'), 'Clara Mendes')
@@ -65,6 +66,7 @@ describe('ClientsPage', () => {
     renderPage()
     const trigger = await screen.findByRole('button', { name: 'Novo cliente' })
     await user.click(trigger)
+    await user.selectOptions(screen.getByLabelText('Tipo do cliente'), 'PF')
     await user.type(screen.getByLabelText('Razão social'), 'Novo Hospitalar')
     await user.type(screen.getByLabelText('CNPJ'), '12.345.678/0001-90')
     await user.type(screen.getByLabelText('Nome do Admin do Cliente'), 'Clara Mendes')
@@ -73,7 +75,7 @@ describe('ClientsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Criar cliente' }))
 
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/tenants', {
-      cnpj: '12345678000190', nome: 'Novo Hospitalar', adminNome: 'Clara Mendes', adminEmail: 'clara@example.com', adminCodigo: 'ADM-001',
+      tipo: 'PF', cnpj: '12345678000190', nome: 'Novo Hospitalar', adminNome: 'Clara Mendes', adminEmail: 'clara@example.com', adminCodigo: 'ADM-001',
     }))
     expect(await screen.findByText('Novo Hospitalar')).toBeInTheDocument()
     expect(success).toHaveBeenCalledWith('Cliente criado. O convite do Admin do Cliente foi enfileirado.')
@@ -87,6 +89,7 @@ describe('ClientsPage', () => {
     vi.mocked(apiClient.post).mockRejectedValueOnce({ response: { data: { code: 'CNPJ_DUPLICADO', detail: 'Já existe um cliente com este CNPJ.' } } })
     renderPage()
     await user.click(await screen.findByRole('button', { name: 'Novo cliente' }))
+    await user.selectOptions(screen.getByLabelText('Tipo do cliente'), 'PJ')
     await user.type(screen.getByLabelText('Razão social'), 'Grupo')
     await user.type(screen.getByLabelText('CNPJ'), '12345678000190')
     await user.type(screen.getByLabelText('Nome do Admin do Cliente'), 'Clara Mendes')
