@@ -1,11 +1,12 @@
-import { Check, ChevronDown, Plus, Search, UserRound, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, Check, ChevronDown, Plus, Search, UserRound, X } from 'lucide-react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { Field, Modal } from '@/components/ui/Modal'
-import { useDeactivateUser, useHospitalChoices, useSaveTenantUser, useSetUserHospitals, useTenantUser, useTenantUsers, useUserHospitalLinks, useUserHospitals } from '../api/users'
+import { getAuthState, subscribeAuthState } from '@/features/auth/session'
+import { useAnonymizeUserCpf, useDeactivateUser, useHospitalChoices, useSaveTenantUser, useSetUserHospitals, useTenantUser, useTenantUsers, useUserHospitalLinks, useUserHospitals } from '../api/users'
 import { userSchema } from '../schemas/user.schema'
 import type { TenantRole, TenantUser, TenantUserInput } from '../types'
 
@@ -26,6 +27,11 @@ export function UsersPage() {
   const linkQueries = useUserHospitalLinks(users.data ?? [])
   const [query, setQuery] = useState('')
   const [modal, setModal] = useState<'create' | TenantUser | null>(null)
+  const [anonymizeTarget, setAnonymizeTarget] = useState<TenantUser | null>(null)
+  const [anonymizeError, setAnonymizeError] = useState<string | null>(null)
+  const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
+  const canAnonymize = auth.user?.roles.some((role) => role === 'admin_cliente' || role === 'super_admin') ?? false
+  const anonymizeCpf = useAnonymizeUserCpf()
   const deactivate = useDeactivateUser()
   const allReady = linkQueries.every((item) => !item.isLoading)
   const filtered = useMemo(() => (users.data ?? []).filter((user) => `${user.nome} ${user.email} ${roles[user.role]}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [users.data, query])
@@ -33,6 +39,17 @@ export function UsersPage() {
   async function deactivateUser(user: TenantUser) {
     if (!window.confirm(`Desativar ${user.nome}? A pessoa perderá acesso ao HEMM.`)) return
     try { await deactivate.mutateAsync(user.id); toast.success('Usuário desativado.') } catch (error) { toast.error(getApiErrorMessage(error, 'Não foi possível desativar o usuário.')) }
+  }
+
+  async function anonymizeUserCpf(user: TenantUser) {
+    setAnonymizeError(null)
+    try {
+      await anonymizeCpf.mutateAsync(user.id)
+      toast.success('CPF anonimizado. Os dados do usuário foram atualizados.')
+      setAnonymizeTarget(null)
+    } catch (error) {
+      setAnonymizeError(getApiErrorMessage(error, 'Não foi possível anonimizar o CPF.'))
+    }
   }
 
   return <AdminPageShell title="Usuários & Papéis" subtitle="Acessos do tenant" action={<button type="button" onClick={() => setModal('create')} className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand"><Plus size={15} /> Convidar usuário</button>}>
@@ -44,11 +61,31 @@ export function UsersPage() {
       const index = (users.data ?? []).findIndex((item) => item.id === user.id)
       const ids = linkQueries[index]?.data ?? []
       const names = ids.map((id) => hospitals.data?.find((hospital) => hospital.id === id)?.nome).filter(Boolean)
-      return <tr key={user.id} className="border-b border-border/70 last:border-0"><td className="px-4 py-3"><div className="font-medium text-sm">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm">{roles[user.role] ?? user.role}</td><td className="max-w-[240px] px-4 py-3 text-sm text-text-secondary">{linkQueries[index]?.isLoading ? 'Carregando…' : names.length ? names.join(', ') : '—'}</td><td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 text-xs ${user.ativo ? 'text-primary' : 'text-text-muted'}`}><span className={`size-1.5 rounded-full ${user.ativo ? 'bg-primary' : 'bg-text-muted'}`} />{user.ativo ? 'Ativo' : 'Inativo'}</span></td><td className="px-4 py-3"><div className="flex items-center gap-2"><button type="button" onClick={() => setModal(user)} className="text-xs text-primary hover:underline">Editar</button>{user.ativo && <button type="button" disabled={deactivate.isPending} onClick={() => void deactivateUser(user)} className="text-xs text-danger hover:underline disabled:opacity-50">Desativar</button>}</div></td></tr>
+      return <tr key={user.id} className="border-b border-border/70 last:border-0"><td className="px-4 py-3"><div className="font-medium text-sm">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm">{roles[user.role] ?? user.role}</td><td className="max-w-[240px] px-4 py-3 text-sm text-text-secondary">{linkQueries[index]?.isLoading ? 'Carregando…' : names.length ? names.join(', ') : '—'}</td><td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 text-xs ${user.ativo ? 'text-primary' : 'text-text-muted'}`}><span className={`size-1.5 rounded-full ${user.ativo ? 'bg-primary' : 'bg-text-muted'}`} />{user.ativo ? 'Ativo' : 'Inativo'}</span></td><td className="px-4 py-3"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><button type="button" onClick={() => setModal(user)} className="text-xs text-primary hover:underline">Editar</button>{user.ativo && <button type="button" disabled={deactivate.isPending} onClick={() => void deactivateUser(user)} className="text-xs text-danger hover:underline disabled:opacity-50">Desativar</button>}{canAnonymize && isTenantUserRole(user.role) && <button type="button" onClick={() => setAnonymizeTarget(user)} className="text-xs text-danger hover:underline">Anonimizar CPF</button>}</div></td></tr>
     })}</tbody></table></div> : null}
     {modal && <UserForm user={modal === 'create' ? undefined : modal} hospitals={hospitals.data ?? []} hospitalsLoading={hospitals.isLoading} onClose={() => setModal(null)} onSaved={() => setModal(null)} />}
+    {anonymizeTarget && <AnonymizeCpfModal user={anonymizeTarget} busy={anonymizeCpf.isPending} error={anonymizeError} onClose={() => setAnonymizeTarget(null)} onConfirm={() => void anonymizeUserCpf(anonymizeTarget)} />}
     {!allReady && users.data?.length ? <span className="sr-only" aria-live="polite">Carregando vínculos de hospitais</span> : null}
   </AdminPageShell>
+}
+
+function AnonymizeCpfModal({ user, busy, error, onClose, onConfirm }: { user: TenantUser; busy: boolean; error: string | null; onClose: () => void; onConfirm: () => void }) {
+  const [confirmation, setConfirmation] = useState('')
+  const matchesName = confirmation.trim() === user.nome.trim()
+
+  return <Modal title="Anonimizar CPF" description="Esta ação é irreversível e não pode ser desfeita." onClose={onClose} busy={busy}>
+    <div className="space-y-4">
+      {error && <p role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">{error}</p>}
+      <div className="flex gap-3 rounded-md border border-danger/30 bg-danger/10 p-3 text-sm"><AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-danger" /><p className="text-text-primary">O CPF de <strong>{user.nome}</strong> ({user.email}) será anonimizado permanentemente.</p></div>
+      <label className="block space-y-1.5 text-xs font-medium text-text-secondary"><span>Digite o nome do usuário para confirmar: <strong className="text-text-primary">{user.nome}</strong></span><input autoFocus value={confirmation} onChange={(event) => setConfirmation(event.target.value)} disabled={busy} autoComplete="off" className="h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" aria-label="Confirmação do nome do usuário" /></label>
+      {confirmation.length > 0 && !matchesName && <p role="status" className="text-xs text-danger">O nome digitado não corresponde ao usuário.</p>}
+      <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" disabled={busy} onClick={onClose} className="h-9 rounded-md border border-border px-3 text-xs">Cancelar</button><button type="button" disabled={!matchesName || busy} onClick={onConfirm} className="h-9 rounded-md bg-danger px-3 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Anonimizando…' : 'Anonimizar CPF'}</button></div>
+    </div>
+  </Modal>
+}
+
+function isTenantUserRole(role: string): role is TenantRole {
+  return role === 'admin_cliente' || role === 'tecnico' || role === 'interno_hospital'
 }
 
 function UserForm({ user, hospitals, hospitalsLoading, onClose, onSaved }: { user?: TenantUser; hospitals: { id: string; nome: string }[]; hospitalsLoading: boolean; onClose: () => void; onSaved: () => void }) {
