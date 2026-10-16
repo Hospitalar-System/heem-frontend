@@ -67,7 +67,12 @@ export function WorkOrdersPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
-  useEffect(() => { if (location.pathname === '/work-orders/new') setIsCreateOpen(true) }, [location.pathname])
+  useEffect(() => {
+    if (location.pathname !== '/work-orders/new') return
+    setIsCreateOpen(true)
+    const requestedEquipmentId = new URLSearchParams(location.search).get('equipamentoId')
+    if (requestedEquipmentId) setEquipamentoId(requestedEquipmentId)
+  }, [location.pathname, location.search])
 
   const equipmentById = useMemo(() => new Map((equipment.data ?? []).map((item) => [item.id, item])), [equipment.data])
   const sectorById = useMemo(() => new Map((sectors.data ?? []).map((item) => [item.id, item])), [sectors.data])

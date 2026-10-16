@@ -49,7 +49,7 @@ A seção do Figma é desktop-first e agrupa telas distintas. A listagem (`W10`)
 - Abas: Dados, Histórico de medições, Checklists e OTs. A aba selecionada deve ser navegável por teclado e ter estado ativo perceptível.
 - Aba Dados apresenta identificação e atributos técnicos retornados pelo equipamento; valores ausentes usam `—`, não dados do Figma.
 - Indicadores exibem MTBF, disponibilidade e total de OTs no ano quando o endpoint e seu contrato fornecerem os valores para o equipamento. Não calcular esses indicadores no frontend.
-- A área de próxima manutenção pode exibir prazo, checklist e responsável apenas se vierem de dados de OT relacionados. `Agendar OT preventiva` encaminha ao fluxo de F4; enquanto ele não existir, a ação deve estar desabilitada/indisponível com comportamento coerente, sem simular criação.
+- A área de próxima manutenção pode exibir prazo, checklist e responsável apenas se vierem de dados de OT relacionados. `Agendar OT preventiva` encaminha ao fluxo de F4 com o equipamento pré-selecionado; a criação continua submetida ao contrato de F4.
 - Técnico pode consultar somente equipamento de hospital ao qual está vinculado; o backend continua sendo a autoridade de autorização e escopo.
 
 ## Regras funcionais
@@ -125,14 +125,12 @@ Enquanto algum contrato estiver pendente, a implementação não deve inventar p
 - [ ] `/assets/:id` mostra dados e estado do equipamento consultados da API, com quatro abas acessíveis.
 - [ ] Histórico, checklists, OTs e indicadores só exibem dados reais de contratos confirmados; abas indisponíveis não usam fixtures.
 - [ ] MTBF, disponibilidade e total anual de OTs não são calculados no browser.
-- [ ] A ação de agendamento direciona ao fluxo F4 disponível, sem simular operação.
+- [x] Admin do Cliente pode abrir o fluxo F4 pelo botão de agendamento; o equipamento atual é pré-selecionado sem criar a OT automaticamente.
 - [ ] Técnico não acessa equipamento fora dos hospitais autorizados; erros 403/404 têm tratamento claro.
 - [ ] Dark, Light, Loading, Empty, Error e estados de mutação são distintos e acessíveis.
 - [ ] Testes cobrem filtros, acesso ao detalhe, formulários, upload em nível de integração mockada, autorização e estados de API; lint e build passam.
 
 ## Decisões pendentes
 
-1. Confirmar os detalhes e critérios completos dos issues #8, #9 e #10; a leitura pública das URLs retornou 404 nesta sessão.
-2. Confirmar contrato OpenAPI para campos, filtros, paginação, upload, medições, indicadores e relações equipamento-checklist/OT.
+1. Confirmar contrato OpenAPI para filtros, paginação, medições, indicadores por equipamento e relações equipamento-checklist/OT. O backend local não estava disponível durante a revisão.
 3. Definir se o cadastro/edição abre página, modal ou drawer; a seção do Figma não contém frame de formulário de equipamento.
-4. Confirmar navegação para agendamento preventivo e o destino da ação após a entrega da Story F4.4.
