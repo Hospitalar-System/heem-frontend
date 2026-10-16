@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import type { PropsWithChildren } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
+import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { UsersPage } from '../pages/UsersPage'
 import type { TenantUser } from '../types'
 
@@ -43,6 +44,7 @@ function configureApi() {
       users = [...users, created]
       return { data: created } as never
     }
+    if (/^\/users\/[^/]+\/anonimizar-cpf$/.test(url)) return { data: {} } as never
     const linkMatch = url.match(/^\/users\/([^/]+)\/hospitais\/([^/]+)$/)
     if (linkMatch) {
       const [, userId, hospitalId] = linkMatch
@@ -73,7 +75,7 @@ beforeEach(() => {
   configureApi()
 })
 
-afterEach(() => vi.resetAllMocks())
+afterEach(() => { clearAuthSession(); vi.resetAllMocks() })
 
 describe('UsersPage F2.2', () => {
   it('shows a loading skeleton while the users request is pending', async () => {
@@ -170,5 +172,74 @@ describe('UsersPage F2.2', () => {
     expect(await screen.findByText('Inativo')).toBeInTheDocument()
     expect(apiClient.post).toHaveBeenCalledWith('/users/user-1/desativar')
     expect(success).toHaveBeenCalledWith('Usuário desativado.')
+  })
+
+  it('requires an exact name confirmation and calls the CPF anonymization endpoint', async () => {
+    const user = userEvent.setup()
+    users = [activeUser]
+    setAuthSession('token', { id: 'admin-1', name: 'Admin', roles: ['admin_cliente'] })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Anonimizar CPF' }))
+    const confirmButton = within(screen.getByRole('dialog')).getByRole('button', { name: /^Anonimizar CPF$/ })
+    expect(confirmButton).toBeDisabled()
+    const nameInput = screen.getByLabelText('Confirmação do nome do usuário')
+    await user.type(nameInput, 'Outra pessoa')
+    expect(confirmButton).toBeDisabled()
+    await user.clear(nameInput)
+    await user.type(nameInput, '  Clara Mendes  ')
+    expect(confirmButton).toBeEnabled()
+    await user.click(confirmButton)
+
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/users/user-1/anonimizar-cpf'))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(success).toHaveBeenCalledWith('CPF anonimizado. Os dados do usuário foram atualizados.')
+  })
+
+  it('does not send a request when the operator cancels the confirmation', async () => {
+    const user = userEvent.setup()
+    users = [activeUser]
+    setAuthSession('token', { id: 'admin-1', name: 'Admin', roles: ['admin_cliente'] })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Anonimizar CPF' }))
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(apiClient.post).not.toHaveBeenCalledWith('/users/user-1/anonimizar-cpf')
+  })
+
+  it('keeps the confirmation open and preserves the name after an API error', async () => {
+    const user = userEvent.setup()
+    users = [activeUser]
+    setAuthSession('token', { id: 'admin-1', name: 'Admin', roles: ['admin_cliente'] })
+    vi.mocked(apiClient.post).mockImplementation(async (url) => {
+      if (url === '/users/user-1/anonimizar-cpf') throw { response: { data: { detail: 'CPF já anonimizado.' } } }
+      throw new Error(`Unexpected POST ${url}`)
+    })
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Anonimizar CPF' }))
+    const nameInput = screen.getByLabelText('Confirmação do nome do usuário')
+    await user.type(nameInput, 'Clara Mendes')
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^Anonimizar CPF$/ }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('CPF já anonimizado.')
+    expect(nameInput).toHaveValue('Clara Mendes')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('does not expose anonymization for a platform user', async () => {
+    users = [{ ...activeUser, role: 'platform_user' as TenantUser['role'] }]
+    setAuthSession('token', { id: 'admin-1', name: 'Admin', roles: ['admin_cliente'] })
+    renderPage()
+
+    await screen.findByText('Clara Mendes')
+    expect(screen.queryByRole('button', { name: 'Anonimizar CPF' })).not.toBeInTheDocument()
+  })
+
+  it('exposes the action to a Super Admin when the current user endpoint returns a tenant user', async () => {
+    users = [activeUser]
+    setAuthSession('token', { id: 'platform-admin', name: 'Super Admin', roles: ['super_admin'] })
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: 'Anonimizar CPF' })).toBeInTheDocument()
   })
 })

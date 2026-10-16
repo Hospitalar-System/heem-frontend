@@ -23,3 +23,16 @@ export function useDeactivateUser() {
   const client = useQueryClient()
   return useMutation({ mutationFn: async (id: string) => apiClient.post(`/users/${id}/desativar`), onSuccess: () => client.invalidateQueries({ queryKey: key }) })
 }
+
+export function useAnonymizeUserCpf() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => apiClient.post(`/users/${id}/anonimizar-cpf`),
+    onSuccess: async (_data, id) => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: key }),
+        client.invalidateQueries({ queryKey: [...key, id] }),
+      ])
+    },
+  })
+}
