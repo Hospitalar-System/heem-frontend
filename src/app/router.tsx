@@ -20,6 +20,7 @@ const WorkOrdersPage = lazy(() => import('@/features/maintenance/pages/WorkOrder
 const WorkOrderDetailPage = lazy(() => import('@/features/maintenance/pages/WorkOrderDetailPage').then((module) => ({ default: module.WorkOrderDetailPage })))
 const ChecklistsPage = lazy(() => import('@/features/maintenance/pages/ChecklistsPage').then((module) => ({ default: module.ChecklistsPage })))
 const SlaPolicyPage = lazy(() => import('@/features/sla-policy/pages/SlaPolicyPage').then((module) => ({ default: module.SlaPolicyPage })))
+const BatchImportPage = lazy(() => import('@/features/imports/pages/BatchImportPage').then((module) => ({ default: module.BatchImportPage })))
 
 const router = createBrowserRouter([
   {
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
   { path: '/work-orders/:id', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrderDetailPage /></Suspense></RequireRole> },
   { path: '/checklists', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><ChecklistsPage /></Suspense></RequireRole> },
   { path: '/settings/sla', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><SlaPolicyPage /></Suspense></RequireRole> },
+  { path: '/imports', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><BatchImportPage /></Suspense></RequireRole> },
   {
     path: '/dashboard',
     element: (
