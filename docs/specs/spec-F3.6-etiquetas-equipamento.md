@@ -1,6 +1,6 @@
 # Spec F3.6 — Etiquetas do Equipamento
 
-**Status:** especificação para implementação; contrato disponibilizado no ambiente `dev` conforme comentário do backend no issue.  
+**Status:** implementado no frontend; link ao equipamento que já usa a etiqueta depende de o backend fornecer seu ID no conflito `ETIQUETA_EM_USO`.
 **Story:** F3.6 — Etiquetas do equipamento  
 **Issue:** [#30 — Story F3.6: Etiquetas do equipamento](https://github.com/Hospitalar-System/heem-frontend/issues/30)  
 **Tela relacionada:** [Spec F3.2–F3.4 — Equipamentos](spec-F3.2-F3.3-F3.4-equipamentos.md)  
@@ -52,14 +52,14 @@ O backend devolve `403` para `interno_hospital` e `404` para Técnico de outro h
 
 ## Critérios de aceite
 
-- [ ] A seção “Etiquetas” aparece no detalhe do equipamento apenas para `admin_cliente`.
-- [ ] A lista consulta etiquetas ativas daquele equipamento e mostra valor, tipo, quem vinculou e quando, usando os dados recebidos.
-- [ ] É possível vincular etiquetas dos tipos `qr`, `barras` e `outro`, incluindo valor inserido por leitor USB que opera como teclado.
-- [ ] Valores vazios, acima de 200 caracteres ou com caracteres de controle são tratados; o backend também pode rejeitar com erro exibido no formulário.
-- [ ] Repetir um vínculo no mesmo equipamento trata a resposta idempotente `200` sem duplicar a etiqueta.
-- [ ] `409 ETIQUETA_EM_USO` apresenta a resposta segura do backend e só navega ao equipamento existente se houver ID confiável/autorizado.
-- [ ] Desvincular exige confirmação, só atualiza a lista após `204` e não sugere que o histórico foi apagado.
-- [ ] Loading, empty, error, envio, confirmação, Dark/Light e restrição de papel estão cobertos por testes.
+- [x] A seção “Etiquetas” aparece no detalhe do equipamento apenas para `admin_cliente`.
+- [x] A lista consulta etiquetas ativas daquele equipamento e mostra valor, tipo, quem vinculou e quando, usando os dados recebidos.
+- [x] É possível vincular etiquetas dos tipos `qr`, `barras` e `outro`, incluindo valor inserido por leitor USB que opera como teclado.
+- [x] Valores vazios, acima de 200 caracteres ou com caracteres de controle são tratados; erros do backend permanecem no formulário.
+- [x] Repetir um vínculo no mesmo equipamento trata a resposta idempotente `200` sem duplicar a etiqueta.
+- [ ] `409 ETIQUETA_EM_USO` apresenta a resposta segura do backend; o link ao equipamento permanece bloqueado porque o contrato não retorna um ID navegável/autorizável.
+- [x] Desvincular exige confirmação, só atualiza a lista após `204` e não sugere que o histórico foi apagado.
+- [x] Loading, empty, error, envio, confirmação e restrição de papel têm testes; Dark/Light usam os tokens semânticos compartilhados.
 
 ## Dependências e limites conhecidos
 

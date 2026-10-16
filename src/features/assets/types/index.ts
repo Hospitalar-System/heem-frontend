@@ -75,3 +75,19 @@ export interface SignedUploadUrl {
   chave: string
   expiraEm: string
 }
+
+export type EquipmentLabelType = 'qr' | 'barras' | 'outro'
+
+export interface EquipmentLabel {
+  id: string
+  equipamentoId: string
+  valor: string
+  tipo: EquipmentLabelType
+  vinculadoPor: string
+  vinculadoEm: string
+}
+
+export interface CreateEquipmentLabelInput {
+  valor: string
+  tipo: EquipmentLabelType
+}

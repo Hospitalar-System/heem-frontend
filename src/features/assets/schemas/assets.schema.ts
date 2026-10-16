@@ -28,7 +28,19 @@ export const equipmentSchema = z.object({
   dataGarantiaFim: z.string(),
 })
 
+export const equipmentLabelSchema = z.object({
+  valor: z.string()
+    .refine((value) => !Array.from(value).some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0
+      return codePoint <= 31 || (codePoint >= 127 && codePoint <= 159)
+    }), 'O valor não pode conter caracteres de controle.')
+    .transform((value) => value.trim())
+    .pipe(z.string().min(1, 'Informe o valor da etiqueta.').max(200, 'Use até 200 caracteres.')),
+  tipo: z.enum(['qr', 'barras', 'outro']),
+})
+
 export type EquipmentFormValues = z.infer<typeof equipmentSchema>
+export type EquipmentLabelFormValues = z.infer<typeof equipmentLabelSchema>
 
 export function toEquipmentInput(values: EquipmentFormValues, fotoUrl: string | null): CreateEquipmentInput {
   const dadosGerais = Object.fromEntries(values.dadosGerais
