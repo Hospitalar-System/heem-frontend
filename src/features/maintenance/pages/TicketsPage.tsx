@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useEquipments, useHospitals, useSectorsForHospitals } from '@/features/assets/api/assets'
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
 import { useCreateCorrectiveWorkOrder, useTickets } from '../api/tickets'
+import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import type { Ticket, TicketSeverity, TicketStatus } from '../types'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
@@ -135,6 +136,7 @@ export function TicketsPage() {
                 <Link to={`/tickets/${ticket.id}`} aria-label={`Abrir chamado ${ticket.id}`} className="text-sm font-semibold text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">Chamado {ticket.id.slice(0, 8)}</Link>
                 <span className={`rounded-md border px-2 py-1 text-[10px] font-medium ${severityClass(ticket.severidade)}`}>{severityText[ticket.severidade] ?? 'Severidade não informada'}</span>
                 <span className="rounded-md border border-border bg-bg px-2 py-1 text-[10px] text-text-secondary">{statusText[status] ?? ticket.status}</span>
+                <TicketSlaBadge status={ticket.slaStatus} />
               </div>
               <p className="mt-2 truncate text-sm font-medium text-text-primary">{equip ? `${equip.codigo} · ${equip.nome}` : 'Equipamento —'}</p>
               <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-secondary">{ticket.descricao || 'Sem descrição'}</p>

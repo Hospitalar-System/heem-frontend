@@ -15,7 +15,7 @@ vi.mock('@/components/layout/AdminPageShell', () => ({
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const tickets = [
-  { id: 'ticket-critical', hospitalId: 'hospital-1', setorId: 'sector-1', equipamentoId: 'equipment-1', abertoPor: 'user-2', descricao: 'Falha crítica de pressão', severidade: 'CRITICA', status: 'ABERTO', abertoEm: '2026-10-14T10:00:00Z' },
+  { id: 'ticket-critical', hospitalId: 'hospital-1', setorId: 'sector-1', equipamentoId: 'equipment-1', abertoPor: 'user-2', descricao: 'Falha crítica de pressão', severidade: 'CRITICA', status: 'ABERTO', abertoEm: '2026-10-14T10:00:00Z', slaStatus: 'vencido', slaAtendimentoAte: '2026-10-14T10:15:00Z', slaResolucaoAte: '2026-10-14T14:00:00Z' },
   { id: 'ticket-resolved', hospitalId: 'hospital-1', setorId: 'sector-1', equipamentoId: 'equipment-1', abertoPor: 'user-2', descricao: 'Falha resolvida', severidade: 'ALTA', status: 'RESOLVIDO', abertoEm: '2026-10-13T10:00:00Z' },
 ]
 let currentTickets = [...tickets]
@@ -55,6 +55,7 @@ describe('TicketsPage', () => {
     expect(screen.getAllByText('EQ-01 · Bomba de infusão')).toHaveLength(2)
     expect(screen.getAllByText('Santa Casa · UTI Adulto')).toHaveLength(2)
     expect(screen.getAllByRole('button', { name: 'Gerar OT corretiva' })).toHaveLength(1)
+    expect(screen.getByText('SLA vencido')).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: 'Abrir chamado ticket-critical' }))
     expect(screen.getByTestId('current-route')).toHaveTextContent('/tickets/ticket-critical')
   })
