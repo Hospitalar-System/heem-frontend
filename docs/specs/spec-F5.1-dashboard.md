@@ -1,7 +1,9 @@
 # Spec F5.1 — Dashboard operacional
 
-**Status:** implementado para `admin_cliente`; fixture demonstrativa até o contrato de dados do backend ser definido  
+**Status:** integração frontend e agregados implementados contra o contrato proposto abaixo; homologação com o DTO real do backend ainda pendente.
 **Story:** F5.1 — Dashboard (`docs/epics.md`)  
+**Issue:** [#16 — Story F5.1: Dashboard](https://github.com/Hospitalar-System/heem-frontend/issues/16)
+**Emenda aprovada:** [Comentário de 14/10/2026](https://github.com/Hospitalar-System/heem-frontend/issues/16#issuecomment-6178477086)
 **Persona:** Admin do Cliente  
 **Referência visual:** [Seção Dashboard no Figma](https://www.figma.com/design/EDy6hci8DTe0hniabXwsqi/HEMM?node-id=2411-5)  
 **Frames:** `W06-Dashboard/Default` (`2404:12899`), `W07-Dashboard/Alt` (`2404:13049`), `W08-Dashboard/Loading/Dark` (`2404:14950`) e `W09-Dashboard/Empty/Dark` (`2404:15021`)  
@@ -16,6 +18,7 @@ Apresentar ao Admin do Cliente um resumo da saúde operacional do tenant ao entr
 - Rota de dashboard para o papel `admin_cliente`.
 - Shell do painel Web com sidebar, perfil do usuário autenticado em memória, contexto do tenant e cabeçalho global conforme o frame.
 - Quatro indicadores operacionais, gráfico de OTs por status, tendência de MTBF por setor e tabela de chamados recentes.
+- Resumo operacional ampliado: equipamentos ativos, chamados por severidade, SLAs vencidos, disponibilidade, preventivas atrasadas e documentos próximos do vencimento.
 - Estados Default, Light, Loading e Empty mostrados na seção do Figma, além de erro recuperável exigido para dados assíncronos.
 - Busca global e acessos de navegação presentes no cabeçalho e menu.
 
@@ -36,15 +39,17 @@ A seção Figma agrupa quatro frames desktop de **1440×900**. A tela assume des
 
 ### Conteúdo Default
 
-1. **Linha de KPIs:** quatro cards em grade responsiva:
+1. **Linha de KPIs:** cards em grade responsiva:
    - Equipamentos ativos, valor e variação percentual vs. mês anterior.
    - OT em aberto, quantidade e novas hoje.
-   - Emergências hoje, quantidade e quantas críticas estão em aberto.
+   - Chamados de emergência, com distribuição por severidade e quantas críticas estão em aberto.
    - Disponibilidade, percentual e variação em pontos percentuais na semana.
+   - SLAs vencidos, preventivas atrasadas e documentos próximos do vencimento, destacados como contadores operacionais de atenção.
 2. **Gráficos, lado a lado:**
    - “OT por status”: barras para Aberto, Em andamento, Concluído e Atrasado; período indicado como “Últimos 30 dias”.
    - “MTBF por setor”: linha/tendência em horas com setores no eixo horizontal.
 3. **Chamados recentes:** tabela com “Chamado”, “Equipamento”, “Hospital / Setor”, “Severidade” e “Abertura”, ação “Ver todos” e linhas clicáveis.
+4. **Resumo ampliado:** incluir contagem/distribuição dos chamados por severidade, total de chamados com SLA vencido, preventivas atrasadas e documentos vencendo. A apresentação pode usar KPI cards ou uma faixa de alertas compacta, mantendo hierarquia e legibilidade do dashboard existente; os valores devem vir do agregado oficial.
 
 Os números e nomes visíveis no Figma (por exemplo, `1.284`, `47`, `3` e `97,4%`) são dados ilustrativos do mockup, não valores fixos da aplicação.
 
@@ -60,12 +65,13 @@ Mantém sidebar e cabeçalho funcionais e representa os quatro KPIs, dois gráfi
 
 1. Ao acessar `/dashboard`, o sistema carrega os agregados do tenant associado à sessão do Admin do Cliente. O cliente nunca envia um tenantId arbitrário para ampliar o escopo; o backend permanece autoridade de isolamento multi-tenant.
 2. O dashboard disponibiliza métricas dos KPIs e séries dos gráficos consistentes com FR-16/FR-16b. As regras de cálculo oficiais vêm do backend.
-3. “Chamados recentes” ordena por abertura mais recente, salvo regra confirmada do endpoint. Cada linha abre o detalhe do chamado correspondente; “Ver todos” abre a listagem do Epic F4.
-4. A pesquisa do cabeçalho aceita equipamentos, OTs e chamados e leva à entidade correspondente quando a busca for selecionada. O formato do autocomplete, os filtros e o endpoint ainda precisam ser confirmados.
-5. “+ Nova OT” inicia o fluxo de criação de OT quando disponível. O destino/fluxo não está definido nesta Story e não deve ser simulado como concluído.
-6. O sino abre um popover ancorado com as notificações do usuário quando houver endpoint. Até lá, não mostrar contagem ou dados de fixture como reais e apresentar um estado indisponível. Não inferir marcação de leitura ou mutações a partir do mockup.
-7. Erros de API preservam o shell, apresentam mensagem objetiva e permitem tentar novamente. Uma resposta vazia válida não deve ser apresentada como erro.
-8. O seletor de tema no cabeçalho oferece Claro, Escuro e Automático, com ícones; Automático segue `prefers-color-scheme`.
+3. O dashboard também apresenta os agregados da emenda aprovada na issue #16: chamados por severidade, SLAs vencidos, preventivas atrasadas e documentos vencendo. O backend deve fornecer os totais e as janelas temporais; o frontend não deve recalcular essas métricas varrendo listas parciais.
+4. “Chamados recentes” ordena por abertura mais recente, salvo regra confirmada do endpoint. Cada linha abre o detalhe do chamado correspondente; “Ver todos” abre a listagem do Epic F4.
+5. A pesquisa do cabeçalho aceita equipamentos, OTs e chamados e leva à entidade correspondente quando a busca for selecionada. O formato do autocomplete, os filtros e o endpoint ainda precisam ser confirmados.
+6. “+ Nova OT” inicia o fluxo de criação de OT quando disponível. O destino/fluxo não está definido nesta Story e não deve ser simulado como concluído.
+7. O sino abre um popover ancorado com as notificações do usuário quando houver endpoint. Até lá, não mostrar contagem ou dados de fixture como reais e apresentar um estado indisponível. Não inferir marcação de leitura ou mutações a partir do mockup.
+8. Erros de API preservam o shell, apresentam mensagem objetiva e permitem tentar novamente. Uma resposta vazia válida não deve ser apresentada como erro.
+9. O seletor de tema no cabeçalho oferece Claro, Escuro e Automático, com ícones; Automático segue `prefers-color-scheme`.
 
 ## Indicadores, séries e semântica dos dados
 
@@ -80,12 +86,16 @@ O frame sugere os seguintes campos; valores e fórmulas devem vir de agregados d
 | OT por status | contagem de Aberto, Em andamento, Concluído e Atrasado | Mapeamento dos estados reais para as quatro séries e janela de 30 dias |
 | MTBF por setor | pontos da série, setor, horas | Fórmula FR-16b, período e tratamento de setor sem amostra |
 | Chamados recentes | id, equipamento, hospital/setor, severidade, abertura | Ordenação, paginação e quantidade inicial |
+| Chamados por severidade | total por severidade e total de críticas abertas | Enumeração e regras de inclusão de estados |
+| SLA vencido | quantidade e, se aplicável, idade do vencimento | Definição do SLA, timezone e quais estados deixam de contar |
+| Preventivas atrasadas | quantidade de OTs preventivas vencidas e não concluídas | Status que contam, data de referência e timezone |
+| Documentos vencendo | quantidade e janela de vencimento; opcionalmente itens para navegação | Tipos de documento, janela de alerta e autorização de acesso |
 
 Não derivar MTBF, disponibilidade, atraso, variações ou contagens a partir dos poucos pontos desenhados no Figma. O gráfico deve tratar ausências e zeros conforme o contrato da API.
 
 ## Contrato de dados e integrações
 
-Este repositório não contém contrato OpenAPI para os agregados do dashboard. O shape abaixo é uma necessidade de interface, não um DTO confirmado:
+O inventário de rotas disponível inclui `GET /api/v1/relatorios/dashboard`. A rota é conhecida, mas este repositório ainda não contém o DTO OpenAPI confirmado para o resumo original nem para os agregados ampliados. O shape abaixo é uma necessidade de interface, não um DTO confirmado:
 
 ```ts
 interface DashboardSummaryResponse {
@@ -95,7 +105,11 @@ interface DashboardSummaryResponse {
     openWorkOrders: { value: number; newToday: number }
     emergencies: { value: number; criticalOpen: number }
     availability: { percent: number; weeklyChangePp: number }
+    overdueSla: { count: number }
+    overduePreventiveWorkOrders: { count: number }
+    expiringDocuments: { count: number; withinDays?: number }
   }
+  emergenciesBySeverity: Array<{ severity: string; count: number }>
   workOrdersByStatus: Array<{ status: string; count: number }>
   mtbfBySector: Array<{ sector: string; hours: number }>
   recentTickets: Array<{
@@ -109,11 +123,14 @@ interface DashboardSummaryResponse {
 }
 ```
 
-O `DashboardSummary` no front-end é um view model normalizado e atualmente preenchido pelo fixture do Figma em `src/features/dashboard/data/dashboard.demo.ts`. Não representa o DTO do servidor e não deve ser exibido como dado operacional em produção. Confirmar endpoint, query keys, paginação, atualização/refetch, datas/timezone, precisão, códigos de erro e formato dos valores com o backend antes de substituir o fixture. Respeitar RFC 7807 (`ProblemDetail`) já estabelecido para erros REST. Se APIs separadas forem necessárias, documentar sua consistência temporal.
+O front-end consome `GET /api/v1/relatorios/dashboard` pelo hook React Query do feature e valida a resposta em runtime antes de normalizá-la. O shape TypeScript/Zod em `src/features/dashboard/types/index.ts` formaliza o contrato de consumo proposto neste spec, mas ainda não foi confirmado contra o DTO OpenAPI real do servidor. Respostas divergentes são tratadas como erro recuperável; nenhum dado de fixture do Figma é exibido como operacional. Confirmar propriedades, filtros, atualização/refetch, datas/timezone, precisão, códigos de erro e formato dos valores com o backend. Respeitar RFC 7807 (`ProblemDetail`) já estabelecido para erros REST. A emenda da issue depende das stories correspondentes do `heem-backend` estarem em `dev`; os IDs dessas stories não estão indicados no comentário e não devem ser presumidos.
+
+Não consultar todos os equipamentos, OTs, chamados e documentos em chamadas N+1 para reconstruir os agregados. Em particular, a contagem de documentos vencendo exige dado agregado/autorizado do backend; os endpoints atuais de documentos por equipamento não são suficientes para uma consulta global confiável.
 
 ## Estados de interface
 
 - **Default:** renderiza shell, contexto do tenant, KPIs, ambos os gráficos e chamados recentes.
+- **Default ampliado:** inclui distribuição por severidade e indicadores de SLA vencido, preventiva atrasada e documento vencendo, sem substituir os gráficos e aceites originais.
 - **Light:** mesmos dados e hierarquia do Default com tokens Light.
 - **Loading:** skeletons para as áreas em carregamento, sem travar navegação global.
 - **Empty:** mensagem útil e CTAs acordadas, preservando sidebar/cabeçalho.
@@ -134,18 +151,22 @@ Figma e `docs/experience.md` priorizam o painel Web desktop. A composição para
 ## Critérios de aceite
 
 - [ ] `/dashboard` exibe shell e conteúdo do tenant correto para Admin do Cliente.
-- [ ] KPIs e gráficos exibem dados de FR-16/FR-16b sem fórmulas duplicadas no front-end.
+- [ ] KPIs, gráficos e agregados ampliados exibem dados de FR-16/FR-16b e da emenda da issue #16 sem fórmulas duplicadas no front-end.
+- [ ] Chamados são agrupados por severidade e os totais de SLA vencido, preventivas atrasadas e documentos vencendo vêm do agregado autorizado do backend.
 - [ ] “Chamados recentes” é navegável para detalhe e “Ver todos” para a lista de chamados.
 - [ ] A busca e “Nova OT” têm destinos/contratos definidos; notificações mostram dados do endpoint quando disponível ou o estado indisponível sem dados fictícios.
 - [ ] O seletor no cabeçalho alterna Claro, Escuro e Automático com ícones.
+- [x] O front-end consulta `GET /api/v1/relatorios/dashboard`, valida o agregado e não exibe valores demonstrativos como reais.
+- [x] Loading, Empty e Error são derivados da consulta; o erro permite retry sem recarregar a página.
+- [x] Empty usa os CTAs acordados e navega a destinos funcionais.
 - [ ] Default Dark, Light, Loading, Empty e Error ficam visual e funcionalmente distintos.
-- [ ] Empty usa os CTAs acordados e navega a destinos funcionais.
 - [ ] Gráficos, severidades, tabela e navegação atendem os requisitos de teclado e leitor de tela.
 - [ ] O layout preserva a hierarquia desktop do Figma; comportamento em viewports menores é acordado/documentado.
 
-## Decisões pendentes antes da implementação
+## Dependências e decisões pendentes
 
-1. Contratos/endpoints e fórmulas de cada KPI/gráfico, incluindo períodos e timezone.
-2. Definição e quantidade dos “Chamados recentes”, ordem e paginação.
-3. Destinos definitivos das ações “Nova OT”, pesquisa global, contador de notificações e “Ver todos”.
-4. Comportamento responsivo e tratamento de falha parcial entre widgets.
+1. DTO expandido do `GET /api/v1/relatorios/dashboard` e stories correspondentes do backend em `dev`, conforme dependência apontada no comentário da issue.
+2. Contratos e fórmulas de cada KPI/gráfico/agregado, incluindo períodos e timezone.
+3. Definição e quantidade dos “Chamados recentes”, ordem e paginação.
+4. Destinos definitivos das ações “Nova OT”, pesquisa global, contador de notificações e “Ver todos”.
+5. Comportamento responsivo, tratamento de falha parcial e permissões específicas para os agregados de documentos.
