@@ -3,6 +3,7 @@ import { useState, type PropsWithChildren, type ReactNode } from 'react'
 import { ThemeSwitcher } from '@/app/ThemeSwitcher'
 import { DashboardSidebar } from '@/features/dashboard/components/DashboardSidebar'
 import { NotificationsPopover } from '@/features/dashboard/components/NotificationsPopover'
+import { isDemoMode } from '@/lib/demo-mode'
 
 export function AdminPageShell({ title, subtitle, action, children }: PropsWithChildren<{ title: string; subtitle?: string; action?: ReactNode }>) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -24,6 +25,7 @@ export function AdminPageShell({ title, subtitle, action, children }: PropsWithC
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <label className="relative hidden h-[38px] w-[240px] xl:block"><Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} /><input type="search" aria-label="Pesquisar" placeholder="Pesquisar" className="h-full w-full rounded-md border border-border bg-surface pl-8 pr-3 text-xs outline-none placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
+            {isDemoMode && <span className="hidden rounded-sm border border-warning/40 px-2 py-1 text-[10px] font-medium text-warning sm:inline">Demonstração · dados locais</span>}
             <NotificationsPopover /><ThemeSwitcher />{action}
           </div>
         </header>

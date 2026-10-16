@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { apiClient } from '@/lib/axios'
+import { isDemoMode } from '@/lib/demo-mode'
 import type { CurrentUserResponse, UserProfileDTO } from '../types'
 
 const devTokenUrl = 'http://localhost:8080/dev/token/admin-cliente'
@@ -9,6 +10,8 @@ const devTokenClient = axios.create({
 })
 
 export async function getDevelopmentToken() {
+  if (isDemoMode) return 'heem-demo-admin-cliente-token'
+
   const { data } = await devTokenClient.get<unknown>(devTokenUrl)
   const token = typeof data === 'string'
     ? data
@@ -24,7 +27,17 @@ export async function getDevelopmentToken() {
   return token
 }
 
-export async function getCurrentUser(accessToken: string) {
+export async function getCurrentUser(accessToken: string): Promise<UserProfileDTO> {
+  if (isDemoMode) {
+    return {
+      id: 'user-demo-1',
+      name: 'Clara Mendes',
+      email: 'clara.mendes@example.test',
+      roles: ['admin_cliente'],
+      tenantId: 'tenant-demo-1',
+    }
+  }
+
   const { data } = await apiClient.get<CurrentUserResponse>('/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
