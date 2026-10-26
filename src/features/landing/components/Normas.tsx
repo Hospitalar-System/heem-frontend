@@ -36,7 +36,7 @@ export function Normas() {
                   tabIndex={selecionado ? 0 : -1}
                   onClick={() => tabs.select(i)}
                   onKeyDown={(event) => tabs.onKeyDown(event, i)}
-                  className={`font-mono rounded-full border px-4 py-2.5 text-[13px] transition ${focusRing} ${
+                  className={`landing-chip-norma font-mono rounded-full border px-4 py-2.5 text-[13px] ${focusRing} ${
                     selecionado
                       ? 'border-primary bg-[var(--primary-soft)] text-primary'
                       : 'border-border bg-surface text-text-secondary hover:border-primary hover:text-primary'
