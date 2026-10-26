@@ -9,6 +9,8 @@ import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/a
 import { useChecklists, useCreatePreventiveWorkOrder, useWorkOrders } from '../api/work-orders'
 import { preventiveWorkOrderSchema } from '../schemas/work-orders.schema'
 import { Select } from '@/components/ui/Select'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { DateTimePicker } from '@/components/ui/DateTimePicker'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const statusLabel: Record<string, string> = {
@@ -146,7 +148,7 @@ export function WorkOrdersPage() {
         <label className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-bg px-3 text-xs text-text-secondary"><input type="checkbox" checked={onlyOverdue} onChange={(event) => setOnlyOverdue(event.target.checked)} className="size-4 accent-warning" />Atrasadas</label>
         <Select size="sm" aria-label="Filtrar por tipo" value={typeFilter} onChange={setTypeFilter} options={[{ value: '', label: 'Todos os tipos' }, { value: 'PREVENTIVA', label: 'Preventiva' }, { value: 'CORRETIVA', label: 'Corretiva' }]} />
         <Select size="sm" aria-label="Filtrar por técnico" value={technicianFilter} onChange={setTechnicianFilter} options={[{ value: '', label: 'Todos os técnicos' }, ...(users.data ?? []).filter((user) => user.role === 'tecnico').map((user) => ({ value: user.id, label: user.nome }))]} />
-        <label className="grid grid-cols-2 gap-2 sm:col-span-2 xl:col-span-6 xl:grid-cols-[auto_180px_auto_180px]"><span className="self-center text-xs text-text-secondary">Período</span><input type="date" aria-label="Data inicial" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} className={inputClass} /><span className="self-center text-xs text-text-secondary">até</span><input type="date" aria-label="Data final" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className={inputClass} /></label>
+        <label className="grid grid-cols-2 gap-2 sm:col-span-2 xl:col-span-6 xl:grid-cols-[auto_180px_auto_180px]"><span className="self-center text-xs text-text-secondary">Período</span><DatePicker size="sm" aria-label="Data inicial" value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} /><span className="self-center text-xs text-text-secondary">até</span><DatePicker size="sm" aria-label="Data final" value={dateTo} min={dateFrom || undefined} onChange={setDateTo} /></label>
       </section>
 
       {orders.isLoading && <div aria-label="Carregando ordens de trabalho" aria-busy="true" className="overflow-hidden rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando ordens.</span><div className="mb-3 h-9 animate-pulse rounded-md bg-bg" />{Array.from({ length: 6 }, (_, index) => <div key={index} className="my-2 h-12 animate-pulse rounded-md bg-bg" />)}</div>}
@@ -170,7 +172,7 @@ export function WorkOrdersPage() {
         {selectedEquipment && !selectedSector && <p role="alert" className="text-xs text-warning">Não foi possível identificar o hospital deste equipamento para validar os técnicos.</p>}
         {selectedEquipment && selectedSector && eligibleTechnicians.length === 0 && <p className="text-xs text-warning">Não há técnicos ativos vinculados ao hospital do equipamento.</p>}
         {equipment.isError || checklists.isError || users.isError || sectors.isError ? <p role="alert" className="text-xs text-danger">Não foi possível carregar os dados necessários para o agendamento. Feche e tente novamente.</p> : null}
-        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Data agendada<input required type="datetime-local" value={dataAgendada} onChange={(event) => setDataAgendada(event.target.value)} className={`${inputClass} w-full`} /></label>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Data agendada<DateTimePicker required label="Data agendada" value={dataAgendada} onChange={setDataAgendada} /></label>
         {createOrder.isError && <p role="alert" className="text-xs text-danger">{errorMessage(createOrder.error)}</p>}
         <div className="flex justify-end gap-2 border-t border-border pt-3"><button type="button" disabled={createOrder.isPending} onClick={closeCreateDialog} className="h-9 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg">Cancelar</button><button type="submit" disabled={!codigo.trim() || !equipamentoId || !checklistId || !tecnicoId || !dataAgendada || !selectedSector || !eligibleTechnicians.some((technician) => technician.id === tecnicoId) || createOrder.isPending} className="h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{createOrder.isPending ? 'Agendando…' : 'Agendar OT'}</button></div>
       </form>}

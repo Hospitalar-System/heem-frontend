@@ -8,6 +8,7 @@ import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { apiClient } from '@/lib/axios'
 import { WorkOrdersPage } from '../pages/WorkOrdersPage'
 import { chooseOption, listOptions } from '@/test/select-helpers'
+import { chooseDate } from '@/test/date-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -90,7 +91,9 @@ describe('WorkOrdersPage', () => {
     const technicianSelect = screen.getByRole('combobox', { name: 'Técnico responsável' })
     await waitFor(async () => expect(await listOptions(user, technicianSelect)).toEqual(['Rafael']))
     await chooseOption(user, technicianSelect, 'Rafael')
-    await user.type(screen.getByLabelText('Data agendada'), '2026-10-22T10:30')
+    await chooseDate(user, 'Data agendada', '2026-10-22')
+    await chooseOption(user, 'Data agendada, hora', '10')
+    await chooseOption(user, 'Data agendada, minuto', '30')
     await user.click(screen.getByRole('button', { name: 'Agendar OT' }))
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/ordens-de-trabalho/preventivas', {
       codigo: 'OT-2042', equipamentoId: 'equipment-1', checklistId: 'checklist-1', tecnicoId: 'tech-1', dataAgendada: new Date('2026-10-22T10:30').toISOString(),

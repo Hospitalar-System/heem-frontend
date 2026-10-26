@@ -1,10 +1,11 @@
-import { CalendarDays, Download, FileSpreadsheet, FileText, RotateCw } from 'lucide-react'
+import { Download, FileSpreadsheet, FileText, RotateCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { useHospitals, useSectors } from '@/features/assets/api/assets'
 import { useReportExport, useReportIndicators, useRequestReportExport, useRiskCompliance } from '../api/reports'
 import type { ExportRequest, ReportFilters } from '../api/reports'
 import { Select } from '@/components/ui/Select'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 type ExportContent = ExportRequest['conteudo']
 type ExportFormat = ExportRequest['formato']
@@ -86,17 +87,11 @@ export function ReportsPage() {
         <section aria-label="Filtros do relatório" className="flex flex-wrap items-end gap-3">
           <label className="grid gap-1 text-xs text-text-secondary">
             <span>Desde</span>
-            <span className="flex h-[38px] items-center gap-2 rounded-md border border-border bg-surface px-3">
-              <CalendarDays aria-hidden="true" size={14} className="text-text-muted" />
-              <input aria-label="Data inicial" type="date" value={desde} max={ate || undefined} onChange={(event) => setDesde(event.target.value)} className="min-w-0 bg-transparent text-xs text-text-primary outline-none" />
-            </span>
+            <DatePicker size="sm" required aria-label="Data inicial" value={desde} max={ate || undefined} onChange={setDesde} />
           </label>
           <label className="grid gap-1 text-xs text-text-secondary">
             <span>Até</span>
-            <span className="flex h-[38px] items-center gap-2 rounded-md border border-border bg-surface px-3">
-              <CalendarDays aria-hidden="true" size={14} className="text-text-muted" />
-              <input aria-label="Data final" type="date" value={ate} min={desde || undefined} onChange={(event) => setAte(event.target.value)} className="min-w-0 bg-transparent text-xs text-text-primary outline-none" />
-            </span>
+            <DatePicker size="sm" required aria-label="Data final" value={ate} min={desde || undefined} onChange={setAte} />
           </label>
           <label className="grid min-w-40 gap-1 text-xs text-text-secondary">
             <span>Hospital</span>

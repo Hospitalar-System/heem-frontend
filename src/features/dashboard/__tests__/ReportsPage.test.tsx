@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,6 +7,7 @@ import { apiClient } from '@/lib/axios'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { ReportsPage } from '../pages/ReportsPage'
 import { chooseOption } from '@/test/select-helpers'
+import { chooseDate } from '@/test/date-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -91,12 +92,16 @@ describe('ReportsPage', () => {
     expect(await screen.findByRole('link', { name: 'Baixar arquivo' })).toHaveAttribute('href', 'https://storage.test/export.pdf')
   })
 
-  it('rejects an invalid date range without requesting a report', async () => {
+  it('impede um período invertido: dias anteriores ao início ficam desabilitados', async () => {
+    const user = userEvent.setup()
     render(<ReportsPage />, { wrapper: TestProviders })
     await screen.findByText('286 h')
-    fireEvent.change(screen.getByLabelText('Data inicial'), { target: { value: '2026-07-31' } })
-    fireEvent.change(screen.getByLabelText('Data final'), { target: { value: '2026-07-01' } })
-    expect(await screen.findByRole('alert')).toHaveTextContent('Informe um período válido')
+    await chooseDate(user, 'Data inicial', '2026-07-31')
+    await user.click(screen.getByRole('button', { name: 'Data final' }))
+    while (screen.getByTestId('datepicker-title').textContent !== 'julho de 2026') await user.click(screen.getByRole('button', { name: 'Mês anterior' }))
+    expect(screen.getByRole('button', { name: '1 de julho de 2026' })).toHaveAttribute('aria-disabled', 'true')
+    await user.click(screen.getByRole('button', { name: '1 de julho de 2026' }))
+    expect(screen.getByRole('button', { name: 'Data final' })).not.toHaveTextContent('01/07/2026')
     expect(apiClient.post).not.toHaveBeenCalled()
   })
 })

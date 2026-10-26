@@ -1,6 +1,7 @@
 import { Check, ChevronDown } from 'lucide-react'
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useFloatingPlacement } from './useFloatingPlacement'
 
 export type SelectOption = { value: string; label: string; disabled?: boolean }
 
@@ -22,11 +23,7 @@ export type SelectProps = {
   onBlur?: () => void
 }
 
-type Placement = { left: number; width: number; top?: number; bottom?: number; maxHeight: number }
-
 const LIST_MAX = 256
-const GAP = 6
-const MARGIN = 8
 
 /**
  * Select compartilhado (padrão ARIA "select-only combobox").
@@ -46,7 +43,6 @@ export function Select({
   const typeahead = useRef({ text: '', timer: 0 as number | undefined })
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
-  const [placement, setPlacement] = useState<Placement | null>(null)
 
   const selectedIndex = useMemo(() => options.findIndex((option) => option.value === value), [options, value])
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined
@@ -54,28 +50,7 @@ export function Select({
 
   const enabledIndexes = useMemo(() => options.map((option, index) => (option.disabled ? -1 : index)).filter((index) => index >= 0), [options])
 
-  const measure = useCallback(() => {
-    const button = buttonRef.current
-    if (!button) return
-    const rect = button.getBoundingClientRect()
-    const below = window.innerHeight - rect.bottom - GAP - MARGIN
-    const above = rect.top - GAP - MARGIN
-    const wanted = Math.min(LIST_MAX, options.length * 40 + 12)
-    const openUp = below < wanted && above > below
-    const maxHeight = Math.max(96, Math.min(LIST_MAX, openUp ? above : below))
-    setPlacement(openUp
-      ? { left: rect.left, width: rect.width, bottom: window.innerHeight - rect.top + GAP, maxHeight }
-      : { left: rect.left, width: rect.width, top: rect.bottom + GAP, maxHeight })
-  }, [options.length])
-
-  useLayoutEffect(() => {
-    if (!open) return
-    measure()
-    const onMove = () => measure()
-    window.addEventListener('resize', onMove)
-    window.addEventListener('scroll', onMove, true)
-    return () => { window.removeEventListener('resize', onMove); window.removeEventListener('scroll', onMove, true) }
-  }, [open, measure])
+  const placement = useFloatingPlacement(open, buttonRef, Math.min(LIST_MAX, options.length * 40 + 12), LIST_MAX)
 
   useEffect(() => {
     if (!open) return

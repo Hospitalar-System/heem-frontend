@@ -11,6 +11,7 @@ import { useEquipment, useHospitals, useSaveEquipment, useSector, useSectors, us
 import type { CreateEquipmentInput } from '../types'
 import { Select } from '@/components/ui/Select'
 import { FormSelect } from '@/components/ui/FormSelect'
+import { FormDatePicker } from '@/components/ui/FormDatePicker'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60'
 const emptyValues: EquipmentFormValues = {
@@ -109,8 +110,8 @@ export function EquipmentFormPage() {
             <SelectField label="Tipo de proteção" name="tipoProtecao" control={form.control} options={['CLASSE_I', 'CLASSE_II', 'ALIMENTACAO_INTERNA']} />
             <SelectField label="Parte aplicada" name="parteAplicada" control={form.control} options={['TIPO_B', 'TIPO_BF', 'TIPO_CF']} />
             <SelectField label="Modo de operação" name="modoOperacao" control={form.control} options={['CONTINUO', 'INTERMITENTE', 'CURTA_DURACAO']} />
-            <Field label="Data de instalação"><input type="date" className={inputClass} {...form.register('dataInstalacao')} /></Field>
-            <Field label="Fim da garantia"><input type="date" className={inputClass} {...form.register('dataGarantiaFim')} /></Field>
+            <Field label="Data de instalação"><FormDatePicker control={form.control} name="dataInstalacao" /></Field>
+            <Field label="Fim da garantia"><FormDatePicker control={form.control} name="dataGarantiaFim" /></Field>
           </div>
         </section>
 
