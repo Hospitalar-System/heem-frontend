@@ -3,7 +3,7 @@ import { useRef, useState } from 'react'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { batchImportTypes, createBatchImportTemplate, formatFileSize, type BatchImportType } from '../types'
 
-const choiceClass = 'flex min-h-[76px] cursor-pointer items-start gap-3 rounded-md border border-border bg-bg p-3 outline-none transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary/5 focus-within:ring-2 focus-within:ring-primary'
+const choiceClass = 'flex min-h-[76px] cursor-pointer items-start gap-3 rounded-md border border-border bg-surface p-3 outline-none transition-colors hover:bg-bg/60 has-[:checked]:border-primary has-[:checked]:bg-primary/5 focus-within:ring-2 focus-within:ring-primary'
 
 export function BatchImportPage() {
   const [type, setType] = useState<BatchImportType>('equipamentos')

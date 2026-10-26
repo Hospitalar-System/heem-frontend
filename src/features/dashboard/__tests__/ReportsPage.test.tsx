@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { ReportsPage } from '../pages/ReportsPage'
+import { chooseOption } from '@/test/select-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -49,9 +50,9 @@ describe('ReportsPage', () => {
     const user = userEvent.setup()
     render(<ReportsPage />, { wrapper: TestProviders })
     await screen.findByText('286 h')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Hospital' }), 'hospital-1')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Setor' }), 'sector-1')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Conteúdo da exportação' }), 'ordens_trabalho')
+    await chooseOption(user, 'Hospital', 'Santa Casa')
+    await chooseOption(user, 'Setor', 'UTI Adulto')
+    await chooseOption(user, 'Conteúdo da exportação', 'Ordens de trabalho')
     await user.click(screen.getByRole('button', { name: 'Exportar PDF' }))
 
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', expect.objectContaining({
@@ -65,7 +66,7 @@ describe('ReportsPage', () => {
     vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { id: 'export-xlsx', status: 'pendente', urlDownload: null } } as never)
     render(<ReportsPage />, { wrapper: TestProviders })
     expect(await screen.findByText('286 h')).toBeInTheDocument()
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Conteúdo da exportação' }), 'INDICADORES')
+    await chooseOption(user, 'Conteúdo da exportação', 'Indicadores')
     await user.click(screen.getByRole('button', { name: 'Exportar Excel' }))
 
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', expect.objectContaining({

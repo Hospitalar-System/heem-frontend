@@ -5,6 +5,7 @@ import type { PropsWithChildren } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
 import { EquipmentLabelsSection } from '../components/EquipmentLabelsSection'
+import { chooseOption } from '@/test/select-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), delete: vi.fn() } }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
@@ -33,7 +34,7 @@ describe('EquipmentLabelsSection', () => {
     expect(await screen.findByText('Nenhuma etiqueta ativa')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Vincular etiqueta' }))
     await user.type(screen.getByRole('textbox', { name: 'Valor da etiqueta' }), '  EQ-01  ')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Tipo' }), 'barras')
+    await chooseOption(user, 'Tipo', 'Código de barras')
     await user.click(screen.getByRole('button', { name: 'Confirmar vínculo' }))
 
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/equipamentos/equipment-1/etiquetas', { valor: 'EQ-01', tipo: 'barras' }))

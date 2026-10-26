@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal'
 import { equipmentLabelSchema } from '../schemas/assets.schema'
 import { useEquipmentLabels, useLinkEquipmentLabel, useUnlinkEquipmentLabel } from '../api/equipment-labels'
 import type { EquipmentLabel, EquipmentLabelType } from '../types'
+import { Select } from '@/components/ui/Select'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-60'
 const labelTypeNames: Record<EquipmentLabelType, string> = { qr: 'QR', barras: 'Código de barras', outro: 'Outro' }
@@ -72,7 +73,7 @@ export function EquipmentLabelsSection({ equipmentId }: { equipmentId: string })
     {isLinkOpen ? <Modal title="Vincular etiqueta" description="O valor pode ser digitado, colado ou lido por um leitor USB de código de barras." busy={linkLabel.isPending} onClose={() => setIsLinkOpen(false)}>
       <form className="space-y-4" onSubmit={(event) => void submitLink(event)}>
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Valor da etiqueta<input autoFocus required maxLength={200} value={value} onChange={(event) => { setValue(event.target.value); setValidationError(''); setSubmitError(''); setIsLabelConflict(false) }} aria-invalid={Boolean(validationError || submitError)} aria-describedby={validationError || submitError ? 'equipment-label-error' : undefined} className={inputClass} placeholder="Digite ou leia a etiqueta" /></label>
-        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Tipo<select value={type} onChange={(event) => setType(event.target.value as EquipmentLabelType)} className={inputClass}><option value="qr">QR</option><option value="barras">Código de barras</option><option value="outro">Outro</option></select></label>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Tipo<Select value={type} onChange={(next) => setType(next as EquipmentLabelType)} options={[{ value: 'qr', label: 'QR' }, { value: 'barras', label: 'Código de barras' }, { value: 'outro', label: 'Outro' }]} /></label>
         {(validationError || submitError) && <div id="equipment-label-error" role="alert" className="rounded-md border border-danger/30 bg-danger/5 p-3 text-xs text-danger">{validationError || submitError}</div>}
         {isLabelConflict ? <p className="flex items-start gap-2 text-[11px] text-text-secondary"><Link2 aria-hidden="true" size={13} className="mt-0.5 shrink-0" />O contrato não fornece o ID do equipamento atual; não é possível criar um link seguro para ele.</p> : null}
         <p aria-live="polite" className="text-right text-[10px] text-text-muted">{value.length}/200 caracteres</p>

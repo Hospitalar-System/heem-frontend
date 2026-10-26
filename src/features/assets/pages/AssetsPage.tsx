@@ -6,6 +6,7 @@ import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { EquipmentStatusBadge } from '../components/EquipmentStatusBadge'
 import { useEquipments, useHospitals, useSectorsForHospitals } from '../api/assets'
 import type { EquipmentLifecycle } from '../types'
+import { Select } from '@/components/ui/Select'
 
 const inputClass = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const lifecycleOptions: Array<{ value: EquipmentLifecycle | ''; label: string }> = [
@@ -46,23 +47,15 @@ export function AssetsPage() {
       <div className="flex min-w-0 flex-1 flex-wrap gap-2">
         <label className="min-w-[180px] flex-1 sm:max-w-[230px]">
           <span className="sr-only">Filtrar por hospital</span>
-          <select aria-label="Filtrar por hospital" value={hospitalId} onChange={(event) => { setHospitalId(event.target.value); setSectorId('') }} className={inputClass}>
-            <option value="">Todos os hospitais</option>
-            {hospitals.data?.map((hospital) => <option key={hospital.id} value={hospital.id}>{hospital.nome}</option>)}
-          </select>
+          <Select size="sm" aria-label="Filtrar por hospital" value={hospitalId} onChange={(next) => { setHospitalId(next); setSectorId('') }} options={[{ value: '', label: 'Todos os hospitais' }, ...(hospitals.data ?? []).map((hospital) => ({ value: hospital.id, label: hospital.nome }))]} />
         </label>
         <label className="min-w-[160px] flex-1 sm:max-w-[210px]">
           <span className="sr-only">Filtrar por setor</span>
-          <select aria-label="Filtrar por setor" value={sectorId} onChange={(event) => setSectorId(event.target.value)} className={inputClass}>
-            <option value="">Todos os setores</option>
-            {sectors.data?.filter((sector) => !hospitalId || sector.hospitalId === hospitalId).map((sector) => <option key={sector.id} value={sector.id}>{sector.nome}</option>)}
-          </select>
+          <Select size="sm" aria-label="Filtrar por setor" value={sectorId} onChange={setSectorId} options={[{ value: '', label: 'Todos os setores' }, ...(sectors.data ?? []).filter((sector) => !hospitalId || sector.hospitalId === hospitalId).map((sector) => ({ value: sector.id, label: sector.nome }))]} />
         </label>
         <label className="min-w-[160px] flex-1 sm:max-w-[190px]">
           <span className="sr-only">Filtrar por status</span>
-          <select aria-label="Filtrar por status" value={status} onChange={(event) => setStatus(event.target.value as EquipmentLifecycle | '')} className={inputClass}>
-            {lifecycleOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
+          <Select size="sm" aria-label="Filtrar por status" value={status} onChange={(next) => setStatus(next as EquipmentLifecycle | '')} options={lifecycleOptions} />
         </label>
         <label className="relative min-w-[200px] flex-1 sm:max-w-[280px]">
           <span className="sr-only">Buscar equipamento</span>
@@ -84,8 +77,8 @@ export function AssetsPage() {
     </section> : null}
     {!equipment.isLoading && !equipment.isError && visibleEquipment.length > 0 ? <div className="overflow-x-auto rounded-lg border border-border bg-surface">
       <table className="w-full min-w-[980px] border-collapse text-left">
-        <thead><tr className="h-12 border-b border-border bg-bg text-[11px] font-medium text-text-muted">{['Código', 'Nome', 'Modelo', 'Nº série', 'Setor', 'Últ. manut.', 'Status'].map((heading) => <th key={heading} scope="col" className="px-4">{heading}</th>)}</tr></thead>
-        <tbody>{visibleEquipment.map((item) => <tr key={item.id} role="link" tabIndex={0} aria-label={`Abrir ${item.codigo}, ${item.nome}`} onClick={() => navigate(`/assets/${item.id}`)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/assets/${item.id}`) } }} className="h-12 cursor-pointer border-b border-border/70 text-xs last:border-0 hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary">
+        <thead><tr className="table-head h-12 text-[11px]">{['Código', 'Nome', 'Modelo', 'Nº série', 'Setor', 'Últ. manut.', 'Status'].map((heading) => <th key={heading} scope="col" className="px-4">{heading}</th>)}</tr></thead>
+        <tbody>{visibleEquipment.map((item) => <tr key={item.id} role="link" tabIndex={0} aria-label={`Abrir ${item.codigo}, ${item.nome}`} onClick={() => navigate(`/assets/${item.id}`)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/assets/${item.id}`) } }} className="h-12 row-clickable border-b border-border/70 text-xs last:border-0">
           <td className="whitespace-nowrap px-4 font-medium text-text-secondary">{item.codigo}</td><td className="max-w-[280px] truncate px-4 text-sm font-medium text-text-primary">{item.nome}</td><td className="px-4 text-text-secondary">{item.modelo || '—'}</td><td className="px-4 text-text-secondary">{item.numeroSerie || '—'}</td><td className="px-4 text-text-secondary">{sectorById.get(item.setorId)?.nome ?? '—'}</td><td className="px-4 text-text-muted" title="A API não fornece a data da última manutenção na listagem">—</td><td className="px-4"><EquipmentStatusBadge status={item.statusCicloVida} /></td>
         </tr>)}</tbody>
       </table>

@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { apiClient } from '@/lib/axios'
 import { WorkOrdersPage } from '../pages/WorkOrdersPage'
+import { chooseOption, listOptions } from '@/test/select-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -49,12 +50,12 @@ describe('WorkOrdersPage', () => {
     render(<WorkOrdersPage />, { wrapper: TestProviders })
     expect(await screen.findByText('OT-1001')).toBeInTheDocument()
     expect(screen.getByText('Bomba de infusão')).toBeInTheDocument()
-    expect(screen.getAllByText('Agendada')).toHaveLength(2)
+    expect(screen.getByText('Agendada')).toBeInTheDocument()
     expect(screen.getByText('Atrasada')).toBeInTheDocument()
     expect(screen.getByText('Plano preventivo')).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: 'Atrasadas' }))
     await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/ordens-de-trabalho', { params: { atrasadas: true } }))
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Filtrar por tipo' }), 'CORRETIVA')
+    await chooseOption(user, 'Filtrar por tipo', 'Corretiva')
     expect(await screen.findByText('Nenhuma OT encontrada')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Limpar filtros' }))
     await user.click(screen.getByRole('link', { name: 'OT-1001' }))
@@ -84,11 +85,11 @@ describe('WorkOrdersPage', () => {
     render(<WorkOrdersPage />, { wrapper: TestProviders })
     await user.click(await screen.findByRole('button', { name: 'Nova OT' }))
     await user.type(screen.getByRole('textbox', { name: 'Código da OT' }), 'OT-2042')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Equipamento' }), 'equipment-1')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Checklist preventivo' }), 'checklist-1')
+    await chooseOption(user, 'Equipamento', 'EQ-01 · Bomba de infusão')
+    await chooseOption(user, 'Checklist preventivo', 'Inspeção preventiva')
     const technicianSelect = screen.getByRole('combobox', { name: 'Técnico responsável' })
-    await waitFor(() => expect(withinOptions(technicianSelect)).toEqual(['Selecione um técnico', 'Rafael']))
-    await user.selectOptions(technicianSelect, 'tech-1')
+    await waitFor(async () => expect(await listOptions(user, technicianSelect)).toEqual(['Rafael']))
+    await chooseOption(user, technicianSelect, 'Rafael')
     await user.type(screen.getByLabelText('Data agendada'), '2026-10-22T10:30')
     await user.click(screen.getByRole('button', { name: 'Agendar OT' }))
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/ordens-de-trabalho/preventivas', {
@@ -99,10 +100,7 @@ describe('WorkOrdersPage', () => {
   it('preselects the equipment when the form is opened from an equipment detail link', async () => {
     render(<WorkOrdersPage />, { wrapper: ({ children }) => <TestProviders initialEntry="/work-orders/new?equipamentoId=equipment-1">{children}</TestProviders> })
     const equipmentSelect = await screen.findByRole('combobox', { name: 'Equipamento' })
-    await waitFor(() => expect((equipmentSelect as HTMLSelectElement).value).toBe('equipment-1'))
+    await waitFor(() => expect(equipmentSelect).toHaveTextContent('EQ-01 · Bomba de infusão'))
   })
 })
 
-function withinOptions(select: HTMLElement) {
-  return Array.from((select as HTMLSelectElement).options).map((option) => option.textContent)
-}

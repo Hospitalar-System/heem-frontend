@@ -9,6 +9,7 @@ import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/a
 import { useCreateCorrectiveWorkOrder, useTickets } from '../api/tickets'
 import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import type { Ticket, TicketSeverity, TicketStatus } from '../types'
+import { Select } from '@/components/ui/Select'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const severityOrder: Record<string, number> = { CRITICA: 0, ALTA: 1, MEDIA: 2, BAIXA: 3 }
@@ -112,12 +113,8 @@ export function TicketsPage() {
           <span className="sr-only">Buscar chamados</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input type="search" aria-label="Buscar chamados" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Chamado, equipamento ou hospital" className={`${inputClass} w-full pl-8`} />
         </label>
-        <label><span className="sr-only">Filtrar por status</span><select aria-label="Filtrar por status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className={inputClass}>
-          <option value="">Todos os status</option><option value="ABERTO">Aberto</option><option value="EM_ANDAMENTO">Em andamento</option><option value="AGUARDANDO_PECA">Aguardando peça</option><option value="RESOLVIDO">Resolvido</option><option value="CANCELADO">Cancelado</option>
-        </select></label>
-        <label><span className="sr-only">Filtrar por severidade</span><select aria-label="Filtrar por severidade" value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)} className={inputClass}>
-          <option value="">Todas as severidades</option><option value="CRITICA">Crítica</option><option value="ALTA">Alta</option><option value="MEDIA">Média</option><option value="BAIXA">Baixa</option>
-        </select></label>
+        <label><span className="sr-only">Filtrar por status</span><Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={setStatusFilter} options={[{ value: '', label: 'Todos os status' }, { value: 'ABERTO', label: 'Aberto' }, { value: 'EM_ANDAMENTO', label: 'Em andamento' }, { value: 'AGUARDANDO_PECA', label: 'Aguardando peça' }, { value: 'RESOLVIDO', label: 'Resolvido' }, { value: 'CANCELADO', label: 'Cancelado' }]} /></label>
+        <label><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={setSeverityFilter} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
       </section>
 
       {tickets.isLoading ? <div aria-label="Carregando chamados" aria-busy="true" className="space-y-2 rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando chamados.</span>{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-24 animate-pulse rounded-md bg-bg" />)}</div> : null}
@@ -157,9 +154,7 @@ export function TicketsPage() {
     {selectedTicket && <Modal title="Gerar OT corretiva" description={`Chamado ${selectedTicket.id.slice(0, 8)}`} busy={createWorkOrder.isPending} onClose={() => setSelectedTicket(null)}>
         <form className="space-y-4" onSubmit={(event) => void submitCorrectiveWorkOrder(event)}>
           <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Código da OT<input autoFocus required maxLength={40} value={codigo} onChange={(event) => setCodigo(event.target.value)} placeholder="Ex.: OT-2042" className={`${inputClass} w-full`} /></label>
-          <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<select required value={tecnicoId} onChange={(event) => setTecnicoId(event.target.value)} className={`${inputClass} w-full`}>
-            <option value="">Selecione um técnico</option>{eligibleTechnicians.map((technician) => <option key={`${technician.id}-${technician.hospitalId}`} value={technician.id}>{technician.nome}</option>)}
-          </select></label>
+          <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<Select required value={tecnicoId} onChange={setTecnicoId} placeholder="Selecione um técnico" options={eligibleTechnicians.map((technician) => ({ value: technician.id, label: technician.nome }))} /></label>
           {!users.isLoading && !hospitalLinks.some((query) => query.isLoading) && eligibleTechnicians.length === 0 && <p className="text-xs text-warning">Não há técnicos ativos vinculados ao hospital deste chamado.</p>}
           {createWorkOrder.isError && <p role="alert" className="text-xs text-danger">{getErrorMessage(createWorkOrder.error)}</p>}
           <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" disabled={createWorkOrder.isPending} onClick={() => setSelectedTicket(null)} className="h-9 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg">Cancelar</button><button type="submit" disabled={!codigo.trim() || !tecnicoId || createWorkOrder.isPending} className="h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{createWorkOrder.isPending ? 'Criando…' : 'Criar OT'}</button></div>

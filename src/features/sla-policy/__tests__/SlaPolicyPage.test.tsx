@@ -9,6 +9,7 @@ import { apiClient } from '@/lib/axios'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { DashboardSidebar } from '@/features/dashboard/components/DashboardSidebar'
 import { SlaPolicyPage } from '../pages/SlaPolicyPage'
+import { chooseOption } from '@/test/select-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), put: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -57,7 +58,7 @@ describe('SlaPolicyPage', () => {
     expect(screen.getByText('Baixa')).toBeInTheDocument()
     expect(screen.getAllByText('Padrão do sistema')).toHaveLength(4)
     expect(screen.getByRole('spinbutton', { name: 'Prazo de atendimento, Crítica' })).toHaveValue(15)
-    expect(screen.getByRole('combobox', { name: 'Unidade da resolução, Crítica' })).toHaveValue('h')
+    expect(screen.getByRole('combobox', { name: 'Unidade da resolução, Crítica' })).toHaveTextContent('horas')
     render(<MemoryRouter><DashboardSidebar /></MemoryRouter>)
     expect(screen.getByRole('link', { name: 'Política de SLA' })).toHaveAttribute('href', '/settings/sla')
   })
@@ -68,7 +69,7 @@ describe('SlaPolicyPage', () => {
     await screen.findByRole('spinbutton', { name: 'Prazo de atendimento, Crítica' })
     await user.clear(screen.getByRole('spinbutton', { name: 'Prazo de atendimento, Crítica' }))
     await user.type(screen.getByRole('spinbutton', { name: 'Prazo de atendimento, Crítica' }), '1')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Unidade do atendimento, Crítica' }), 'h')
+    await chooseOption(user, 'Unidade do atendimento, Crítica', 'horas')
     await user.click(screen.getByRole('button', { name: 'Salvar política' }))
 
     await waitFor(() => expect(apiClient.put).toHaveBeenCalledWith('/sla/politica', [
@@ -91,7 +92,7 @@ describe('SlaPolicyPage', () => {
     expect(await screen.findByText('Informe um prazo maior que zero.')).toBeInTheDocument()
     await user.clear(service)
     await user.type(service, '30')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Unidade da resolução, Crítica' }), 'min')
+    await chooseOption(user, 'Unidade da resolução, Crítica', 'min')
     await user.clear(resolution)
     await user.type(resolution, '10')
     expect(await screen.findByText('A resolução deve ser igual ou maior que o atendimento.')).toBeInTheDocument()

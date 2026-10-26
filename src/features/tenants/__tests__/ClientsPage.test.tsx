@@ -5,6 +5,7 @@ import type { PropsWithChildren } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
 import { ClientsPage } from '../pages/ClientsPage'
+import { chooseOption } from '@/test/select-helpers'
 
 const { success } = vi.hoisted(() => ({ success: vi.fn() }))
 
@@ -43,7 +44,7 @@ describe('ClientsPage', () => {
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: [] } as never)
     renderPage()
     await user.click(await screen.findByRole('button', { name: 'Novo cliente' }))
-    await user.selectOptions(screen.getByLabelText('Tipo do cliente'), 'PJ')
+    await chooseOption(user, 'Tipo do cliente', 'Pessoa Jurídica (PJ)')
     await user.type(screen.getByLabelText('Razão social'), 'Grupo')
     await user.type(screen.getByLabelText('CNPJ'), '123')
     await user.type(screen.getByLabelText('Nome do Admin do Cliente'), 'Clara Mendes')
@@ -66,7 +67,7 @@ describe('ClientsPage', () => {
     renderPage()
     const trigger = await screen.findByRole('button', { name: 'Novo cliente' })
     await user.click(trigger)
-    await user.selectOptions(screen.getByLabelText('Tipo do cliente'), 'PF')
+    await chooseOption(user, 'Tipo do cliente', 'Pessoa Física (PF)')
     await user.type(screen.getByLabelText('Razão social'), 'Novo Hospitalar')
     await user.type(screen.getByLabelText('CNPJ'), '12.345.678/0001-90')
     await user.type(screen.getByLabelText('Nome do Admin do Cliente'), 'Clara Mendes')
@@ -89,7 +90,7 @@ describe('ClientsPage', () => {
     vi.mocked(apiClient.post).mockRejectedValueOnce({ response: { data: { code: 'CNPJ_DUPLICADO', detail: 'Já existe um cliente com este CNPJ.' } } })
     renderPage()
     await user.click(await screen.findByRole('button', { name: 'Novo cliente' }))
-    await user.selectOptions(screen.getByLabelText('Tipo do cliente'), 'PJ')
+    await chooseOption(user, 'Tipo do cliente', 'Pessoa Jurídica (PJ)')
     await user.type(screen.getByLabelText('Razão social'), 'Grupo')
     await user.type(screen.getByLabelText('CNPJ'), '12345678000190')
     await user.type(screen.getByLabelText('Nome do Admin do Cliente'), 'Clara Mendes')
