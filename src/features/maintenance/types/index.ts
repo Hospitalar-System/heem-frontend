@@ -15,6 +15,38 @@ export interface Ticket {
   slaAtendimentoAte?: string | null
   slaResolucaoAte?: string | null
   slaStatus?: TicketSlaStatus
+  codigo?: string | null
+  tecnicoResponsavelId?: string | null
+  primeiraRespostaEm?: string | null
+  canceladoEm?: string | null
+  solucao?: string | null
+  causaCategoria?: string | null
+  reaberturas?: number | null
+  prontoParaResolver?: boolean | null
+}
+
+export const ticketCauseCategories = ['desgaste', 'falha_eletrica', 'falha_mecanica', 'uso_inadequado', 'falta_insumo', 'software', 'outra'] as const
+export type TicketCauseCategory = (typeof ticketCauseCategories)[number]
+
+export const ticketCauseLabels: Record<TicketCauseCategory, string> = {
+  desgaste: 'Desgaste',
+  falha_eletrica: 'Falha elétrica',
+  falha_mecanica: 'Falha mecânica',
+  uso_inadequado: 'Uso inadequado',
+  falta_insumo: 'Falta de insumo',
+  software: 'Software',
+  outra: 'Outra',
+}
+
+/** Destinos de transição manual de status; ABERTO -> EM_ANDAMENTO nunca é manual (AD-15). */
+export type TicketManualStatus = 'AGUARDANDO_PECA' | 'EM_ANDAMENTO' | 'RESOLVIDO' | 'CANCELADO'
+
+export interface ChangeTicketStatusInput {
+  id: string
+  novoStatus: TicketManualStatus
+  motivo?: string
+  solucao?: string
+  causaCategoria?: TicketCauseCategory
 }
 
 export interface TicketHistoryEvent {
