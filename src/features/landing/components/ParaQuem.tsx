@@ -5,14 +5,14 @@ const avatarClasses = [
   'bg-primary text-[var(--ink)]',
   'bg-[var(--surface-hi)] text-text-primary',
   'bg-warning text-[var(--on-warn)]',
-  'bg-[var(--danger-soft)] text-danger',
+  'bg-[var(--danger-soft)] text-[var(--danger-text)]',
 ]
 
 export function ParaQuem() {
   return (
     <section id="para-quem" aria-labelledby="para-quem-titulo" className="mx-auto w-[min(1120px,100%-32px)] py-24 text-center md:py-[120px]">
       <Reveal>
-        <span className="mb-4 block text-sm font-semibold text-primary">Para quem</span>
+        <span className="mb-4 block text-sm font-semibold text-[var(--primary-text)]">Para quem</span>
         <h2 id="para-quem-titulo" className="text-[clamp(30px,4.6vw,52px)] font-semibold leading-[1.08] tracking-[-0.03em] [text-wrap:balance]">
           Cada pessoa vê só o que precisa.
         </h2>

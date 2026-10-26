@@ -1,0 +1,5 @@
+<!-- PROVISÓRIO: ícone temporário (quadrado verde com "H"). A identidade visual será trocada antes do lançamento. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="8" fill="#3ed597"/>
+  <path fill="#0b2a1e" d="M9 8h3.5v6.25h7V8H23v16h-3.5v-6.25h-7V24H9z"/>
+</svg>

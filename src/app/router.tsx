@@ -7,6 +7,8 @@ import { SessionRestoring } from '@/features/auth/components/SessionRestoring'
 import { useAuthRestoring } from '@/features/auth/hooks/useAuthRestoring'
 
 const LandingPage = lazy(() => import('@/features/landing/pages/LandingPage').then((module) => ({ default: module.LandingPage })))
+const PoliticaPrivacidadePage = lazy(() => import('@/features/landing/pages/PaginasLegais').then((module) => ({ default: module.PoliticaPrivacidadePage })))
+const TermosDeUsoPage = lazy(() => import('@/features/landing/pages/PaginasLegais').then((module) => ({ default: module.TermosDeUsoPage })))
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
 const HospitalsPage = lazy(() => import('@/features/assets/pages/HospitalsPage').then((module) => ({ default: module.HospitalsPage })))
 const SectorsPage = lazy(() => import('@/features/assets/pages/SectorsPage').then((module) => ({ default: module.SectorsPage })))
@@ -31,6 +33,8 @@ const router = createBrowserRouter([
     path: '/',
     element: <Suspense fallback={<DashboardRouteLoading />}><LandingPage /></Suspense>,
   },
+  { path: '/privacidade', element: <Suspense fallback={<DashboardRouteLoading />}><PoliticaPrivacidadePage /></Suspense> },
+  { path: '/termos', element: <Suspense fallback={<DashboardRouteLoading />}><TermosDeUsoPage /></Suspense> },
   { path: '/login', element: <LoginPage /> },
   { path: '/platform/clients', element: <RequireRole role="super_admin"><Suspense fallback={<DashboardRouteLoading />}><ClientsPage /></Suspense></RequireRole> },
   { path: '/platform/users', element: <RequireRole role="super_admin"><Suspense fallback={<DashboardRouteLoading />}><PlatformUsersPage /></Suspense></RequireRole> },
