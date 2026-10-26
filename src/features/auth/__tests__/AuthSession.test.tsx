@@ -1,14 +1,21 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AxiosError, type InternalAxiosRequestConfig } from 'axios'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { DashboardSidebar } from '@/features/dashboard/components/DashboardSidebar'
 import { AuthSessionCacheCleanup } from '../components/AuthSessionCacheCleanup'
 import { apiClient } from '@/lib/axios'
-import { clearAuthSession, getAuthState, setAuthSession } from '../session'
+import { KeycloakAuthError, logoutSession } from '../api/keycloak'
+import { REFRESH_TOKEN_STORAGE_KEY, clearAuthSession, getAuthState, setAuthSession } from '../session'
 import type { UserProfileDTO } from '../types'
+
+vi.mock('@/lib/demo-mode', () => ({ isDemoMode: false }))
+vi.mock('../api/keycloak', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/keycloak')>()),
+  logoutSession: vi.fn(),
+}))
 
 const user: UserProfileDTO = {
   id: 'user-1',
@@ -44,17 +51,36 @@ function renderSidebar() {
 
 describe('authenticated session logout', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(logoutSession).mockResolvedValue(undefined)
     clearAuthSession()
-    setAuthSession('access-token', user)
+    window.localStorage.clear()
+    window.sessionStorage.clear()
+    setAuthSession('access-token', user, { refreshToken: 'refresh-token', expiresAt: Date.now() + 900_000, rememberMe: true })
   })
 
   afterEach(() => clearAuthSession())
 
-  it('clears the in-memory session and query cache, then replaces the route with login', async () => {
+  it('revokes the refresh token, clears memory, storages and query cache, then goes to login', async () => {
     const { client } = renderSidebar()
     await userEvent.setup().click(screen.getByRole('button', { name: 'Sair' }))
 
+    expect(logoutSession).toHaveBeenCalledWith('refresh-token')
     expect(getAuthState()).toEqual({ accessToken: null, user: null, isAuthenticated: false })
+    expect(window.localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)).toBeNull()
+    expect(window.sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)).toBeNull()
+    expect(client.getQueryCache().getAll()).toHaveLength(0)
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/login')
+  })
+
+  it('still clears the local session when revoking the token fails on the network', async () => {
+    vi.mocked(logoutSession).mockRejectedValue(new KeycloakAuthError('network'))
+    const { client } = renderSidebar()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Sair' }))
+
+    await waitFor(() => expect(logoutSession).toHaveBeenCalledWith('refresh-token'))
+    expect(getAuthState().isAuthenticated).toBe(false)
+    expect(window.localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)).toBeNull()
     expect(client.getQueryCache().getAll()).toHaveLength(0)
     expect(screen.getByTestId('current-path')).toHaveTextContent('/login')
   })
