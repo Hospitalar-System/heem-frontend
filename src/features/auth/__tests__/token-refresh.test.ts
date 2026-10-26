@@ -10,10 +10,10 @@ vi.mock('../api/keycloak', async (importOriginal) => ({
 }))
 
 import { apiClient } from '@/lib/axios'
-import { REFRESH_LEAD_MS, REFRESH_RETRY_MS, startRefreshScheduler } from '../api/refresh-scheduler'
+import { MAX_TIMER_MS, REFRESH_LEAD_MS, REFRESH_RETRY_MAX_MS, REFRESH_RETRY_MS, startRefreshScheduler } from '../api/refresh-scheduler'
 import { refreshAccessToken } from '../api/token-refresh'
 import { KeycloakAuthError } from '../api/keycloak'
-import { clearAuthSession, getAuthState, getRefreshToken, REFRESH_TOKEN_STORAGE_KEY as KEY, setAuthSession } from '../session'
+import { clearAuthSession, getAuthState, getRefreshToken, REFRESH_TOKEN_STORAGE_KEY as KEY, setAuthSession, updateAuthTokens } from '../session'
 import type { UserProfileDTO } from '../types'
 
 const user: UserProfileDTO = { id: 'u1', name: 'Clara', email: 'clara@heem.dev', roles: ['admin_cliente'] }
@@ -148,6 +148,104 @@ describe('renovação no interceptor de 401', () => {
   })
 })
 
+describe('corridas de sessão durante a renovação', () => {
+  it('logout + login de outro usuário durante o refresh em voo: tokens de A não entram na sessão de B', async () => {
+    login()
+    let release!: () => void
+    mocks.refreshTokens.mockReturnValueOnce(
+      new Promise((resolve) => { release = () => resolve({ accessToken: 'accA', refreshToken: 'refA2', expiresAt: 1 }) }),
+    )
+    const pending = refreshAccessToken()
+    clearAuthSession()
+    setAuthSession('accB', user, { refreshToken: 'refB', expiresAt: Date.now() + 900_000 })
+    release()
+
+    await expect(pending).rejects.toThrow()
+    expect(getAuthState().accessToken).toBe('accB')
+    expect(getRefreshToken()).toBe('refB')
+    expect(window.sessionStorage.getItem(KEY)).toBe('refB')
+  })
+
+  it('invalid_grant da sessão antiga não derruba o login de B', async () => {
+    login()
+    let fail!: () => void
+    mocks.refreshTokens.mockReturnValueOnce(new Promise((_, reject) => { fail = () => reject(new KeycloakAuthError('invalid_credentials')) }))
+    const pending = refreshAccessToken()
+    clearAuthSession()
+    setAuthSession('accB', user, { refreshToken: 'refB', expiresAt: Date.now() + 900_000 })
+    fail()
+
+    await expect(pending).rejects.toBeInstanceOf(KeycloakAuthError)
+    expect(getAuthState().isAuthenticated).toBe(true)
+    expect(getRefreshToken()).toBe('refB')
+  })
+
+  it('invalid_credentials com token já rotacionado por outra aba: adota o do storage e tenta uma vez', async () => {
+    login(true)
+    mocks.refreshTokens.mockImplementation(async (token: string) => {
+      if (token === 'ref1') {
+        window.localStorage.setItem(KEY, 'refOutraAba') // a outra aba rotacionou no meio
+        throw new KeycloakAuthError('invalid_credentials')
+      }
+      return { accessToken: 'new', refreshToken: 'ref3', expiresAt: Date.now() + 900_000 }
+    })
+
+    await refreshAccessToken()
+
+    expect(mocks.refreshTokens.mock.calls.map((c) => c[0])).toEqual(['ref1', 'refOutraAba'])
+    expect(getAuthState().isAuthenticated).toBe(true)
+    expect(window.localStorage.getItem(KEY)).toBe('ref3')
+  })
+
+  it('token do storage igual ao usado e recusado: limpa a sessão', async () => {
+    login(true)
+    mocks.refreshTokens.mockRejectedValue(new KeycloakAuthError('invalid_credentials'))
+
+    await expect(refreshAccessToken()).rejects.toBeInstanceOf(KeycloakAuthError)
+
+    expect(mocks.refreshTokens).toHaveBeenCalledTimes(1)
+    expect(getAuthState().isAuthenticated).toBe(false)
+  })
+
+  it('token adotado também recusado: limpa a sessão', async () => {
+    login(true)
+    mocks.refreshTokens.mockImplementation(async (token: string) => {
+      if (token === 'ref1') window.localStorage.setItem(KEY, 'refOutraAba')
+      throw new KeycloakAuthError('invalid_credentials')
+    })
+
+    await expect(refreshAccessToken()).rejects.toBeInstanceOf(KeycloakAuthError)
+
+    expect(mocks.refreshTokens).toHaveBeenCalledTimes(2)
+    expect(getAuthState().isAuthenticated).toBe(false)
+  })
+
+  it('mantém o rememberMe da sessão mesmo se o storage foi esvaziado por outra aba', async () => {
+    login(true)
+    window.localStorage.removeItem(KEY)
+
+    await refreshAccessToken()
+
+    expect(window.localStorage.getItem(KEY)).toBe('ref2')
+    expect(window.sessionStorage.getItem(KEY)).toBeNull()
+  })
+
+  it('401 com token já substituído por outra renovação repete sem renovar de novo', async () => {
+    login()
+    const calls = backend('new')
+    const inner = apiClient.defaults.adapter as AxiosAdapter
+    // outra renovação conclui enquanto a requisição com o token velho está em voo
+    apiClient.defaults.adapter = (config) => {
+      if (calls.length === 0) updateAuthTokens({ accessToken: 'new', refreshToken: 'ref2', expiresAt: Date.now() + 900_000 })
+      return inner(config)
+    }
+    await apiClient.get('/a')
+
+    expect(mocks.refreshTokens).not.toHaveBeenCalled()
+    expect(calls).toEqual(['Bearer old', 'Bearer new'])
+  })
+})
+
 describe('agendador de renovação antecipada', () => {
   let stop: () => void
 
@@ -208,6 +306,34 @@ describe('agendador de renovação antecipada', () => {
     await vi.advanceTimersByTimeAsync(REFRESH_RETRY_MS)
     expect(mocks.refreshTokens).toHaveBeenCalledTimes(2)
     expect(getAuthState().accessToken).toBe('new')
+  })
+
+  it('backoff exponencial até o teto e reset após sucesso', async () => {
+    login(false, Date.now() + 120_000)
+    stop = startRefreshScheduler()
+    mocks.refreshTokens.mockRejectedValue(new KeycloakAuthError('network'))
+
+    await vi.advanceTimersByTimeAsync(120_000 - REFRESH_LEAD_MS)
+    expect(mocks.refreshTokens).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(REFRESH_RETRY_MS - 1)
+    expect(mocks.refreshTokens).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(mocks.refreshTokens).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(REFRESH_RETRY_MS * 2)
+    expect(mocks.refreshTokens).toHaveBeenCalledTimes(3)
+    for (let i = 0; i < 6; i++) await vi.advanceTimersByTimeAsync(REFRESH_RETRY_MAX_MS)
+    const before = mocks.refreshTokens.mock.calls.length
+    await vi.advanceTimersByTimeAsync(REFRESH_RETRY_MAX_MS)
+    expect(mocks.refreshTokens).toHaveBeenCalledTimes(before + 1) // no teto: 1 tentativa por 5 min
+  })
+
+  it('limita o atraso ao máximo do setTimeout', () => {
+    const spy = vi.spyOn(globalThis, 'setTimeout')
+    login(false, Date.now() + 40 * 24 * 3_600_000)
+    stop = startRefreshScheduler()
+
+    expect(spy.mock.calls.every(([, ms]) => (ms ?? 0) <= MAX_TIMER_MS)).toBe(true)
+    expect(spy).toHaveBeenCalledWith(expect.any(Function), MAX_TIMER_MS)
   })
 
   it('invalid_credentials derruba a sessão e não reagenda', async () => {

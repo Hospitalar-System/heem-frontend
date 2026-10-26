@@ -4,9 +4,13 @@ import { refreshAccessToken } from './token-refresh'
 
 /** Antecedência da renovação em relação à expiração do access token. */
 export const REFRESH_LEAD_MS = 60_000
-/** Espera antes de tentar de novo após falha transitória. */
+/** Espera inicial antes de tentar de novo após falha transitória; dobra a cada falha até o teto. */
 export const REFRESH_RETRY_MS = 30_000
+export const REFRESH_RETRY_MAX_MS = 300_000
+/** Maior atraso aceito por setTimeout (acima disso dispara na hora). */
+export const MAX_TIMER_MS = 2 ** 31 - 1
 
+let failures = 0
 let timer: ReturnType<typeof setTimeout> | null = null
 let stop: (() => void) | null = null
 
@@ -19,14 +23,20 @@ function schedule(delay?: number) {
   cancel()
   const expiresAt = getAccessTokenExpiresAt()
   if (!getAuthState().isAuthenticated || expiresAt === null) return
-  const wait = delay ?? Math.max(0, expiresAt - REFRESH_LEAD_MS - Date.now())
+  const wait = Math.min(delay ?? Math.max(0, expiresAt - REFRESH_LEAD_MS - Date.now()), MAX_TIMER_MS)
   timer = setTimeout(() => {
     timer = null
     // Sucesso: updateAuthTokens notifica e reagenda. Invalid_credentials: a sessão é limpa e o timer cancelado.
     // Falha transitória: tenta de novo mais tarde, sem derrubar a sessão.
-    refreshAccessToken().catch(() => {
-      if (getAuthState().isAuthenticated) schedule(REFRESH_RETRY_MS)
-    })
+    refreshAccessToken().then(
+      () => { failures = 0 },
+      () => {
+        if (!getAuthState().isAuthenticated) return
+        const backoff = Math.min(REFRESH_RETRY_MS * 2 ** failures, REFRESH_RETRY_MAX_MS)
+        failures += 1
+        schedule(backoff)
+      },
+    )
   }, wait)
 }
 
@@ -45,6 +55,7 @@ export function startRefreshScheduler(): () => void {
   document.addEventListener('visibilitychange', onVisible)
   schedule()
   stop = () => {
+    failures = 0
     unsubscribe()
     document.removeEventListener('visibilitychange', onVisible)
     cancel()

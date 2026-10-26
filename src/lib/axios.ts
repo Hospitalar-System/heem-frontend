@@ -34,6 +34,9 @@ apiClient.interceptors.response.use(
     }
 
     config._retry = true
+    // O token enviado já não é o atual (outra renovação terminou no meio): repete sem renovar de novo.
+    const sent = typeof config.headers?.Authorization === 'string' ? config.headers.Authorization : null
+    if (sent && sent !== `Bearer ${getAuthState().accessToken}`) return apiClient(config)
     try {
       await refreshAccessToken()
     } catch {

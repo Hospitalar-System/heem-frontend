@@ -11,6 +11,7 @@ let state: AuthState = {
 }
 let refreshToken: string | null = null
 let accessTokenExpiresAt: number | null = null
+let rememberMeChoice: boolean | null = null
 let restoring = false
 const listeners = new Set<() => void>()
 
@@ -37,6 +38,7 @@ export interface AuthSessionOptions {
 
 export function setAuthSession(accessToken: string, user: UserProfileDTO, options: AuthSessionOptions = {}) {
   state = { accessToken, user, isAuthenticated: true }
+  rememberMeChoice = options.rememberMe ?? false
   accessTokenExpiresAt = options.expiresAt ?? null
   if (options.refreshToken) {
     refreshToken = options.refreshToken
@@ -69,7 +71,7 @@ export function getAccessTokenExpiresAt() {
  * no mesmo storage em que o anterior estava, preservando a escolha de "lembrar de mim".
  */
 export function updateAuthTokens(tokens: { accessToken: string; refreshToken: string; expiresAt: number }) {
-  const remembered = readStoredRefreshToken()?.remembered ?? false
+  const remembered = rememberMeChoice ?? readStoredRefreshToken()?.remembered ?? false
   state = { ...state, accessToken: tokens.accessToken }
   accessTokenExpiresAt = tokens.expiresAt
   refreshToken = tokens.refreshToken
