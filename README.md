@@ -89,3 +89,17 @@ Copie `.env.example` para `.env.local` e ajuste. Toda leitura de `VITE_OIDC_*` f
 | `VITE_DEMO_MODE` | (vazio) | `true` força a demonstração; `false` a desativa. |
 
 Sessão: o access token fica só em memória; o refresh token fica em `sessionStorage` (ou `localStorage` com "lembrar de mim") sob a chave `heem.auth.refresh` e é usado para restaurar a sessão ao abrir o app. Senha, access token e usuário nunca são persistidos.
+
+### Deploy na Vercel
+
+Configure no projeto da Vercel as três variáveis abaixo (valores de staging):
+
+| Variável | Valor (staging) |
+| --- | --- |
+| `VITE_API_BASE_URL` | `https://heem-backend.onrender.com/api/v1` |
+| `VITE_OIDC_AUTHORITY` | `https://heem-keycloak.onrender.com/realms/heem` |
+| `VITE_OIDC_CLIENT_ID` | `heem-frontend` |
+
+- As variáveis `VITE_*` são embutidas só no build: alterar um valor exige um novo deploy (redeploy).
+- A origem `https://heem-frontend.vercel.app` precisa estar em `webOrigins` do client `heem-frontend` no Keycloak e no CORS do backend, pois o navegador chama o endpoint de token diretamente.
+- O access token é renovado automaticamente (em 401 e cerca de 60 s antes de expirar); a sessão total (até 7 dias) é definida pelo Keycloak.

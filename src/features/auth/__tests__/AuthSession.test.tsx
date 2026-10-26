@@ -85,7 +85,8 @@ describe('authenticated session logout', () => {
     expect(screen.getByTestId('current-path')).toHaveTextContent('/login')
   })
 
-  it('clears the in-memory session after an unauthorized API response', async () => {
+  it('clears the in-memory session after an unauthorized API response without a refresh token', async () => {
+    setAuthSession('access-token', user)
     const adapter = async (config: InternalAxiosRequestConfig) => {
       const response = {
         data: { code: 'AUTH_UNAUTHORIZED' },
