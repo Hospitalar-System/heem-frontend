@@ -8,6 +8,7 @@
     color-scheme: dark;
     --bg: #1f1f1f;
     --surface: #2a2a2e;
+    --surface-hi: #34343a;
     --bg-brand: #19191b;
     --bg-login: #1e1e20;
     --border: #3a3a3e;
@@ -25,6 +26,7 @@
     color-scheme: light;
     --bg: #f4f5f7;
     --surface: #ffffff;
+    --surface-hi: #eef0f3;
     --bg-brand: #eceef1;
     --bg-login: #f8f9fa;
     --border: #e2e8f0;
@@ -42,6 +44,7 @@
       color-scheme: dark;
       --bg: #1f1f1f;
       --surface: #2a2a2e;
+      --surface-hi: #34343a;
       --bg-brand: #19191b;
       --bg-login: #1e1e20;
       --border: #3a3a3e;
@@ -82,6 +85,22 @@
   textarea,
   select {
     font: inherit;
+  }
+}
+
+/* Estados de linha e cartão (F6.2): repouso sem cinza, hover sutil só em clicáveis, selecionado destacado. */
+@layer components {
+  .table-head {
+    @apply border-b border-border bg-surface text-[11px] font-medium text-text-secondary;
+  }
+  .row-idle {
+    @apply border-border bg-surface;
+  }
+  .row-clickable {
+    @apply cursor-pointer transition-colors hover:bg-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary;
+  }
+  .row-selected {
+    @apply border-primary bg-primary/5;
   }
 }
 
