@@ -73,11 +73,12 @@ describe('LandingPage', () => {
     expect(screen.queryByRole('link', { name: 'Entrar' })).not.toBeInTheDocument()
   })
 
-  it('"Agendar demonstração" aponta para #contato', () => {
+  it('"Agendar demonstração" é botão que abre o formulário (não mais link para #contato)', async () => {
+    const user = userEvent.setup()
     renderLanding()
-    for (const link of screen.getAllByRole('link', { name: 'Agendar demonstração' })) {
-      expect(link).toHaveAttribute('href', '#contato')
-    }
+    expect(screen.queryByRole('link', { name: 'Agendar demonstração' })).not.toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: 'Agendar demonstração' })[0])
+    expect(screen.getByRole('dialog', { name: 'Quero conhecer o HEEM' })).toBeInTheDocument()
   })
 
   it('links de navegação e rodapé existem', () => {
