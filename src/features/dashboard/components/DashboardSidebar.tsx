@@ -16,7 +16,8 @@ import {
 } from 'lucide-react'
 import { useSyncExternalStore } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { clearAuthSession, getAuthState, subscribeAuthState } from '@/features/auth/session'
+import { logout } from '@/features/auth/api/logout'
+import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import type { UserRole } from '@/features/auth/types'
 
 const roleLabels: Record<UserRole, string> = {
@@ -54,7 +55,7 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
     || 'Usuário'
 
   function handleLogout() {
-    clearAuthSession()
+    void logout()
     onNavigate?.()
     navigate('/login', { replace: true })
   }

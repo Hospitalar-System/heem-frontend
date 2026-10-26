@@ -1,9 +1,13 @@
 import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { toast } from 'sonner'
+import { isDemoMode } from '@/lib/demo-mode'
 import { getCurrentUser, getDevelopmentToken } from '../api/identity'
+import { loginWithPassword, logoutSession } from '../api/keycloak'
+import type { LoginFormValues } from '../schemas/login.schema'
 import { setAuthSession } from '../session'
 import type { ProblemDetail, UserRole } from '../types'
+
+const noRoleMessage = 'Sua conta não possui um perfil de acesso reconhecido.'
 
 const roleLandingPaths: Record<UserRole, string> = {
   super_admin: '/dashboard',
@@ -23,6 +27,27 @@ export function getRoleLandingPath(roles: UserRole[]) {
   return role ? roleLandingPaths[role] : null
 }
 
+export type AccessBlockedReason = 'USUARIO_NAO_CADASTRADO' | 'USUARIO_DESATIVADO' | 'OUTRO'
+
+/** O /me respondeu 403: login válido no Keycloak, mas sem acesso ao HEEM. */
+export class AccessBlockedError extends Error {
+  readonly reason: AccessBlockedReason
+
+  constructor(reason: AccessBlockedReason) {
+    super('Acesso bloqueado.')
+    this.name = 'AccessBlockedError'
+    this.reason = reason
+  }
+}
+
+function getForbiddenReason(error: unknown): AccessBlockedReason | null {
+  if (typeof error !== 'object' || error === null || !('response' in error)) return null
+  const response = (error as { response?: { status?: number; data?: ProblemDetail } }).response
+  if (response?.status !== 403) return null
+  const code = response.data?.code
+  return code === 'USUARIO_NAO_CADASTRADO' || code === 'USUARIO_DESATIVADO' ? code : 'OUTRO'
+}
+
 export function getLoginErrorMessage(error: unknown) {
   if (typeof error === 'object' && error !== null && 'response' in error) {
     const response = (error as { response?: { data?: ProblemDetail } }).response
@@ -39,22 +64,34 @@ export function useLogin() {
   const navigate = useNavigate()
 
   return useMutation({
-    mutationFn: async () => {
-      // Temporário: fora do modo demonstração ainda usa o token de desenvolvimento até a Story F1.2
-      // trocar pelo login com o cliente Keycloak (api/keycloak.ts).
-      const accessToken = await getDevelopmentToken()
-      const user = await getCurrentUser(accessToken)
-      return { accessToken, user }
-    },
-    onSuccess: ({ accessToken, user }) => {
-      const destination = getRoleLandingPath(user.roles)
-      if (!destination) {
-        toast.error('Sua conta não possui um perfil de acesso reconhecido.')
-        return
+    mutationFn: async (values?: LoginFormValues) => {
+      if (isDemoMode || !values) {
+        const accessToken = await getDevelopmentToken()
+        const user = await getCurrentUser(accessToken)
+        const destination = getRoleLandingPath(user.roles)
+        if (!destination) throw new Error(noRoleMessage)
+        setAuthSession(accessToken, user)
+        return destination
       }
-      setAuthSession(accessToken, user)
-      navigate(destination, { replace: true })
+
+      const { accessToken, refreshToken, expiresAt } = await loginWithPassword({
+        email: values.email,
+        password: values.password,
+      })
+      try {
+        const user = await getCurrentUser(accessToken)
+        const destination = getRoleLandingPath(user.roles)
+        if (!destination) throw new Error(noRoleMessage)
+        // Só grava a sessão (e o refresh token) depois de /me e papel validados.
+        setAuthSession(accessToken, user, { refreshToken, expiresAt, rememberMe: values.rememberMe })
+        return destination
+      } catch (error) {
+        // Sem sessão utilizável: revoga o refresh token (best-effort) e não persiste nada.
+        void logoutSession(refreshToken).catch(() => undefined)
+        const reason = getForbiddenReason(error)
+        throw reason ? new AccessBlockedError(reason) : error
+      }
     },
-    onError: (error) => toast.error(getLoginErrorMessage(error)),
+    onSuccess: (destination) => navigate(destination, { replace: true }),
   })
 }
