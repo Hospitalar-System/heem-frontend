@@ -76,3 +76,16 @@ As funcionalidades devem ser organizadas por domínio em `src/features/`, com p�
 O front-end consome o contrato REST/OpenAPI do [`heem-backend`](https://github.com/Hospitalar-System/heem-backend), com endpoints sob `/api/v1/`.
 
 Sem `VITE_API_BASE_URL`, a aplicação inicia em modo de demonstração: o login usa um perfil local e as telas recebem dados sintéticos mantidos em memória, sem chamadas ao backend. As alterações feitas nesse modo não são persistidas. Para conectar uma API, configure `VITE_API_BASE_URL` (por exemplo, `http://localhost:8080/api/v1`). `VITE_DEMO_MODE=true` força a demonstração mesmo com uma URL configurada; `VITE_DEMO_MODE=false` desativa o modo local.
+
+### Variáveis de ambiente
+
+Copie `.env.example` para `.env.local` e ajuste. Toda leitura de `VITE_OIDC_*` fica em `src/lib/oidc-config.ts`.
+
+| Variável | Padrão | Uso |
+| --- | --- | --- |
+| `VITE_API_BASE_URL` | (vazio: modo demonstração) | URL base da API, por exemplo `http://localhost:8080/api/v1`. |
+| `VITE_OIDC_AUTHORITY` | `http://localhost:8180/realms/heem` | Realm do Keycloak; o app chama `{authority}/protocol/openid-connect/token` e `/logout`. |
+| `VITE_OIDC_CLIENT_ID` | `heem-frontend` | Client público do Keycloak com login direto (Direct Access Grants). |
+| `VITE_DEMO_MODE` | (vazio) | `true` força a demonstração; `false` a desativa. |
+
+Sessão: o access token fica só em memória; o refresh token fica em `sessionStorage` (ou `localStorage` com "lembrar de mim") sob a chave `heem.auth.refresh` e é usado para restaurar a sessão ao abrir o app. Senha, access token e usuário nunca são persistidos.

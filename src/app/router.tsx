@@ -3,6 +3,8 @@ import { createBrowserRouter, Link, Navigate, RouterProvider, useLocation } from
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RequireRole } from './RequireRole'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
+import { SessionRestoring } from '@/features/auth/components/SessionRestoring'
+import { useAuthRestoring } from '@/features/auth/hooks/useAuthRestoring'
 
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
 const HospitalsPage = lazy(() => import('@/features/assets/pages/HospitalsPage').then((module) => ({ default: module.HospitalsPage })))
@@ -120,12 +122,14 @@ function RequireEquipmentRole({ children, editorOnly = false }: PropsWithChildre
 
 function RequireTicketListAccess({ children }: PropsWithChildren) {
   const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
+  if (useAuthRestoring()) return <SessionRestoring />
   if (!auth.isAuthenticated || !auth.user) return <Navigate to="/login" replace />
   return auth.user.roles.includes('admin_cliente') ? children : <Navigate to="/access-denied" replace />
 }
 
 function RequireTicketAccess({ children }: PropsWithChildren) {
   const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
+  if (useAuthRestoring()) return <SessionRestoring />
   if (!auth.isAuthenticated || !auth.user) return <Navigate to="/login" replace />
   const canReadTicket = auth.user.roles.some((role) => ['admin_cliente', 'tecnico', 'interno_hospital'].includes(role))
   return canReadTicket ? children : <Navigate to="/access-denied" replace />

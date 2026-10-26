@@ -40,6 +40,8 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async () => {
+      // Temporário: fora do modo demonstração ainda usa o token de desenvolvimento até a Story F1.2
+      // trocar pelo login com o cliente Keycloak (api/keycloak.ts).
       const accessToken = await getDevelopmentToken()
       const user = await getCurrentUser(accessToken)
       return { accessToken, user }
