@@ -31,7 +31,7 @@ export function montarCorpoLead(valores: LeadFormValues): CorpoLead {
     ...(telefone ? { telefone } : {}),
     ...(valores.interesse ? { interesse: valores.interesse } : {}),
     consentimento: true,
-    website: valores.website,
+    website: valores.contato_alt,
   }
 }
 

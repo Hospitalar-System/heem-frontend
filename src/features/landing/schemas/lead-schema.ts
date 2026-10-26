@@ -50,7 +50,8 @@ export const leadSchema = z.object({
   telefone: opcional(LIMITES_LEAD.telefone),
   interesse: z.string(),
   consentimento: z.boolean().refine((valor) => valor === true, 'Para enviar, concorde com o contato e o uso dos dados.'),
-  website: z.string(),
+  /** Isca anti-robô. Nome neutro no DOM (gerenciadores de senha preenchem "website"); vira `website` só no corpo. */
+  contato_alt: z.string(),
 })
 
 export type LeadFormValues = z.infer<typeof leadSchema>

@@ -1,0 +1,5 @@
+    expect(isca).toHaveAttribute('autocomplete', 'off')
+    expect(isca).toHaveAttribute('name', 'contato_alt')
+    expect(isca).toHaveAttribute('data-lpignore', 'true')
+    expect(isca).toHaveAttribute('data-1p-ignore')
+    expect(document.querySelector('[name="website"], 

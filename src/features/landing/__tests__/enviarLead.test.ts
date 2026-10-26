@@ -21,7 +21,7 @@ const valores = {
   telefone: '',
   interesse: '',
   consentimento: true,
-  website: '',
+  contato_alt: '',
 }
 
 beforeEach(() => post.mockReset())
@@ -45,6 +45,10 @@ describe('cliente HTTP público dos leads', () => {
       consentimento: true,
       website: '',
     })
+  })
+
+  it('a isca vai no corpo como website', () => {
+    expect(montarCorpoLead({ ...valores, contato_alt: 'x' }).website).toBe('x')
   })
 
   it('inclui cargo, telefone e interesse quando preenchidos', () => {

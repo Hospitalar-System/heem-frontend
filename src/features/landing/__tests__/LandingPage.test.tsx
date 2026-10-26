@@ -61,7 +61,9 @@ describe('LandingPage', () => {
 
   it('"Entrar" aponta para /login sem sessão', () => {
     renderLanding()
-    expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login')
+    for (const regiao of [screen.getByRole('banner'), screen.getByRole('contentinfo')]) {
+      expect(within(regiao).getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login')
+    }
   })
 
   it('"Entrar" leva ao painel do papel quando há sessão', () => {
@@ -69,7 +71,9 @@ describe('LandingPage', () => {
       setAuthSession('token', { id: '1', name: 'Ana', email: 'a@b.c', roles: ['tecnico'], tenantId: 't' })
     })
     renderLanding()
-    expect(screen.getByRole('link', { name: 'Ir para o painel' })).toHaveAttribute('href', '/dashboard')
+    for (const regiao of [screen.getByRole('banner'), screen.getByRole('contentinfo')]) {
+      expect(within(regiao).getByRole('link', { name: 'Ir para o painel' })).toHaveAttribute('href', '/dashboard')
+    }
     expect(screen.queryByRole('link', { name: 'Entrar' })).not.toBeInTheDocument()
   })
 

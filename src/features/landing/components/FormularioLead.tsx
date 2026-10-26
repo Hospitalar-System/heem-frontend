@@ -37,7 +37,7 @@ export function FormularioLead({ interesseInicial, onConcluir, onEnviando }: For
     resolver: zodResolver(leadSchema),
     mode: 'onBlur',
     reValidateMode: 'onChange',
-    defaultValues: { nome: '', email: '', organizacao: '', cargo: '', telefone: '', interesse: interesseInicial ?? '', consentimento: false, website: '' },
+    defaultValues: { nome: '', email: '', organizacao: '', cargo: '', telefone: '', interesse: interesseInicial ?? '', consentimento: false, contato_alt: '' },
   })
   const [enviando, setEnviando] = useState(false)
   const [concluido, setConcluido] = useState(false)
@@ -127,8 +127,8 @@ export function FormularioLead({ interesseInicial, onConcluir, onEnviando }: For
 
       {/* Campo isca: invisível e fora da tabulação; humanos o deixam vazio. */}
       <div aria-hidden="true" className="pointer-events-none absolute -left-[9999px] size-px overflow-hidden opacity-0">
-        <label htmlFor="website">Não preencha este campo</label>
-        <input id="website" type="text" tabIndex={-1} autoComplete="off" {...register('website')} />
+        <label htmlFor="contato_alt">Não preencha este campo</label>
+        <input id="contato_alt" type="text" tabIndex={-1} autoComplete="off" data-lpignore="true" data-1p-ignore {...register('contato_alt')} />
       </div>
 
       <div role="alert" aria-live="assertive" className={erroGeral ? 'rounded-xl bg-[var(--danger-soft)] px-3.5 py-3 text-sm text-danger' : 'hidden'}>{erroGeral}</div>

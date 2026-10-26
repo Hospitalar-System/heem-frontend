@@ -101,7 +101,8 @@ describe('abertura pelos botões "Agendar demonstração"', () => {
 
   it('"Entrar" continua levando a /login', () => {
     renderLanding()
-    expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login')
+    expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login')
+    expect(within(screen.getByRole('contentinfo')).getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login')
   })
 })
 
@@ -157,9 +158,13 @@ describe('acessibilidade do diálogo', () => {
 
   it('campo isca existe, está escondido e fora da ordem de tabulação', () => {
     renderDialogo()
-    const isca = document.getElementById('website') as HTMLInputElement
+    const isca = document.getElementById('contato_alt') as HTMLInputElement
     expect(isca).toHaveAttribute('tabindex', '-1')
     expect(isca).toHaveAttribute('autocomplete', 'off')
+    expect(isca).toHaveAttribute('name', 'contato_alt')
+    expect(isca).toHaveAttribute('data-lpignore', 'true')
+    expect(isca).toHaveAttribute('data-1p-ignore')
+    expect(document.querySelector('[name="website"], #website')).toBeNull()
     expect(isca.closest('[aria-hidden="true"]')).not.toBeNull()
     expect(isca).toHaveValue('')
   })
@@ -238,7 +243,7 @@ describe('envio', () => {
       telefone: '(51) 90000-0000',
       interesse: 'manutencao_preventiva',
       consentimento: true,
-      website: '',
+      contato_alt: '',
     })
     await user.click(screen.getByRole('button', { name: 'Voltar à página' }))
     expect(onFechar).toHaveBeenCalled()
@@ -274,10 +279,10 @@ describe('envio', () => {
     enviar.mockResolvedValue(undefined)
     renderDialogo()
     await preencher(user)
-    fireEvent.change(document.getElementById('website') as HTMLInputElement, { target: { value: 'http://spam' } })
+    fireEvent.change(document.getElementById('contato_alt') as HTMLInputElement, { target: { value: 'http://spam' } })
     await user.click(botaoEnviar())
     expect(await screen.findByRole('heading', { name: 'Cadastro recebido' })).toBeInTheDocument()
-    expect(enviar.mock.calls[0][0].website).toBe('http://spam')
+    expect(enviar.mock.calls[0][0].contato_alt).toBe('http://spam')
   })
 
   it.each([

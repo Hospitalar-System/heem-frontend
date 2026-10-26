@@ -93,6 +93,7 @@ export function LandingLayout({ children, onAgendar }: PropsWithChildren<Landing
               <a href="#para-quem" className={`rounded-md hover:text-text-primary ${focusRing}`}>Para quem</a>
               <Link to="/privacidade" className={`rounded-md hover:text-text-primary ${focusRing}`}>Política de Privacidade</Link>
               <Link to="/termos" className={`rounded-md hover:text-text-primary ${focusRing}`}>Termos</Link>
+              <Link to={enter.to} className={`rounded-md hover:text-text-primary ${focusRing}`}>{enter.label}</Link>
             </nav>
           </div>
           <p className="mt-6">Telas e números são exemplos ilustrativos.</p>
