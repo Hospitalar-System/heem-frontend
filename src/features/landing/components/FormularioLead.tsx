@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Check, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { descreverErroLead, enviarLead } from '../api/enviarLead'
 import { leadSchema, opcoesCargo, opcoesInteresse, type LeadFormValues, type ValorInteresse } from '../schemas/lead-schema'
 import { landingButtonClasses } from './button-classes'
+import { SelectLanding } from './SelectLanding'
 
 interface FormularioLeadProps {
   interesseInicial?: ValorInteresse
@@ -20,7 +21,7 @@ const campoClasses =
 function Campo({ id, rotulo, erro, children }: { id: string; rotulo: string; erro?: string; children: ReactNode }) {
   return (
     <div className="grid gap-1.5">
-      <label htmlFor={id} className="text-[13.5px] font-medium text-text-secondary">{rotulo}</label>
+      <label id={`${id}-rotulo`} htmlFor={id} className="text-[13.5px] font-medium text-text-secondary">{rotulo}</label>
       {children}
       {erro && <p id={`${id}-erro`} className="text-sm text-danger">{erro}</p>}
     </div>
@@ -30,6 +31,7 @@ function Campo({ id, rotulo, erro, children }: { id: string; rotulo: string; err
 export function FormularioLead({ interesseInicial, onConcluir, onEnviando }: FormularioLeadProps) {
   const {
     register,
+    control,
     handleSubmit,
     setError,
     formState: { errors },
@@ -98,20 +100,26 @@ export function FormularioLead({ interesseInicial, onConcluir, onEnviando }: For
           <input id="organizacao" type="text" autoComplete="organization" placeholder="Hospital Santa Casa" aria-invalid={!!errors.organizacao} aria-describedby={descrito('organizacao')} aria-required="true" className={`${campoClasses} ${borda('organizacao')}`} {...register('organizacao')} />
         </Campo>
         <Campo id="cargo" rotulo="Cargo" erro={errors.cargo?.message}>
-          <select id="cargo" aria-invalid={!!errors.cargo} aria-describedby={descrito('cargo')} className={`${campoClasses} ${borda('cargo')}`} {...register('cargo')}>
-            <option value="">Selecione</option>
-            {opcoesCargo.map((cargo) => <option key={cargo} value={cargo}>{cargo}</option>)}
-          </select>
+          <Controller
+          name="cargo"
+          control={control}
+          render={({ field }) => (
+            <SelectLanding id="cargo" name={field.name} rotuloId="cargo-rotulo" opcoes={opcoesCargo.map((cargo) => ({ valor: cargo, rotulo: cargo }))} valor={field.value} onChange={field.onChange} onBlur={field.onBlur} inputRef={field.ref} invalido={!!errors.cargo} descritoPor={descrito('cargo')} />
+          )}
+        />
         </Campo>
       </div>
       <Campo id="telefone" rotulo="Telefone (opcional)" erro={errors.telefone?.message}>
         <input id="telefone" type="tel" autoComplete="tel" placeholder="(51) 90000-0000" aria-invalid={!!errors.telefone} aria-describedby={descrito('telefone')} className={`${campoClasses} ${borda('telefone')}`} {...register('telefone')} />
       </Campo>
       <Campo id="interesse" rotulo="O que você quer resolver?">
-        <select id="interesse" className={`${campoClasses} border-border`} {...register('interesse')}>
-          <option value="">Selecione</option>
-          {opcoesInteresse.map((opcao) => <option key={opcao.valor} value={opcao.valor}>{opcao.rotulo}</option>)}
-        </select>
+        <Controller
+          name="interesse"
+          control={control}
+          render={({ field }) => (
+            <SelectLanding id="interesse" name={field.name} rotuloId="interesse-rotulo" opcoes={opcoesInteresse.map((opcao) => ({ valor: opcao.valor, rotulo: opcao.rotulo }))} valor={field.value} onChange={field.onChange} onBlur={field.onBlur} inputRef={field.ref} />
+          )}
+        />
       </Campo>
 
       <div className="grid gap-1.5">
