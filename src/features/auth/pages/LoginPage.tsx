@@ -1,8 +1,22 @@
 import { ArrowUpRight } from 'lucide-react'
+import { useSyncExternalStore } from 'react'
+import { Navigate } from 'react-router-dom'
 import { LoginForm } from '../components/LoginForm'
+import { SessionRestoring } from '../components/SessionRestoring'
+import { useAuthRestoring } from '../hooks/useAuthRestoring'
+import { getRoleLandingPath } from '../hooks/useLogin'
+import { getAuthState, subscribeAuthState } from '../session'
 import { ThemeSwitcher } from '@/app/ThemeSwitcher'
 
 export function LoginPage() {
+  const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
+  const restoring = useAuthRestoring()
+
+  // Aguarda a restauração da sessão para não piscar o formulário; já autenticado, segue ao destino por papel.
+  if (restoring) return <SessionRestoring />
+  const destination = auth.isAuthenticated && auth.user ? getRoleLandingPath(auth.user.roles) : null
+  if (destination) return <Navigate to={destination} replace />
+
   return (
     <main className="min-h-screen bg-bg-login text-text-primary">
       <div className="flex min-h-screen w-full flex-col md:flex-row">
