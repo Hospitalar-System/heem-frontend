@@ -6,6 +6,7 @@ import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { SessionRestoring } from '@/features/auth/components/SessionRestoring'
 import { useAuthRestoring } from '@/features/auth/hooks/useAuthRestoring'
 
+const LandingPage = lazy(() => import('@/features/landing/pages/LandingPage').then((module) => ({ default: module.LandingPage })))
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
 const HospitalsPage = lazy(() => import('@/features/assets/pages/HospitalsPage').then((module) => ({ default: module.HospitalsPage })))
 const SectorsPage = lazy(() => import('@/features/assets/pages/SectorsPage').then((module) => ({ default: module.SectorsPage })))
@@ -28,7 +29,7 @@ const PreventivePlansPage = lazy(() => import('@/features/maintenance/pages/Prev
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <Navigate to="/login" replace />,
+    element: <Suspense fallback={<DashboardRouteLoading />}><LandingPage /></Suspense>,
   },
   { path: '/login', element: <LoginPage /> },
   { path: '/platform/clients', element: <RequireRole role="super_admin"><Suspense fallback={<DashboardRouteLoading />}><ClientsPage /></Suspense></RequireRole> },

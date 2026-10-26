@@ -1,0 +1,55 @@
+/*
+ * Tons extras usados só pela landing pública. Derivados dos tokens globais do tema
+ * (claro/escuro/auto), sem alterá-los. Escopo: classe .landing.
+ */
+.landing {
+  --bg-deep: color-mix(in srgb, var(--bg) 88%, black);
+  --surface-hi: color-mix(in srgb, var(--surface) 90%, var(--text-primary));
+  --primary-soft: color-mix(in srgb, var(--primary) 12%, transparent);
+  --warning-soft: color-mix(in srgb, var(--warning) 14%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger) 14%, transparent);
+  --ink: color-mix(in srgb, var(--primary) 15%, black);
+  --nav-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* Chips de norma (L2): fonte mono auto-hospedada, só dentro da landing. */
+.landing .font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+}
+
+html:has(.landing) {
+  scroll-behavior: smooth;
+}
+
+.landing section[id] {
+  scroll-margin-top: 88px;
+}
+
+.landing-nav {
+  background-color: var(--nav-bg);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  transition: box-shadow 0.3s;
+}
+
+.landing-nav[data-scrolled='true'] {
+  box-shadow: 0 1px 0 var(--border), 0 8px 24px -16px color-mix(in srgb, black 35%, transparent);
+}
+
+.landing-progress {
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(.landing) {
+    scroll-behavior: auto;
+  }
+  .landing-nav {
+    transition: none;
+  }
+}
