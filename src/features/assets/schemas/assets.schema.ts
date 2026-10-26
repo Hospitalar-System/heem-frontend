@@ -14,6 +14,7 @@ export const equipmentSchema = z.object({
   setorId: z.string().min(1, 'Selecione um setor.'),
   codigo: z.string().trim().min(1, 'Informe o código.'),
   nome: z.string().trim().min(1, 'Informe o nome.'),
+  categoriaId: z.string().min(1, 'Selecione uma categoria.'),
   modelo: z.string(),
   numeroSerie: z.string(),
   marca: z.string(),
@@ -27,6 +28,15 @@ export const equipmentSchema = z.object({
   dataInstalacao: z.string(),
   dataGarantiaFim: z.string(),
 })
+
+export const categorySchema = z.object({
+  nome: z.string().trim().min(1, 'Informe o nome da categoria.').max(120, 'Use até 120 caracteres.'),
+  checklistPadraoId: z.string(),
+  ativa: z.boolean(),
+})
+export type CategoryFormValues = z.infer<typeof categorySchema>
+
+export const categoryMergeSchema = z.object({ origemId: z.string().min(1, 'Selecione a categoria de origem.') })
 
 export const equipmentLabelSchema = z.object({
   valor: z.string()
@@ -55,6 +65,7 @@ export function toEquipmentInput(values: EquipmentFormValues, fotoUrl: string | 
     numeroSerie: values.numeroSerie || '',
     marca: values.marca || '',
     fotoUrl,
+    categoriaId: values.categoriaId,
     dadosGerais,
     classeRiscoAnvisa: values.classeRiscoAnvisa,
     statusCicloVida: values.statusCicloVida,

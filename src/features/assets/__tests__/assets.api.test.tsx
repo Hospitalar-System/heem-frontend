@@ -3,9 +3,10 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PropsWithChildren } from 'react'
 import { apiClient } from '@/lib/axios'
+import { useCategories, useDeactivateCategory, useMarkCategoryReviewed, useMergeCategory, useSaveCategory } from '../api/categories'
 import { useEquipments, useHospitals, useSaveEquipment, useSectors, useUploadEquipmentPhoto } from '../api/assets'
 
-vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
+vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } }))
 vi.mock('@/lib/demo-mode', () => ({ isDemoMode: false }))
 
 function wrapper({ children }: PropsWithChildren) {
@@ -57,5 +58,36 @@ describe('asset queries', () => {
     expect(put).toHaveBeenCalledWith('https://storage.invalid/signed', { method: 'PUT', body: file })
     expect(apiClient.post).toHaveBeenCalledTimes(1)
     vi.unstubAllGlobals()
+  })
+})
+
+describe('category queries', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('lists categories with the ativa and revisar filters only when set', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: [] })
+    const { result: unfiltered } = renderHook(() => useCategories(), { wrapper })
+    await waitFor(() => expect(unfiltered.current.isSuccess).toBe(true))
+    expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: {} })
+    const { result: filtered } = renderHook(() => useCategories({ ativa: true, revisar: true }), { wrapper })
+    await waitFor(() => expect(filtered.current.isSuccess).toBe(true))
+    expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { ativa: true, revisar: true } })
+  })
+
+  it('creates, updates, deactivates, reviews and merges against the category routes', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ data: {} } as never)
+    vi.mocked(apiClient.put).mockResolvedValue({ data: {} } as never)
+    vi.mocked(apiClient.delete).mockResolvedValue({ data: null } as never)
+    const data = { nome: 'Bomba', ativa: true, checklistPadraoId: null }
+    await renderHook(() => useSaveCategory(), { wrapper }).result.current.mutateAsync({ data })
+    expect(apiClient.post).toHaveBeenCalledWith('/categorias-equipamento', data)
+    await renderHook(() => useSaveCategory(), { wrapper }).result.current.mutateAsync({ id: 'c1', data })
+    expect(apiClient.put).toHaveBeenCalledWith('/categorias-equipamento/c1', data)
+    await renderHook(() => useDeactivateCategory(), { wrapper }).result.current.mutateAsync('c1')
+    expect(apiClient.delete).toHaveBeenCalledWith('/categorias-equipamento/c1')
+    await renderHook(() => useMarkCategoryReviewed(), { wrapper }).result.current.mutateAsync('c1')
+    expect(apiClient.put).toHaveBeenCalledWith('/categorias-equipamento/c1/revisada')
+    await renderHook(() => useMergeCategory(), { wrapper }).result.current.mutateAsync({ destinoId: 'dest', origemId: 'orig' })
+    expect(apiClient.post).toHaveBeenCalledWith('/categorias-equipamento/dest/mesclar', { origemId: 'orig' })
   })
 })

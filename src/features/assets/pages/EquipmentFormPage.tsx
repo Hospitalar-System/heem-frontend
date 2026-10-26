@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { Field } from '@/components/ui/Modal'
 import { equipmentSchema, toEquipmentInput, type EquipmentFormValues } from '../schemas/assets.schema'
+import { getCategoryErrorMessage, getErrorCode, useCategories } from '../api/categories'
 import { useEquipment, useHospitals, useSaveEquipment, useSector, useSectors, useUploadEquipmentPhoto } from '../api/assets'
 import type { CreateEquipmentInput } from '../types'
 import { Select } from '@/components/ui/Select'
@@ -15,7 +16,7 @@ import { FormDatePicker } from '@/components/ui/FormDatePicker'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60'
 const emptyValues: EquipmentFormValues = {
-  setorId: '', codigo: '', nome: '', modelo: '', numeroSerie: '', marca: '', dadosGerais: [],
+  setorId: '', codigo: '', nome: '', categoriaId: '', modelo: '', numeroSerie: '', marca: '', dadosGerais: [],
   classeRiscoAnvisa: 'I', statusCicloVida: 'ATIVO', criticidade: 'MEDIA', tipoProtecao: 'CLASSE_I',
   parteAplicada: 'TIPO_B', modoOperacao: 'CONTINUO', dataInstalacao: '', dataGarantiaFim: '',
 }
@@ -31,6 +32,7 @@ export function EquipmentFormPage() {
   const [photo, setPhoto] = useState<File | null>(null)
   const [submitError, setSubmitError] = useState('')
   const sectors = useSectors(hospitalId)
+  const categories = useCategories()
   const save = useSaveEquipment()
   const uploadPhoto = useUploadEquipmentPhoto()
   const form = useForm<EquipmentFormValues>({ resolver: zodResolver(equipmentSchema), defaultValues: emptyValues })
@@ -46,6 +48,7 @@ export function EquipmentFormPage() {
       setorId: equipment.data.setorId,
       codigo: equipment.data.codigo,
       nome: equipment.data.nome,
+      categoriaId: equipment.data.categoriaId ?? '',
       modelo: equipment.data.modelo ?? '',
       numeroSerie: equipment.data.numeroSerie ?? '',
       marca: equipment.data.marca ?? '',
@@ -61,6 +64,8 @@ export function EquipmentFormPage() {
     })
   }, [equipment.data, form])
 
+  const currentCategoryId = equipment.data?.categoriaId
+  const categoryOptions = (categories.data ?? []).filter((category) => category.ativa || category.id === currentCategoryId).map((category) => ({ value: category.id, label: category.ativa ? category.nome : `${category.nome} (inativa)` }))
   const busy = save.isPending || uploadPhoto.isPending
   const submit = form.handleSubmit(async (values) => {
     setSubmitError('')
@@ -74,6 +79,8 @@ export function EquipmentFormPage() {
       navigate(`/assets/${result.id}`, { replace: true })
     } catch (error) {
       const message = getEquipmentError(error)
+      const code = getErrorCode(error)
+      if (code === 'CATEGORIA_OBRIGATORIA' || code === 'CATEGORIA_INVALIDA') form.setError('categoriaId', { message })
       setSubmitError(message)
       toast.error(message)
     }
@@ -91,6 +98,7 @@ export function EquipmentFormPage() {
           <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {editing ? <Field label="Código"><input value={equipment.data?.codigo ?? ''} disabled className={inputClass} /></Field> : <Field label="Código" error={form.formState.errors.codigo?.message}><input autoFocus className={inputClass} {...form.register('codigo')} /></Field>}
             <Field label="Nome" error={form.formState.errors.nome?.message}><input className={inputClass} {...form.register('nome')} /></Field>
+            <Field label="Categoria" error={form.formState.errors.categoriaId?.message ?? (categories.isError ? 'Não foi possível carregar as categorias.' : undefined)}><FormSelect control={form.control} name="categoriaId" disabled={categories.isLoading} placeholder={equipment.data && !equipment.data.categoriaId ? 'Sem categoria: selecione uma' : 'Selecione uma categoria'} aria-invalid={Boolean(form.formState.errors.categoriaId)} options={categoryOptions} /></Field>
             <Field label="Modelo"><input className={inputClass} {...form.register('modelo')} /></Field>
             <Field label="Número de série"><input className={inputClass} {...form.register('numeroSerie')} /></Field>
             <Field label="Fabricante"><input className={inputClass} {...form.register('marca')} /></Field>
@@ -152,6 +160,8 @@ function removeCreateOnlyFields(input: CreateEquipmentInput) {
 }
 
 function getEquipmentError(error: unknown) {
+  const categoryMessage = getCategoryErrorMessage(error)
+  if (categoryMessage) return categoryMessage
   if (typeof error === 'object' && error !== null && 'response' in error) {
     const response = (error as { response?: { data?: { detail?: string; code?: string } } }).response
     if (response?.data?.detail) return response.data.detail

@@ -1,7 +1,7 @@
 import { AlertTriangle, Download, FileSpreadsheet, LockKeyhole, Upload, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
-import { batchImportTypes, createBatchImportTemplate, formatFileSize, type BatchImportType } from '../types'
+import { batchImportErrorMessages, batchImportTypes, createBatchImportTemplate, formatFileSize, type BatchImportType } from '../types'
 
 const choiceClass = 'flex min-h-[76px] cursor-pointer items-start gap-3 rounded-md border border-border bg-surface p-3 outline-none transition-colors hover:bg-bg/60 has-[:checked]:border-primary has-[:checked]:bg-primary/5 focus-within:ring-2 focus-within:ring-primary'
 
@@ -64,6 +64,8 @@ export function BatchImportPage() {
         <details className="mt-3 rounded-md border border-border bg-bg px-3 py-2">
           <summary className="cursor-pointer text-[11px] font-medium text-text-secondary">Colunas do modelo</summary>
           <p className="mt-2 break-words font-mono text-[10px] leading-5 text-text-muted">{selectedType.headers.join(';')}</p>
+          {'requiredNote' in selectedType ? <p className="mt-2 text-xs leading-5 text-text-secondary">{selectedType.requiredNote}</p> : null}
+          {type === 'equipamentos' ? <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] leading-4 text-text-secondary">{Object.entries(batchImportErrorMessages).map(([code, message]) => <li key={code}><code className="text-text-primary">{code}</code>: {message}</li>)}</ul> : null}
           <p className="mt-2 text-[10px] leading-4 text-warning">Modelo preliminar: os cabeçalhos ainda precisam ser confirmados pelo contrato de importação do backend.</p>
         </details>
       </section>
