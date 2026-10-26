@@ -61,6 +61,24 @@ describe('WorkOrdersPage', () => {
     expect(await screen.findByTestId('current-route')).toHaveTextContent('/work-orders/ot-1')
   })
 
+  it('abre o detalhe ao clicar em qualquer célula da linha ou ao usar Enter e Espaço', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(<WorkOrdersPage />, { wrapper: TestProviders })
+    await screen.findByText('OT-1001')
+    await user.click(screen.getByText('Bomba de infusão'))
+    expect(await screen.findByTestId('current-route')).toHaveTextContent('/work-orders/ot-1')
+    unmount()
+
+    for (const key of ['{Enter}', ' ']) {
+      const view = render(<WorkOrdersPage />, { wrapper: TestProviders })
+      await screen.findByText('OT-1001')
+      screen.getByRole('link', { name: 'Abrir OT-1001' }).focus()
+      await user.keyboard(key)
+      expect(await screen.findByTestId('current-route')).toHaveTextContent('/work-orders/ot-1')
+      view.unmount()
+    }
+  })
+
   it('creates a preventive order using only a technician linked to the equipment hospital', async () => {
     const user = userEvent.setup()
     render(<WorkOrdersPage />, { wrapper: TestProviders })

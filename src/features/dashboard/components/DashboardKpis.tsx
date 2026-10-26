@@ -1,4 +1,4 @@
-import { Activity, ClipboardList, PackageCheck, Siren, TrendingUp } from 'lucide-react'
+import { Activity, ClipboardList, PackageCheck, Siren } from 'lucide-react'
 import type { DashboardSummary } from '../types'
 
 export function DashboardKpis({ data }: { data: DashboardSummary }) {
@@ -11,7 +11,7 @@ export function DashboardKpis({ data }: { data: DashboardSummary }) {
     {
       label: 'Equipamentos ativos',
       value: data.activeEquipment.toLocaleString('pt-BR'),
-      note: `▲ ${data.equipmentChangePercent.toLocaleString('pt-BR')}% vs. mês anterior`,
+      note: null,
       Icon: PackageCheck,
       tone: 'primary',
       noteTone: 'text-primary',
@@ -19,23 +19,23 @@ export function DashboardKpis({ data }: { data: DashboardSummary }) {
     {
       label: 'OT em aberto',
       value: data.openWorkOrders.toLocaleString('pt-BR'),
-      note: `▲ ${data.newWorkOrdersToday} novas hoje`,
+      note: `${data.inExecutionWorkOrders.toLocaleString('pt-BR')} em execução`,
       Icon: ClipboardList,
       tone: 'warning',
       noteTone: 'text-warning',
     },
     {
-      label: 'Emergências hoje',
-      value: data.emergenciesToday.toLocaleString('pt-BR'),
-      note: `${data.criticalEmergenciesOpen} críticas em aberto`,
+      label: 'Chamados abertos',
+      value: data.openTickets.toLocaleString('pt-BR'),
+      note: `${data.criticalTicketsOpen.toLocaleString('pt-BR')} críticos em aberto`,
       Icon: Siren,
       tone: 'danger',
       noteTone: 'text-danger',
     },
     {
       label: 'Disponibilidade',
-      value: `${data.availabilityPercent.toLocaleString('pt-BR')}%`,
-      note: `▲ ${data.availabilityChangePp.toLocaleString('pt-BR')} p.p. na semana`,
+      value: data.availabilityPercent === null ? '—' : `${data.availabilityPercent.toLocaleString('pt-BR')}%`,
+      note: null,
       Icon: Activity,
       tone: 'primary',
       noteTone: 'text-primary',
@@ -53,9 +53,8 @@ export function DashboardKpis({ data }: { data: DashboardSummary }) {
             </span>
           </div>
           <p className={`mt-1 text-[26px] font-semibold leading-8 tracking-tight ${tone === 'danger' ? 'text-danger' : 'text-text-primary'}`}>{value}</p>
-          <p className={`mt-1 flex items-center gap-1 text-[10px] font-medium ${noteTone}`}>
-            {tone === 'primary' && label === 'Disponibilidade' && <TrendingUp aria-hidden="true" size={10} />}
-            {note}
+          <p className={`mt-1 flex items-center gap-1 text-[10px] font-medium ${note ? noteTone : 'text-text-muted'}`}>
+            {note ?? '—'}
           </p>
         </article>
       ))}

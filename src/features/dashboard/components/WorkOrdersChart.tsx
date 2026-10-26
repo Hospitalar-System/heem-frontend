@@ -2,10 +2,10 @@ import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis } f
 import type { DashboardSummary, WorkOrderStatus } from '../types'
 
 const statusColors: Record<WorkOrderStatus, string> = {
-  open: 'var(--text-secondary)',
+  scheduled: 'var(--text-secondary)',
   inProgress: 'var(--warning)',
   completed: 'var(--primary)',
-  overdue: 'var(--danger)',
+  canceled: 'var(--text-muted)',
 }
 
 export function WorkOrdersChart({ data }: { data: DashboardSummary['workOrdersByStatus'] }) {
@@ -13,7 +13,7 @@ export function WorkOrdersChart({ data }: { data: DashboardSummary['workOrdersBy
     <section aria-labelledby="work-orders-chart-title" className="min-w-0 rounded-lg border border-border bg-surface p-4 xl:h-[283px] xl:p-5">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 id="work-orders-chart-title" className="text-sm font-semibold text-text-primary">OT por status</h2>
-        <span className="text-[10px] text-text-muted">Últimos 30 dias</span>
+        <span className="text-[10px] text-text-muted">Total por status</span>
       </div>
       <div role="img" aria-label={`Ordens de trabalho por status: ${data.map(({ label, count }) => `${label}: ${count}`).join(', ')}`} className="h-[190px] xl:h-[224px]">
         <ResponsiveContainer width="100%" height="100%">

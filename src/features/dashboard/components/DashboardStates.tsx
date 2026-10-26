@@ -38,13 +38,17 @@ export function DashboardEmptyState() {
   )
 }
 
-export function DashboardErrorState({ onRetry }: { onRetry: () => void }) {
+export function DashboardErrorState({ onRetry, kind = 'network' }: { onRetry: () => void; kind?: 'network' | 'contract' }) {
   return (
     <section role="alert" className="grid min-h-[calc(100vh-10rem)] place-items-center py-10 text-center">
       <div className="mx-auto flex max-w-sm flex-col items-center">
         <AlertCircle aria-hidden="true" className="mb-3 text-danger" size={30} />
         <h2 className="text-base font-semibold text-text-primary">Não foi possível carregar o dashboard</h2>
-        <p className="mt-2 text-xs text-text-secondary">Verifique sua conexão e tente novamente.</p>
+        <p className="mt-2 text-xs text-text-secondary">
+          {kind === 'contract'
+            ? 'Os dados chegaram em um formato que o painel ainda não reconhece. Tente novamente em instantes; se continuar, avise o suporte.'
+            : 'Verifique sua conexão e tente novamente.'}
+        </p>
         <button type="button" onClick={onRetry} className="mt-4 inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs text-text-primary outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary">
           <RotateCw aria-hidden="true" size={14} /> Tentar novamente
         </button>

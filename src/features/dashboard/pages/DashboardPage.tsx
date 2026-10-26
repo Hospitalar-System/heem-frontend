@@ -7,11 +7,10 @@ import { DashboardAttention } from '../components/DashboardAttention'
 import { DashboardKpis } from '../components/DashboardKpis'
 import { DashboardSidebar } from '../components/DashboardSidebar'
 import { DashboardEmptyState, DashboardErrorState, DashboardLoadingState } from '../components/DashboardStates'
-import { MtbfChart } from '../components/MtbfChart'
 import { NotificationsPopover } from '../components/NotificationsPopover'
 import { RecentTicketsTable } from '../components/RecentTicketsTable'
 import { WorkOrdersChart } from '../components/WorkOrdersChart'
-import { isDashboardSummaryEmpty } from '../types'
+import { DashboardContractError, isDashboardSummaryEmpty } from '../types'
 
 export function DashboardPage() {
   const [search, setSearch] = useState('')
@@ -45,7 +44,7 @@ export function DashboardPage() {
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold leading-5 text-text-primary">Dashboard</h1>
               <p className="truncate text-[9px] leading-3 text-text-muted">
-                {summary ? `${summary.tenantName} · ${summary.hospitalCount} hospitais` : 'Resumo operacional'}
+                Resumo operacional
               </p>
             </div>
           </div>
@@ -72,16 +71,13 @@ export function DashboardPage() {
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6 xl:px-8 xl:py-7">
           {dashboard.isPending ? <DashboardLoadingState /> : null}
-          {dashboard.isError ? <DashboardErrorState onRetry={() => void dashboard.refetch()} /> : null}
+          {dashboard.isError ? <DashboardErrorState kind={dashboard.error instanceof DashboardContractError ? 'contract' : 'network'} onRetry={() => void dashboard.refetch()} /> : null}
           {!dashboard.isPending && !dashboard.isError && isEmpty ? <DashboardEmptyState /> : null}
           {!dashboard.isPending && !dashboard.isError && summary && !isEmpty && (
             <div className="space-y-4 xl:space-y-5">
               <DashboardKpis data={summary} />
               <DashboardAttention data={summary} />
-              <div className="grid gap-4 xl:grid-cols-2 xl:gap-5">
-                <WorkOrdersChart data={summary.workOrdersByStatus} />
-                <MtbfChart data={summary.mtbfBySector} />
-              </div>
+              <WorkOrdersChart data={summary.workOrdersByStatus} />
               <RecentTicketsTable tickets={summary.recentTickets} query={search} />
             </div>
           )}

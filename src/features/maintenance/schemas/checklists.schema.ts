@@ -1,8 +1,9 @@
 import { z } from 'zod'
+import { checklistItemTypes } from '../types'
 
 export const checklistItemSchema = z.object({
   descricao: z.string().trim().min(1, 'Informe a descrição do item.').max(240, 'Use até 240 caracteres.'),
-  tipo: z.string().trim().min(1, 'Informe o tipo do item.').max(60, 'Use até 60 caracteres.'),
+  tipo: z.enum(checklistItemTypes, { message: 'Selecione o tipo do item.' }),
   unidade: z.string().trim().max(40, 'Use até 40 caracteres.').optional(),
   obrigatorio: z.boolean(),
 })
