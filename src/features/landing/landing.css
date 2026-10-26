@@ -10,6 +10,9 @@
   --danger-soft: color-mix(in srgb, var(--danger) 14%, transparent);
   --ink: color-mix(in srgb, var(--primary) 15%, black);
   --nav-bg: color-mix(in srgb, var(--bg) 88%, transparent);
+  --on-warn: color-mix(in srgb, var(--warning) 20%, black);
+  --phone: #101011;
+  --shadow: color-mix(in srgb, black 40%, transparent);
   background-color: var(--bg);
   color: var(--text-primary);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -45,11 +48,92 @@ html:has(.landing) {
   will-change: transform;
 }
 
+/* Hero (L2) */
+.landing-hero::before {
+  content: '';
+  position: absolute;
+  inset: -120px 0 auto;
+  height: 560px;
+  background: radial-gradient(50% 60% at 50% 0%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 70%);
+  pointer-events: none;
+}
+
+.landing-hin {
+  animation: landing-hin 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes landing-hin {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Painéis de abas: `hidden` precisa vencer o display de grid das utilidades. */
+.landing .landing-painel[hidden] {
+  display: none;
+}
+
+.landing .landing-painel {
+  animation: landing-hin 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.landing-cta {
+  background:
+    radial-gradient(60% 100% at 50% 0%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 70%),
+    var(--surface);
+}
+
+/* Revelação ao rolar: os atributos só existem quando há IntersectionObserver e sem reduced motion. */
+.landing [data-reveal] {
+  transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.landing [data-reveal='pending'] {
+  opacity: 0;
+  transform: translateY(28px);
+}
+
+.landing [data-reveal='pending'][data-reveal-variant='scale'] {
+  transform: translateY(24px) scale(0.94);
+}
+
+/* Gráfico de indicadores (SVG próprio, cores pelo tema). */
+.landing-chart-grid line { stroke: var(--border); fill: none; }
+.landing-chart-text { fill: var(--text-muted); font-family: Inter, sans-serif; }
+.landing-chart-area { fill: var(--primary-soft); }
+.landing-chart-line {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-dasharray: 1200;
+  animation: landing-draw 1.6s ease 0.3s both;
+}
+.landing-chart-point circle { fill: var(--surface); stroke: var(--primary); stroke-width: 2; }
+.landing-chart-dot { fill: var(--primary); }
+.landing-chart-value { fill: var(--text-primary); font-weight: 600; font-family: Inter, sans-serif; }
+
+@keyframes landing-draw {
+  from { stroke-dashoffset: 1200; }
+  to { stroke-dashoffset: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html:has(.landing) {
     scroll-behavior: auto;
   }
   .landing-nav {
+    transition: none;
+  }
+  .landing-hin,
+  .landing .landing-painel,
+  .landing-chart-line {
+    animation: none;
+  }
+  .landing [data-reveal] {
+    opacity: 1;
+    transform: none;
     transition: none;
   }
 }
