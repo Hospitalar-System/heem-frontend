@@ -19,7 +19,7 @@ export function DashboardAttention({ data }: { data: DashboardSummary }) {
   const alerts = [
     { label: 'SLAs vencidos', count: data.overdueSla, Icon: AlertTriangle },
     { label: 'Preventivas atrasadas', count: data.overduePreventiveWorkOrders, Icon: Clock3 },
-    { label: `Documentos vencendo${data.expiringDocumentsWithinDays ? ` em ${data.expiringDocumentsWithinDays} dias` : ''}`, count: data.expiringDocuments, Icon: FileClock },
+    { label: `Documentos vencendo em ${data.expiringDocumentsWithinDays} dias`, count: data.expiringDocuments, Icon: FileClock },
   ]
 
   return (

@@ -1,5 +1,6 @@
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { TicketSlaBadge } from '@/features/maintenance/components/TicketSlaBadge'
 import type { DashboardTicket, TicketSeverity } from '../types'
 
 const severityStyle: Record<TicketSeverity, { label: string; className: string }> = {
@@ -12,7 +13,7 @@ const severityStyle: Record<TicketSeverity, { label: string; className: string }
 export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicket[]; query: string }) {
   const search = query.trim().toLocaleLowerCase('pt-BR')
   const visibleTickets = tickets.filter((ticket) =>
-    [ticket.id, ticket.equipment, ticket.hospital, ticket.sector].some((value) =>
+    [ticket.code, ticket.statusLabel].some((value) =>
       value.toLocaleLowerCase('pt-BR').includes(search),
     ),
   )
@@ -26,29 +27,29 @@ export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicke
         </Link>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] border-collapse text-left text-xs">
+        <table className="w-full min-w-[640px] border-collapse text-left text-xs">
           <thead className="bg-bg/50 text-[10px] font-medium text-text-muted">
             <tr className="h-9 2xl:h-12">
               <th scope="col" className="px-5 font-medium">Chamado</th>
-              <th scope="col" className="px-4 font-medium">Equipamento</th>
-              <th scope="col" className="px-4 font-medium">Hospital / Setor</th>
+              <th scope="col" className="px-4 font-medium">Status</th>
               <th scope="col" className="px-4 font-medium">Severidade</th>
+              <th scope="col" className="px-4 font-medium">SLA</th>
               <th scope="col" className="px-4 font-medium">Abertura</th>
             </tr>
           </thead>
           <tbody>
             {visibleTickets.map((ticket) => {
-              const severity = severityStyle[ticket.severity]
+              const severity = ticket.severity ? severityStyle[ticket.severity] : null
               return (
                 <tr key={ticket.id} className="h-10 border-t border-border/80 transition hover:bg-bg/50 2xl:h-12">
                   <td className="px-5">
-                    <Link to={`/tickets/${ticket.id}`} className="rounded text-text-secondary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">{ticket.id}</Link>
+                    <Link to={`/tickets/${ticket.id}`} className="rounded text-text-secondary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">{ticket.code}</Link>
                   </td>
-                  <td className="max-w-[300px] truncate px-4 text-text-primary" title={ticket.equipment}>{ticket.equipment}</td>
-                  <td className="px-4 text-text-secondary">{ticket.hospital} · {ticket.sector}</td>
+                  <td className="px-4 text-text-primary">{ticket.statusLabel}</td>
                   <td className="px-4">
-                    <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-medium ${severity.className}`}>{severity.label}</span>
+                    {severity ? <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-medium ${severity.className}`}>{severity.label}</span> : <span className="text-text-muted">—</span>}
                   </td>
+                  <td className="px-4">{ticket.slaStatus ? <TicketSlaBadge status={ticket.slaStatus} /> : <span className="text-text-muted">—</span>}</td>
                   <td className="whitespace-nowrap px-4 text-text-secondary">{ticket.openedLabel}</td>
                 </tr>
               )

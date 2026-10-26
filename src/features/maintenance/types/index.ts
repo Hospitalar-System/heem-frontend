@@ -48,6 +48,32 @@ export interface ChecklistSummary {
   quantidadeItens?: number
 }
 
+export const checklistItemTypes = ['NUMERICO', 'BOOLEANO', 'TEXTO', 'SELECAO'] as const
+export type ChecklistItemType = (typeof checklistItemTypes)[number]
+
+const checklistItemTypeLabels: Record<ChecklistItemType, string> = {
+  NUMERICO: 'Número (medição)',
+  BOOLEANO: 'Sim ou Não',
+  TEXTO: 'Texto livre',
+  SELECAO: 'Lista de opções',
+}
+
+function isChecklistItemType(value: unknown): value is ChecklistItemType {
+  return typeof value === 'string' && (checklistItemTypes as readonly string[]).includes(value)
+}
+
+/** Normaliza o tipo vindo da API (legado/minúsculas) para o enum canônico; desconhecido vira undefined. */
+export function normalizeChecklistItemType(tipo?: string | null): ChecklistItemType | undefined {
+  const value = tipo?.trim().toUpperCase()
+  return isChecklistItemType(value) ? value : undefined
+}
+
+/** Rótulo hospitalar do tipo; valor desconhecido é mostrado como veio. */
+export function checklistItemTypeLabel(tipo?: string | null): string {
+  const normalized = normalizeChecklistItemType(tipo)
+  return normalized ? checklistItemTypeLabels[normalized] : (tipo ?? '')
+}
+
 export interface ChecklistItem {
   id: string
   descricao: string
@@ -65,7 +91,7 @@ export interface CreateChecklistInput {
 
 export interface SaveChecklistItemInput {
   descricao: string
-  tipo: string
+  tipo: ChecklistItemType
   unidade?: string | null
   obrigatorio: boolean
 }

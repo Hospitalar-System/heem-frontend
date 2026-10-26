@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { apiClient } from '../axios'
 import { isDemoMode } from '../demo-mode'
+import { dashboardSummaryResponseSchema } from '@/features/dashboard/types'
 
 describe('modo de demonstração', () => {
   it('é ativado automaticamente quando a API não está configurada', () => {
@@ -15,7 +16,8 @@ describe('modo de demonstração', () => {
     ])
 
     expect(hospitals.data).toHaveLength(2)
-    expect(dashboard.data.tenant.name).toBe('Rede Hospitalar Exemplo')
+    expect(dashboardSummaryResponseSchema.safeParse(dashboard.data).success).toBe(true)
+    expect(dashboard.data.chamadosRecentes).toHaveLength(2)
     expect(orders.data).toHaveLength(2)
   })
 

@@ -1,104 +1,150 @@
 import { z } from 'zod'
 
-export const workOrderStatusSchema = z.enum(['open', 'inProgress', 'completed', 'overdue'])
-export const ticketSeveritySchema = z.enum(['critical', 'high', 'medium', 'low'])
+export type WorkOrderStatus = 'scheduled' | 'inProgress' | 'completed' | 'canceled'
+export type TicketSeverity = 'critical' | 'high' | 'medium' | 'low'
+export type TicketSlaStatus = 'no_prazo' | 'em_risco' | 'vencido'
+
+/**
+ * Contrato de ENTRADA de GET /relatorios/dashboard (DashboardResponse do OpenAPI).
+ * Tolerante: campos desconhecidos são ignorados e todos os campos são opcionais/anuláveis;
+ * os padrões são aplicados na normalização.
+ */
+const count = z.number().nullish()
 
 export const dashboardSummaryResponseSchema = z.object({
-  tenant: z.object({ name: z.string(), hospitalCount: z.number().int().nonnegative() }),
-  kpis: z.object({
-    activeEquipment: z.object({ value: z.number().nonnegative(), changePercent: z.number() }),
-    openWorkOrders: z.object({ value: z.number().nonnegative(), newToday: z.number().nonnegative() }),
-    emergencies: z.object({ value: z.number().nonnegative(), criticalOpen: z.number().nonnegative() }),
-    availability: z.object({ percent: z.number().min(0).max(100), weeklyChangePp: z.number() }),
-    overdueSla: z.object({ count: z.number().nonnegative() }),
-    overduePreventiveWorkOrders: z.object({ count: z.number().nonnegative() }),
-    expiringDocuments: z.object({ count: z.number().nonnegative(), withinDays: z.number().int().positive().optional() }),
-  }),
-  emergenciesBySeverity: z.array(z.object({ severity: ticketSeveritySchema, count: z.number().nonnegative() })),
-  workOrdersByStatus: z.array(z.object({ status: workOrderStatusSchema, count: z.number().nonnegative() })),
-  mtbfBySector: z.array(z.object({ sector: z.string(), hours: z.number().nonnegative() })),
-  recentTickets: z.array(z.object({
-    id: z.string(),
-    equipmentName: z.string(),
-    hospitalName: z.string(),
-    sectorName: z.string(),
-    severity: ticketSeveritySchema,
-    openedAt: z.string().datetime({ offset: true }),
-  })),
+  agendadas: count,
+  emExecucao: count,
+  concluidas: count,
+  canceladas: count,
+  equipamentosAtivos: count,
+  chamadosAbertosPorSeveridade: z.record(z.string(), z.number()).nullish(),
+  chamadosSlaVencido: count,
+  disponibilidadePercentual: count,
+  otsPreventivasAtrasadas: count,
+  documentosVencendo30d: count,
+  chamadosRecentes: z.array(z.object({
+    id: z.string().min(1),
+    codigo: z.string().nullish(),
+    severidade: z.string().nullish(),
+    status: z.string().nullish(),
+    abertoEm: z.string().nullish(),
+    slaStatus: z.string().nullish(),
+  })).nullish(),
+}).refine((value) => Object.values(value).some((field) => field !== undefined), {
+  message: 'Resposta sem nenhum campo conhecido do dashboard.',
 })
 
-export type WorkOrderStatus = z.infer<typeof workOrderStatusSchema>
-export type TicketSeverity = z.infer<typeof ticketSeveritySchema>
 export type DashboardSummaryResponse = z.infer<typeof dashboardSummaryResponseSchema>
+
+/** A resposta chegou, mas não corresponde ao contrato esperado (distinto de falha de rede/servidor). */
+export class DashboardContractError extends Error {
+  constructor() {
+    super('A resposta do dashboard não corresponde ao contrato esperado.')
+    this.name = 'DashboardContractError'
+  }
+}
 
 export interface DashboardTicket {
   id: string
-  equipment: string
-  hospital: string
-  sector: string
-  severity: TicketSeverity
+  code: string
+  severity: TicketSeverity | null
+  statusLabel: string
+  slaStatus: TicketSlaStatus | null
   openedLabel: string
 }
 
 export interface DashboardSummary {
-  tenantName: string
-  hospitalCount: number
   activeEquipment: number
-  equipmentChangePercent: number
   openWorkOrders: number
-  newWorkOrdersToday: number
-  emergenciesToday: number
-  criticalEmergenciesOpen: number
-  availabilityPercent: number
-  availabilityChangePp: number
+  inExecutionWorkOrders: number
+  openTickets: number
+  criticalTicketsOpen: number
+  /** null quando o backend não informa a disponibilidade. */
+  availabilityPercent: number | null
   overdueSla: number
   overduePreventiveWorkOrders: number
   expiringDocuments: number
-  expiringDocumentsWithinDays?: number
+  expiringDocumentsWithinDays: number
   emergenciesBySeverity: Array<{ severity: TicketSeverity; count: number }>
   workOrdersByStatus: Array<{ status: WorkOrderStatus; label: string; count: number }>
-  mtbfBySector: Array<{ sector: string; hours: number }>
   recentTickets: DashboardTicket[]
 }
 
 const workOrderLabels: Record<WorkOrderStatus, string> = {
-  open: 'Aberto',
-  inProgress: 'Em andamento',
-  completed: 'Concluído',
-  overdue: 'Atrasado',
+  scheduled: 'Agendadas',
+  inProgress: 'Em execução',
+  completed: 'Concluídas',
+  canceled: 'Canceladas',
+}
+
+const severityByApi: Record<string, TicketSeverity> = {
+  CRITICA: 'critical',
+  ALTA: 'high',
+  MEDIA: 'medium',
+  BAIXA: 'low',
+}
+
+const ticketStatusLabels: Record<string, string> = {
+  aberto: 'Aberto',
+  em_andamento: 'Em andamento',
+  aguardando_peca: 'Aguardando peça',
+  resolvido: 'Resolvido',
+  cancelado: 'Cancelado',
+}
+
+const slaStatuses: readonly string[] = ['no_prazo', 'em_risco', 'vencido']
+
+function toSeverity(value?: string | null): TicketSeverity | null {
+  return value ? severityByApi[value.trim().toUpperCase()] ?? null : null
+}
+
+function toStatusLabel(value?: string | null): string {
+  if (!value) return '—'
+  const key = value.trim().toLowerCase()
+  return ticketStatusLabels[key] ?? key.replaceAll('_', ' ')
+}
+
+function formatOpenedAt(value?: string | null): string {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date)
 }
 
 export function normalizeDashboardSummary(response: DashboardSummaryResponse): DashboardSummary {
+  const bySeverity = new Map<TicketSeverity, number>()
+  for (const [key, value] of Object.entries(response.chamadosAbertosPorSeveridade ?? {})) {
+    const severity = toSeverity(key)
+    if (severity) bySeverity.set(severity, (bySeverity.get(severity) ?? 0) + value)
+  }
   const severities: TicketSeverity[] = ['critical', 'high', 'medium', 'low']
-  const statusOrder: WorkOrderStatus[] = ['open', 'inProgress', 'completed', 'overdue']
-  const severityCounts = new Map(response.emergenciesBySeverity.map(({ severity, count }) => [severity, count]))
-  const statusCounts = new Map(response.workOrdersByStatus.map(({ status, count }) => [status, count]))
+  const statusCounts: Record<WorkOrderStatus, number> = {
+    scheduled: response.agendadas ?? 0,
+    inProgress: response.emExecucao ?? 0,
+    completed: response.concluidas ?? 0,
+    canceled: response.canceladas ?? 0,
+  }
+  const statusOrder: WorkOrderStatus[] = ['scheduled', 'inProgress', 'completed', 'canceled']
 
   return {
-    tenantName: response.tenant.name,
-    hospitalCount: response.tenant.hospitalCount,
-    activeEquipment: response.kpis.activeEquipment.value,
-    equipmentChangePercent: response.kpis.activeEquipment.changePercent,
-    openWorkOrders: response.kpis.openWorkOrders.value,
-    newWorkOrdersToday: response.kpis.openWorkOrders.newToday,
-    emergenciesToday: response.kpis.emergencies.value,
-    criticalEmergenciesOpen: response.kpis.emergencies.criticalOpen,
-    availabilityPercent: response.kpis.availability.percent,
-    availabilityChangePp: response.kpis.availability.weeklyChangePp,
-    overdueSla: response.kpis.overdueSla.count,
-    overduePreventiveWorkOrders: response.kpis.overduePreventiveWorkOrders.count,
-    expiringDocuments: response.kpis.expiringDocuments.count,
-    expiringDocumentsWithinDays: response.kpis.expiringDocuments.withinDays,
-    emergenciesBySeverity: severities.map((severity) => ({ severity, count: severityCounts.get(severity) ?? 0 })),
-    workOrdersByStatus: statusOrder.map((status) => ({ status, label: workOrderLabels[status], count: statusCounts.get(status) ?? 0 })),
-    mtbfBySector: response.mtbfBySector,
-    recentTickets: response.recentTickets.map((ticket) => ({
+    activeEquipment: response.equipamentosAtivos ?? 0,
+    openWorkOrders: statusCounts.scheduled + statusCounts.inProgress,
+    inExecutionWorkOrders: statusCounts.inProgress,
+    openTickets: severities.reduce((total, severity) => total + (bySeverity.get(severity) ?? 0), 0),
+    criticalTicketsOpen: bySeverity.get('critical') ?? 0,
+    availabilityPercent: response.disponibilidadePercentual ?? null,
+    overdueSla: response.chamadosSlaVencido ?? 0,
+    overduePreventiveWorkOrders: response.otsPreventivasAtrasadas ?? 0,
+    expiringDocuments: response.documentosVencendo30d ?? 0,
+    expiringDocumentsWithinDays: 30,
+    emergenciesBySeverity: severities.map((severity) => ({ severity, count: bySeverity.get(severity) ?? 0 })),
+    workOrdersByStatus: statusOrder.map((status) => ({ status, label: workOrderLabels[status], count: statusCounts[status] })),
+    recentTickets: (response.chamadosRecentes ?? []).map((ticket) => ({
       id: ticket.id,
-      equipment: ticket.equipmentName,
-      hospital: ticket.hospitalName,
-      sector: ticket.sectorName,
-      severity: ticket.severity,
-      openedLabel: new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(ticket.openedAt)),
+      code: ticket.codigo || ticket.id,
+      severity: toSeverity(ticket.severidade),
+      statusLabel: toStatusLabel(ticket.status),
+      slaStatus: ticket.slaStatus && slaStatuses.includes(ticket.slaStatus) ? ticket.slaStatus as TicketSlaStatus : null,
+      openedLabel: formatOpenedAt(ticket.abertoEm),
     })),
   }
 }
@@ -106,13 +152,11 @@ export function normalizeDashboardSummary(response: DashboardSummaryResponse): D
 export function isDashboardSummaryEmpty(data: DashboardSummary): boolean {
   return data.activeEquipment === 0
     && data.openWorkOrders === 0
-    && data.emergenciesToday === 0
-    && data.availabilityPercent === 0
+    && data.openTickets === 0
+    && (data.availabilityPercent ?? 0) === 0
     && data.overdueSla === 0
     && data.overduePreventiveWorkOrders === 0
     && data.expiringDocuments === 0
     && data.workOrdersByStatus.every(({ count }) => count === 0)
-    && data.emergenciesBySeverity.every(({ count }) => count === 0)
-    && data.mtbfBySector.length === 0
     && data.recentTickets.length === 0
 }
