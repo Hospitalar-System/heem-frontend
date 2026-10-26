@@ -25,6 +25,8 @@ export interface Equipment {
   numeroSerie: string | null
   marca: string | null
   fotoUrl: string | null
+  categoriaId: string | null
+  categoriaNome: string | null
   dadosGerais: Record<string, unknown> | null
   classeRiscoAnvisa: EquipmentRiskClass
   statusCicloVida: EquipmentLifecycle
@@ -43,6 +45,7 @@ export interface EquipmentEditableFields {
   numeroSerie: string
   marca: string
   fotoUrl: string | null
+  categoriaId: string
   dadosGerais: Record<string, unknown>
   classeRiscoAnvisa: EquipmentRiskClass
   statusCicloVida: EquipmentLifecycle
@@ -90,4 +93,30 @@ export interface EquipmentLabel {
 export interface CreateEquipmentLabelInput {
   valor: string
   tipo: EquipmentLabelType
+}
+
+export type CategoryOrigin = 'manual' | 'carga'
+
+export interface EquipmentCategory {
+  id: string
+  nome: string
+  ativa: boolean
+  checklistPadraoId: string | null
+  origem: CategoryOrigin
+  revisada: boolean
+  /** Só vem para admin_cliente. */
+  quantidadeEquipamentos?: number
+}
+
+export interface EquipmentCategoryInput {
+  nome: string
+  ativa: boolean
+  checklistPadraoId: string | null
+}
+
+export interface EquipmentFilters {
+  hospitalId?: string
+  setorId?: string
+  categoriaId?: string
+  semCategoria?: boolean
 }

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
 import { isDemoMode } from '@/lib/demo-mode'
-import type { CreateEquipmentInput, Equipment, Hospital, HospitalInput, Setor, SetorInput, SignedUploadUrl, UpdateEquipmentInput, WorkOrderSummary } from '../types'
+import type { CreateEquipmentInput, Equipment, EquipmentFilters, Hospital, HospitalInput, Setor, SetorInput, SignedUploadUrl, UpdateEquipmentInput, WorkOrderSummary } from '../types'
 
 const hospitalKey = ['hospitals'] as const
 export function useHospitals() { return useQuery({ queryKey: hospitalKey, queryFn: async () => (await apiClient.get<Hospital[]>('/hospitais')).data }) }
@@ -25,7 +25,7 @@ export function useSaveSector() {
 }
 
 const equipmentKey = ['equipments'] as const
-export function useEquipments(filters: { hospitalId?: string; setorId?: string } = {}) {
+export function useEquipments(filters: EquipmentFilters = {}) {
   return useQuery({
     queryKey: [...equipmentKey, filters],
     queryFn: async () => (await apiClient.get<Equipment[]>('/equipamentos', { params: filters })).data,

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RequireRole } from '@/app/RequireRole'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { BatchImportPage } from '../pages/BatchImportPage'
-import { createBatchImportTemplate, getBatchImportType } from '../types'
+import { createBatchImportTemplate, describeBatchImportError, getBatchImportType } from '../types'
 
 vi.mock('@/components/layout/AdminPageShell', () => ({
   AdminPageShell: ({ title, children }: PropsWithChildren<{ title: string }>) => <main><h1>{title}</h1>{children}</main>,
@@ -32,6 +32,30 @@ describe('BatchImportPage', () => {
     expect(createBatchImportTemplate('setores')).toContain('hospitalId;codigo;nome')
     expect(createBatchImportTemplate('usuarios')).toContain('codigo;nome;email;role')
     expect(getBatchImportType('usuarios').label).toBe('Usuários')
+  })
+
+  it('requires the categoria column in the equipment template, with the CSV text it downloads', async () => {
+    expect(createBatchImportTemplate('equipamentos')).toContain('nome;categoria;modelo')
+    expect(createBatchImportTemplate('setores')).not.toContain('categoria')
+    const blobs: Blob[] = []
+    const NativeURL = globalThis.URL
+    vi.stubGlobal('URL', Object.assign(class extends NativeURL {}, { createObjectURL: (blob: Blob) => { blobs.push(blob); return 'blob:modelo' }, revokeObjectURL: vi.fn() }))
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+    renderPage()
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Baixar modelo' }))
+    expect(await blobs[0].text()).toContain(';categoria;')
+    click.mockRestore()
+    vi.unstubAllGlobals()
+  })
+
+  it('explains the mandatory categoria column and the row errors for the equipment import', () => {
+    renderPage()
+    expect(screen.getByText(/A coluna categoria é obrigatória/)).toBeInTheDocument()
+    expect(screen.getByText('CABECALHO_INVALIDO')).toBeInTheDocument()
+    expect(screen.getByText('CATEGORIA_NAO_ENCONTRADA')).toBeInTheDocument()
+    expect(describeBatchImportError('CATEGORIA_NAO_ENCONTRADA')).toMatch(/Categoria não encontrada ou desativada/)
+    expect(describeBatchImportError('CABECALHO_INVALIDO')).toMatch(/coluna categoria é obrigatória/)
+    expect(describeBatchImportError('OUTRO')).toBe('OUTRO')
   })
 
   it('shows the chosen file but keeps processing blocked pending the backend API', async () => {

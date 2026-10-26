@@ -1,4 +1,4 @@
-import { useMemo, useState, type KeyboardEvent } from 'react'
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { ArrowLeft, CalendarClock, ClipboardList, Edit3, Gauge, History, ListChecks, Tag } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
@@ -64,10 +64,10 @@ function EquipmentData({ equipment, photoUrl, photoLoading, order, ordersLoading
   return <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr]">
     <section className="rounded-lg border border-border bg-surface p-5">
       <h3 className="text-sm font-semibold">Identificação</h3>
-      <dl className="mt-3 divide-y divide-border/70">{[
-        ['Código', equipment.codigo], ['Modelo', equipment.modelo], ['Nº série', equipment.numeroSerie], ['Fabricante', equipment.marca],
+      <dl className="mt-3 divide-y divide-border/70">{([
+        ['Código', equipment.codigo], ['Categoria', equipment.categoriaNome ?? <MissingCategory equipmentId={equipment.id} isAdmin={isAdmin} />], ['Modelo', equipment.modelo], ['Nº série', equipment.numeroSerie], ['Fabricante', equipment.marca],
         ['Classe de risco ANVISA', equipment.classeRiscoAnvisa], ['Criticidade', equipment.criticidade], ['Instalação', formatDate(equipment.dataInstalacao)], ['Garantia até', formatDate(equipment.dataGarantiaFim)],
-      ].map(([label, value]) => <div key={label} className="flex min-h-10 items-center justify-between gap-4 py-2"><dt className="text-xs text-text-muted">{label}</dt><dd className="break-all text-right text-xs font-medium text-text-primary">{value || '—'}</dd></div>)}</dl>
+      ] as Array<[string, ReactNode]>).map(([label, value]) => <div key={label} className="flex min-h-10 items-center justify-between gap-4 py-2"><dt className="text-xs text-text-muted">{label}</dt><dd className="break-all text-right text-xs font-medium text-text-primary">{value || '—'}</dd></div>)}</dl>
       {Object.keys(equipment.dadosGerais ?? {}).length ? <div className="mt-5 border-t border-border pt-4"><h4 className="text-xs font-semibold">Dados gerais</h4><dl className="mt-2 divide-y divide-border/70">{Object.entries(equipment.dadosGerais ?? {}).map(([key, value]) => <div key={key} className="flex min-h-9 items-center justify-between gap-4 py-2"><dt className="text-xs text-text-muted">{key}</dt><dd className="break-all text-right text-xs text-text-primary">{displayValue(value)}</dd></div>)}</dl></div> : null}
       {equipment.fotoUrl ? <div className="mt-5 border-t border-border pt-4"><h4 className="text-xs font-semibold">Foto</h4>{photoLoading ? <div aria-label="Carregando foto" aria-busy="true" className="mt-3 h-44 animate-pulse rounded-md bg-bg" /> : photoUrl ? <img src={photoUrl} alt={`Foto de ${equipment.nome}`} className="mt-3 max-h-64 w-full rounded-md border border-border object-contain" /> : <p className="mt-2 text-xs text-text-muted">Foto não disponível.</p>}</div> : null}
     </section>
@@ -84,6 +84,10 @@ function EquipmentData({ equipment, photoUrl, photoLoading, order, ordersLoading
       </section>
     </div>
   </div>
+}
+
+function MissingCategory({ equipmentId, isAdmin }: { equipmentId: string; isAdmin: boolean }) {
+  return <span className="inline-flex flex-wrap items-center justify-end gap-2"><span className="text-text-muted">Sem categoria</span>{isAdmin ? <Link to={`/assets/${equipmentId}/edit`} className="font-semibold text-primary underline">Definir categoria</Link> : null}</span>
 }
 
 function WorkOrdersPanel({ orders, loading, error, retry }: { orders: Array<{ id: string; codigo: string; tipo: string; status: string; dataAgendada: string | null; concluidaEm: string | null }>; loading: boolean; error: boolean; retry: () => void }) {
