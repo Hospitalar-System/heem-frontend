@@ -18,8 +18,8 @@ const equipment: RecordValue[] = [
   { id: 'equipment-demo-3', setorId: 'sector-demo-3', codigo: 'EQ-1003', nome: 'Desfibrilador', modelo: 'Heart 2', numeroSerie: 'DEMO-H2-03', marca: 'CardioCare', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'ATIVO', criticidade: 'ALTA', tipoProtecao: 'CLASSE_II', parteAplicada: 'TIPO_BF', modoOperacao: 'INTERMITENTE', dataInstalacao: '2024-01-20', dataGarantiaFim: '2027-01-20', nivelRisco: 'BAIXO' },
 ]
 const tickets: RecordValue[] = [
-  { id: 'ticket-demo-1', hospitalId: hospitals[0].id, setorId: sectors[0].id, equipamentoId: equipment[0].id, abertoPor: 'user-demo-1', descricao: 'Leitura de SpO2 oscilando durante o monitoramento.', severidade: 'ALTA', status: 'ABERTO', abertoEm: now, slaStatus: 'em_risco' },
-  { id: 'ticket-demo-2', hospitalId: hospitals[0].id, setorId: sectors[1].id, equipamentoId: equipment[1].id, abertoPor: 'user-demo-2', descricao: 'Alarme de pressão recorrente durante o autoteste.', severidade: 'MEDIA', status: 'EM_ANDAMENTO', abertoEm: now, slaStatus: 'no_prazo' },
+  { id: 'ticket-demo-1', hospitalId: hospitals[0].id, setorId: sectors[0].id, equipamentoId: equipment[0].id, abertoPor: 'user-demo-1', descricao: 'Leitura de SpO2 oscilando durante o monitoramento.', severidade: 'ALTA', status: 'ABERTO', abertoEm: now, slaStatus: 'em_risco', codigo: 'CH-0001', tecnicoResponsavelId: null, primeiraRespostaEm: null, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false },
+  { id: 'ticket-demo-2', hospitalId: hospitals[0].id, setorId: sectors[1].id, equipamentoId: equipment[1].id, abertoPor: 'user-demo-2', descricao: 'Alarme de pressão recorrente durante o autoteste.', severidade: 'MEDIA', status: 'EM_ANDAMENTO', abertoEm: now, slaStatus: 'no_prazo', codigo: 'CH-0002', tecnicoResponsavelId: 'user-demo-2', primeiraRespostaEm: now, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: true },
 ]
 const workOrders: RecordValue[] = [
   { id: 'order-demo-1', codigo: 'OT-2026-001', tipo: 'PREVENTIVA', status: 'AGENDADA', equipamentoId: equipment[0].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', local: 'UTI Adulto', dataAgendada: now, iniciadaEm: null, concluidaEm: null, atrasada: false },
@@ -144,6 +144,21 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   }
   if (path === '/ordens-de-trabalho/preventivas' || path === '/ordens-de-trabalho/corretivas') {
     if (method === 'post') return createRecord(workOrders, { tipo: path.endsWith('preventivas') ? 'PREVENTIVA' : 'CORRETIVA', status: 'AGENDADA', local: null, iniciadaEm: null, concluidaEm: null, ...body })
+  }
+  const ticketAction = path.match(/^\/chamados\/([^/]+)\/(assumir|responsavel|status|reabrir)$/)
+  if (ticketAction && (method === 'put' || method === 'post')) {
+    const record = tickets.find((item) => item.id === ticketAction[1])
+    if (!record) return null
+    if (ticketAction[2] === 'assumir') Object.assign(record, { tecnicoResponsavelId: 'user-demo-2', primeiraRespostaEm: record.primeiraRespostaEm ?? now })
+    if (ticketAction[2] === 'responsavel') Object.assign(record, { tecnicoResponsavelId: body.tecnicoId })
+    if (ticketAction[2] === 'status') {
+      const novoStatus = body.novoStatus as string
+      Object.assign(record, { status: novoStatus })
+      if (novoStatus === 'CANCELADO') record.canceladoEm = now
+      if (novoStatus === 'RESOLVIDO') Object.assign(record, { solucao: body.solucao ?? null, causaCategoria: body.causaCategoria ?? null })
+    }
+    if (ticketAction[2] === 'reabrir') Object.assign(record, { status: 'EM_ANDAMENTO', reaberturas: Number(record.reaberturas ?? 0) + 1 })
+    return record
   }
   const detailRoutes = [
     ['/hospitais/', hospitals], ['/setores/', sectors], ['/equipamentos/', equipment], ['/ordens-de-trabalho/', workOrders], ['/chamados/', tickets], ['/users/', users], ['/platform-users/', platformUsers], ['/tenants/', tenants],

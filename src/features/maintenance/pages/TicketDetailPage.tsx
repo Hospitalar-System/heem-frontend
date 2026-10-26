@@ -10,15 +10,19 @@ import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { useUserHospitalLinks } from '@/features/tenants-users/api/users'
 import type { TenantUser } from '@/features/tenants-users/types'
 import { apiClient } from '@/lib/axios'
-import { useCreateCorrectiveWorkOrder, useTicket, useTicketHistory } from '../api/tickets'
+import { ticketActionErrorMessage, useAssignTicketResponsible, useAssumeTicket, useChangeTicketStatus, useCreateCorrectiveWorkOrder, useReopenTicket, useTicket, useTicketHistory } from '../api/tickets'
 import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import { formatSlaDeadline } from '../utils/sla'
-import type { TicketStatus } from '../types'
+import { ticketCauseCategories, ticketCauseLabels, type TicketCauseCategory, type TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
 
 const fieldClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const severityLabel: Record<string, string> = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }
 const statusLabel: Record<string, string> = { ABERTO: 'Aberto', EM_ANDAMENTO: 'Em andamento', AGUARDANDO_PECA: 'Aguardando peça', RESOLVIDO: 'Resolvido', CANCELADO: 'Cancelado' }
+const textareaClass = 'min-h-24 w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
+const secondaryButton = 'h-9 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50'
+const primaryButton = 'h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50'
+const dangerButton = 'h-9 rounded-md border border-danger/40 px-3 text-xs font-semibold text-danger hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50'
 const actionLabel: Record<string, string> = { ABRIR_CHAMADO: 'Chamado aberto', TRANSICIONAR_CHAMADO: 'Status atualizado', GERAR_OT_CORRETIVA: 'OT corretiva gerada' }
 
 function normalizeStatus(status: TicketStatus) {
@@ -66,6 +70,17 @@ export function TicketDetailPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [codigo, setCodigo] = useState('')
   const [tecnicoId, setTecnicoId] = useState('')
+  const assumeTicket = useAssumeTicket()
+  const assignResponsible = useAssignTicketResponsible()
+  const changeStatus = useChangeTicketStatus()
+  const reopenTicket = useReopenTicket()
+  const [dialog, setDialog] = useState<TicketDialog>(null)
+  const [responsibleId, setResponsibleId] = useState('')
+  const [motivo, setMotivo] = useState('')
+  const [solucao, setSolucao] = useState('')
+  const [causa, setCausa] = useState('')
+  const [actionError, setActionError] = useState<string | null>(null)
+  const actionPending = assumeTicket.isPending || assignResponsible.isPending || changeStatus.isPending || reopenTicket.isPending
 
   const hospital = hospitals.data?.find((item) => item.id === ticket.data?.hospitalId)
   const sector = sectors.data?.find((item) => item.id === ticket.data?.setorId)
@@ -80,7 +95,87 @@ export function TicketDetailPage() {
     return []
   }, [auth.user, hospitalLinks, isAdmin, isTechnician, ticket.data?.hospitalId, users.data])
   const normalizedStatus = ticket.data ? normalizeStatus(ticket.data.status) : ''
+  const isStaff = isAdmin || isTechnician
+  const hasResponsible = Boolean(ticket.data?.tecnicoResponsavelId)
+  const canAssume = isTechnician && normalizedStatus === 'ABERTO' && !hasResponsible
+  const canHold = isStaff && normalizedStatus === 'EM_ANDAMENTO'
+  const canResume = isStaff && normalizedStatus === 'AGUARDANDO_PECA'
+  const canResolve = isStaff && normalizedStatus === 'EM_ANDAMENTO'
+  const canCancel = isStaff && (normalizedStatus === 'ABERTO' || normalizedStatus === 'EM_ANDAMENTO')
+  const canAssign = isAdmin && ['ABERTO', 'EM_ANDAMENTO', 'AGUARDANDO_PECA'].includes(normalizedStatus)
+  const canReopen = isAdmin && normalizedStatus === 'RESOLVIDO'
+  const hasActions = canAssume || canHold || canResume || canResolve || canCancel || canAssign || canReopen
+  const notReadyToResolve = ticket.data?.prontoParaResolver === false
+  const responsibleId0 = ticket.data?.tecnicoResponsavelId
+  const responsibleName = responsibleId0
+    ? (users.data?.find((user) => user.id === responsibleId0)?.nome
+      ?? (auth.user && auth.user.id === responsibleId0 ? auth.user.name : responsibleId0.slice(0, 8)))
+    : null
+  const causeText = ticket.data?.causaCategoria ? (ticketCauseLabels[ticket.data.causaCategoria as TicketCauseCategory] ?? ticket.data.causaCategoria) : null
+  const reopenings = ticket.data?.reaberturas ?? 0
   const canGenerateCorrective = normalizedStatus === 'ABERTO' || normalizedStatus === 'AGUARDANDO_PECA'
+
+  function openDialog(next: Exclude<TicketDialog, null>) {
+    setActionError(null)
+    setMotivo('')
+    setSolucao('')
+    setCausa('')
+    setResponsibleId(ticket.data?.tecnicoResponsavelId ?? '')
+    setDialog(next)
+  }
+
+  function closeDialog() {
+    if (actionPending) return
+    setDialog(null)
+    setActionError(null)
+  }
+
+  async function runAction(action: () => Promise<unknown>, successMessage: string, closeOnSuccess = true) {
+    setActionError(null)
+    try {
+      await action()
+      toast.success(successMessage)
+      if (closeOnSuccess) setDialog(null)
+    } catch (error) {
+      setActionError(ticketActionErrorMessage(error))
+    }
+  }
+
+  async function submitAssign(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!ticket.data || !responsibleId) return
+    await runAction(() => assignResponsible.mutateAsync({ id: ticket.data.id, tecnicoId: responsibleId }), 'Responsável atribuído.')
+  }
+
+  async function submitResolve(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!ticket.data || !solucao.trim()) return
+    await runAction(() => changeStatus.mutateAsync({
+      id: ticket.data.id, novoStatus: 'RESOLVIDO', solucao: solucao.trim(), ...(causa ? { causaCategoria: causa as TicketCauseCategory } : {}),
+    }), 'Chamado resolvido.')
+  }
+
+  async function submitCancel(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!ticket.data || !motivo.trim()) return
+    await runAction(() => changeStatus.mutateAsync({ id: ticket.data.id, novoStatus: 'CANCELADO', motivo: motivo.trim() }), 'Chamado cancelado.')
+  }
+
+  async function submitReopen(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!ticket.data || !motivo.trim()) return
+    await runAction(() => reopenTicket.mutateAsync({ id: ticket.data.id, motivo: motivo.trim() }), 'Chamado reaberto.')
+  }
+
+  async function submitAssume() {
+    if (!ticket.data) return
+    await runAction(() => assumeTicket.mutateAsync(ticket.data.id), 'Chamado assumido.', false)
+  }
+
+  async function submitHold(novoStatus: 'AGUARDANDO_PECA' | 'EM_ANDAMENTO') {
+    if (!ticket.data) return
+    await runAction(() => changeStatus.mutateAsync({ id: ticket.data.id, novoStatus }), novoStatus === 'EM_ANDAMENTO' ? 'Atendimento retomado.' : 'Chamado aguardando peça.', false)
+  }
 
   async function submitCorrectiveWorkOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -151,9 +246,29 @@ export function TicketDetailPage() {
         </section>
       </section>
 
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3">
-        <p className="text-xs text-text-secondary">Atribuição de técnico ainda não está disponível: o endpoint de status não aceita um técnico responsável.</p>
-        <button type="button" disabled aria-label="Atribuir técnico indisponível" title="A API ainda não disponibiliza atribuição de técnico para chamados" className="h-9 cursor-not-allowed rounded-md border border-border px-3 text-xs font-medium text-text-muted opacity-70">Atribuir técnico</button>
+      <section aria-labelledby="care-title" className="rounded-lg border border-border bg-surface p-5">
+        <h3 id="care-title" className="text-sm font-semibold text-text-primary">Atendimento</h3>
+        <dl className="mt-4 grid gap-x-6 gap-y-3 text-xs sm:grid-cols-2 xl:grid-cols-4">
+          <div><dt className="text-text-muted">Responsável</dt><dd className="mt-0.5 font-medium text-text-primary">{responsibleName ?? 'Sem responsável'}</dd></div>
+          <div><dt className="text-text-muted">Primeira resposta</dt><dd className="mt-0.5 font-medium text-text-primary">{ticket.data.primeiraRespostaEm ? formatDate(ticket.data.primeiraRespostaEm) : 'Ainda sem resposta'}</dd></div>
+          {ticket.data.canceladoEm && <div><dt className="text-text-muted">Cancelado em</dt><dd className="mt-0.5 font-medium text-text-primary">{formatDate(ticket.data.canceladoEm)}</dd></div>}
+          {reopenings > 0 && <div><dt className="text-text-muted">Reaberturas</dt><dd className="mt-0.5 font-medium text-text-primary">{reopenings}</dd></div>}
+        </dl>
+        {normalizedStatus === 'RESOLVIDO' && (ticket.data.solucao || causeText) && <dl className="mt-4 grid gap-3 border-t border-border pt-4 text-xs">
+          {ticket.data.solucao && <div><dt className="text-text-muted">Solução aplicada</dt><dd className="mt-0.5 whitespace-pre-wrap text-sm leading-6 text-text-secondary">{ticket.data.solucao}</dd></div>}
+          {causeText && <div><dt className="text-text-muted">Causa</dt><dd className="mt-0.5 font-medium text-text-primary">{causeText}</dd></div>}
+        </dl>}
+        {hasActions && <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+          {canAssume && <button type="button" disabled={actionPending} onClick={() => void submitAssume()} className={primaryButton}>{assumeTicket.isPending ? 'Assumindo…' : 'Assumir chamado'}</button>}
+          {canAssign && <button type="button" disabled={actionPending} onClick={() => openDialog('assign')} className={secondaryButton}>Atribuir responsável</button>}
+          {canHold && <button type="button" disabled={actionPending} onClick={() => void submitHold('AGUARDANDO_PECA')} className={secondaryButton}>Aguardando peça</button>}
+          {canResume && <button type="button" disabled={actionPending} onClick={() => void submitHold('EM_ANDAMENTO')} className={secondaryButton}>Retomar atendimento</button>}
+          {canResolve && <button type="button" disabled={actionPending || notReadyToResolve} aria-describedby={notReadyToResolve ? 'resolve-hint' : undefined} onClick={() => openDialog('resolve')} className={primaryButton}>Resolver</button>}
+          {canReopen && <button type="button" disabled={actionPending} onClick={() => openDialog('reopen')} className={secondaryButton}>Reabrir</button>}
+          {canCancel && <button type="button" disabled={actionPending} onClick={() => openDialog('cancel')} className={dangerButton}>Cancelar chamado</button>}
+        </div>}
+        {canResolve && notReadyToResolve && <p id="resolve-hint" className="mt-2 text-xs text-text-muted">Ainda não é possível resolver: conclua ou cancele a OT corretiva em aberto deste chamado.</p>}
+        {!dialog && actionError && <p role="alert" className="mt-3 text-xs text-danger">{actionError}</p>}
       </section>
     </div>
 
@@ -167,7 +282,42 @@ export function TicketDetailPage() {
         <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" disabled={createWorkOrder.isPending} onClick={() => setIsCreateOpen(false)} className="h-9 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg">Cancelar</button><button type="submit" disabled={!codigo.trim() || !tecnicoId || createWorkOrder.isPending} className="h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{createWorkOrder.isPending ? 'Criando…' : 'Criar OT'}</button></div>
       </form>
     </Modal>}
+    {dialog === 'assign' && <Modal title="Atribuir responsável" description={`Chamado ${ticket.data.id}`} busy={assignResponsible.isPending} onClose={closeDialog}>
+      <form className="space-y-4" onSubmit={(event) => void submitAssign(event)}>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<Select required value={responsibleId} onChange={setResponsibleId} placeholder="Selecione um técnico" options={activeTechnicians.map((user) => ({ value: user.id, label: user.nome }))} /></label>
+        {!users.isLoading && !hospitalLinks.some((query) => query.isLoading) && activeTechnicians.length === 0 && <p role="status" className="text-xs text-warning">Não há técnicos ativos vinculados ao hospital deste chamado.</p>}
+        <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Atribuir" pendingLabel="Atribuindo…" disabled={!responsibleId} />
+      </form>
+    </Modal>}
+    {dialog === 'resolve' && <Modal title="Resolver chamado" description={`Chamado ${ticket.data.id}`} busy={changeStatus.isPending} onClose={closeDialog}>
+      <form className="space-y-4" onSubmit={(event) => void submitResolve(event)}>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Solução aplicada<textarea autoFocus required maxLength={4000} value={solucao} onChange={(event) => setSolucao(event.target.value)} placeholder="Descreva o que foi feito para resolver" className={textareaClass} /></label>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Causa (opcional)<Select value={causa} onChange={setCausa} placeholder="Não informada" options={[{ value: '', label: 'Não informada' }, ...ticketCauseCategories.map((value) => ({ value, label: ticketCauseLabels[value] }))]} /></label>
+        <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Resolver chamado" pendingLabel="Resolvendo…" disabled={!solucao.trim()} />
+      </form>
+    </Modal>}
+    {dialog === 'cancel' && <Modal title="Cancelar chamado" description="O cancelamento é definitivo e não pode ser desfeito." busy={changeStatus.isPending} onClose={closeDialog}>
+      <form className="space-y-4" onSubmit={(event) => void submitCancel(event)}>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Motivo do cancelamento<textarea autoFocus required maxLength={1000} value={motivo} onChange={(event) => setMotivo(event.target.value)} className={textareaClass} /></label>
+        <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Confirmar cancelamento" pendingLabel="Cancelando…" disabled={!motivo.trim()} danger />
+      </form>
+    </Modal>}
+    {dialog === 'reopen' && <Modal title="Reabrir chamado" description={`Chamado ${ticket.data.id}`} busy={reopenTicket.isPending} onClose={closeDialog}>
+      <form className="space-y-4" onSubmit={(event) => void submitReopen(event)}>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Motivo da reabertura<textarea autoFocus required maxLength={1000} value={motivo} onChange={(event) => setMotivo(event.target.value)} className={textareaClass} /></label>
+        <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Reabrir chamado" pendingLabel="Reabrindo…" disabled={!motivo.trim()} />
+      </form>
+    </Modal>}
   </AdminPageShell>
+}
+
+type TicketDialog = 'assign' | 'resolve' | 'cancel' | 'reopen' | null
+
+function DialogFooter({ error, pending, onCancel, cancelLabel, submitLabel, pendingLabel, disabled, danger = false }: { error: string | null; pending: boolean; onCancel: () => void; cancelLabel: string; submitLabel: string; pendingLabel: string; disabled: boolean; danger?: boolean }) {
+  return <>
+    {error && <p role="alert" className="text-xs text-danger">{error}</p>}
+    <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" disabled={pending} onClick={onCancel} className={secondaryButton}>{cancelLabel}</button><button type="submit" disabled={disabled || pending} className={danger ? dangerButton : primaryButton}>{pending ? pendingLabel : submitLabel}</button></div>
+  </>
 }
 
 function Metadata({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
