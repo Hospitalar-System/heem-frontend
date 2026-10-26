@@ -67,9 +67,46 @@ export const demoApiAdapter: AxiosAdapter = async (config) => {
   } as AxiosResponse
 }
 
+const demoPreventive = { atrasadas: 2, concluidasNoPrazo: 19, concluidasForaDoPrazo: 3, percentualNoPrazo: 86.4, canceladas: 1 }
+
+function demoIndicators(agrupar: unknown) {
+  const total = { mtbfHoras: 186, mttaHoras: 1.8, triagemHoras: 3.2, mttrHoras: 5.4, esperaPecaHoras: 12.5, slaAtendimentoPct: 94.5, slaResolucaoPct: 88.2, disponibilidadePercentual: 98.6, qtdOtsPreventivas: 24, qtdOtsCorretivas: 8, preventiva: demoPreventive }
+  const groups = agrupar === 'setor'
+    ? [
+      { grupoId: 'sector-demo-1', grupoNome: 'UTI Adulto', ...total, mttaHoras: 1.2, mttrHoras: 4.1, qtdOtsPreventivas: 10, qtdOtsCorretivas: 3 },
+      { grupoId: 'sector-demo-2', grupoNome: 'Centro Cirúrgico', ...total, mttaHoras: 2.1, mttrHoras: 6.3, qtdOtsPreventivas: 8, qtdOtsCorretivas: 3 },
+      { grupoId: 'sector-demo-3', grupoNome: 'Emergência', ...total, mttaHoras: 2.4, mttrHoras: 6.9, qtdOtsPreventivas: 6, qtdOtsCorretivas: 2 },
+    ]
+    : agrupar === 'hospital'
+      ? [
+        { grupoId: 'hospital-demo-1', grupoNome: 'Hospital São Lucas', ...total, mttaHoras: 1.6, mttrHoras: 5.1, qtdOtsPreventivas: 18, qtdOtsCorretivas: 6 },
+        { grupoId: 'hospital-demo-2', grupoNome: 'Clínica Vital Norte', ...total, mttaHoras: 2.4, mttrHoras: 6.9, qtdOtsPreventivas: 6, qtdOtsCorretivas: 2 },
+      ]
+      : null
+  return { ...total, severidadesConsideradas: ['ALTA', 'CRITICA'], grupos: groups }
+}
+
+const demoBacklog = {
+  porSeveridade: [
+    { severidade: 'BAIXA', ate24h: 2, de1a3Dias: 1, maisDe3Dias: 0, total: 3 },
+    { severidade: 'MEDIA', ate24h: 3, de1a3Dias: 2, maisDe3Dias: 1, total: 6 },
+    { severidade: 'ALTA', ate24h: 1, de1a3Dias: 2, maisDe3Dias: 1, total: 4 },
+    { severidade: 'CRITICA', ate24h: 1, de1a3Dias: 0, maisDe3Dias: 0, total: 1 },
+  ],
+  total: 14,
+}
+
+const demoTopEquipment = [
+  { equipamentoId: 'equipment-demo-2', codigo: 'EQ-1002', nome: 'Ventilador pulmonar', qtdChamados: 7, mtbfHoras: 96.5 },
+  { equipamentoId: 'equipment-demo-1', codigo: 'EQ-1001', nome: 'Monitor multiparamétrico', qtdChamados: 4, mtbfHoras: 168 },
+  { equipamentoId: 'equipment-demo-3', codigo: 'EQ-1003', nome: 'Desfibrilador', qtdChamados: 1, mtbfHoras: null },
+]
+
 function handleRequest(method: string, path: string, body: RecordValue, params?: Record<string, unknown>): unknown {
   if (path === '/relatorios/dashboard') return dashboard
-  if (path === '/relatorios/indicadores') return { mtbfHoras: 186, tempoMedioAtendimentoHoras: 1.8, tempoMedioResolucaoHoras: 5.4, disponibilidadePercentual: 98.6, qtdOtsPreventivas: 24, qtdOtsCorretivas: 8 }
+  if (path === '/relatorios/indicadores') return demoIndicators(params?.agrupar)
+  if (path === '/relatorios/backlog') return demoBacklog
+  if (path === '/relatorios/top-equipamentos') return demoTopEquipment
   if (path === '/relatorios/conformidade') return ['CRITICO', 'ALTO', 'MEDIO', 'BAIXO'].map((nivelRisco, index) => ({ nivelRisco, percentualConforme: [96, 92, 98, 100][index], totalMedicoes: [25, 38, 54, 12][index] }))
   if (path === '/relatorios/exportacoes' && method === 'post') {
     const id = makeId('export')
