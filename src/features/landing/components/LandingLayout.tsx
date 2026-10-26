@@ -44,12 +44,17 @@ function useScrolled() {
 }
 
 interface LandingLayoutProps {
-  onAgendar: (interesse?: Interesse) => void
+  /**
+   * Abre o formulário "Agendar demonstração". Sem ele (páginas legais, fora da landing) o botão vira um link para
+   * /#contato e as âncoras de seção passam a apontar para a landing (/#recursos etc.).
+   */
+  onAgendar?: (interesse?: Interesse) => void
 }
 
 export function LandingLayout({ children, onAgendar }: PropsWithChildren<LandingLayoutProps>) {
   const enter = useEnterTarget()
   const scrolled = useScrolled()
+  const base = onAgendar ? '' : '/'
 
   return (
     <div className="landing min-h-screen font-sans text-base leading-relaxed">
@@ -63,12 +68,12 @@ export function LandingLayout({ children, onAgendar }: PropsWithChildren<Landing
 
       <header className="landing-nav sticky top-0 z-20" data-scrolled={scrolled}>
         <div className="mx-auto flex h-[72px] w-[min(1120px,100%-32px)] items-center gap-4 md:gap-8">
-          <a href="#topo" aria-label={`${NOME_PRODUTO}, início da página`} className={`rounded-md ${focusRing}`}>
+          <a href={onAgendar ? '#topo' : '/'} aria-label={`${NOME_PRODUTO}, início da página`} className={`rounded-md ${focusRing}`}>
             <Marca />
           </a>
           <nav aria-label="Seções da página" className="mx-auto hidden gap-[30px] text-[15px] text-text-secondary md:flex">
             {sectionLinks.map((link) => (
-              <a key={link.href} href={link.href} className={`rounded-md transition hover:text-text-primary ${focusRing}`}>
+              <a key={link.href} href={base + link.href} className={`rounded-md transition hover:text-text-primary ${focusRing}`}>
                 {link.label}
               </a>
             ))}
@@ -76,7 +81,11 @@ export function LandingLayout({ children, onAgendar }: PropsWithChildren<Landing
           <div className="ml-auto flex items-center gap-2 md:ml-0">
             <ThemeSwitcher />
             <Link to={enter.to} className={`${landingButtonClasses.ghost} px-4`}>{enter.label}</Link>
-            <button type="button" onClick={() => onAgendar()} className={`${landingButtonClasses.primary} hidden px-4 sm:inline-flex`}>Agendar demonstração</button>
+            {onAgendar ? (
+              <button type="button" onClick={() => onAgendar()} className={`${landingButtonClasses.primary} hidden px-4 sm:inline-flex`}>Agendar demonstração</button>
+            ) : (
+              <a href="/#contato" className={`${landingButtonClasses.primary} hidden px-4 sm:inline-flex`}>Agendar demonstração</a>
+            )}
           </div>
         </div>
       </header>
@@ -88,9 +97,9 @@ export function LandingLayout({ children, onAgendar }: PropsWithChildren<Landing
           <div className="flex flex-wrap items-center justify-between gap-5 border-t border-border pt-8">
             <Marca className="text-base text-text-primary" />
             <nav aria-label="Rodapé" className="flex flex-wrap gap-x-6 gap-y-2">
-              <a href="#recursos" className={`rounded-md hover:text-text-primary ${focusRing}`}>Recursos</a>
-              <a href="#conformidade" className={`rounded-md hover:text-text-primary ${focusRing}`}>Conformidade</a>
-              <a href="#para-quem" className={`rounded-md hover:text-text-primary ${focusRing}`}>Para quem</a>
+              <a href={`${base}#recursos`} className={`rounded-md hover:text-text-primary ${focusRing}`}>Recursos</a>
+              <a href={`${base}#conformidade`} className={`rounded-md hover:text-text-primary ${focusRing}`}>Conformidade</a>
+              <a href={`${base}#para-quem`} className={`rounded-md hover:text-text-primary ${focusRing}`}>Para quem</a>
               <Link to="/privacidade" className={`rounded-md hover:text-text-primary ${focusRing}`}>Política de Privacidade</Link>
               <Link to="/termos" className={`rounded-md hover:text-text-primary ${focusRing}`}>Termos</Link>
               <Link to={enter.to} className={`rounded-md hover:text-text-primary ${focusRing}`}>{enter.label}</Link>

@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { NOME_PRODUTO } from '../brand'
 import type { Interesse } from '../content/vitrine'
 import { interesseParaBackend } from '../schemas/lead-schema'
 import { focusRing } from './button-classes'
@@ -12,7 +13,7 @@ interface DialogoAgendarProps {
 
 const FOCAVEIS = 'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
 
-/** Diálogo "Quero conhecer o HEEM". Montado só quando aberto: ao fechar, tudo (campos e mensagens) é descartado. */
+/** Diálogo "Quero conhecer o <produto>". Montado só quando aberto: ao fechar, tudo (campos e mensagens) é descartado. */
 export function DialogoAgendar({ interesse, onFechar }: DialogoAgendarProps) {
   const dialogo = useRef<HTMLDivElement>(null)
   const [enviando, setEnviando] = useState(false)
@@ -77,7 +78,7 @@ export function DialogoAgendar({ interesse, onFechar }: DialogoAgendarProps) {
           >
             <X className="size-5" aria-hidden="true" />
           </button>
-          <h2 id="dlg-agendar-titulo" className="mb-2 pr-10 text-[28px] font-bold leading-[1.12] tracking-[-0.03em]">Quero conhecer o HEEM</h2>
+          <h2 id="dlg-agendar-titulo" className="mb-2 pr-10 text-[28px] font-bold leading-[1.12] tracking-[-0.03em]">Quero conhecer o {NOME_PRODUTO}</h2>
           <p id="dlg-agendar-lede" className="mb-6 text-[15.5px] text-text-secondary">Deixe seus dados e entramos em contato para mostrar o sistema na prática.</p>
           <FormularioLead interesseInicial={interesse ? interesseParaBackend[interesse] : undefined} onConcluir={onFechar} onEnviando={setEnviando} />
         </div>

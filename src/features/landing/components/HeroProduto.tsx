@@ -22,7 +22,7 @@ export function HeroProduto({ onAgendar }: HeroProdutoProps) {
       <section aria-labelledby="hero-titulo" className="landing-hero relative pb-10 pt-20 text-center">
         <div className="relative mx-auto w-[min(1120px,100%-32px)]">
           <h1 id="hero-titulo" className="landing-hin mx-auto max-w-[15ch] text-[clamp(40px,7vw,84px)] font-bold leading-[1.02] tracking-[-0.045em]">
-            A engenharia clínica, <em className="not-italic text-primary">em ordem</em>.
+            A engenharia clínica, <em className="not-italic text-[var(--primary-text)]">em ordem</em>.
           </h1>
           <p className="landing-hin mx-auto mt-5 max-w-[56ch] text-lg text-text-secondary" style={{ animationDelay: '100ms' }}>
             Chamados, ordens de serviço, medições e indicadores de todos os equipamentos do hospital, no computador e no celular, até sem internet.
@@ -64,7 +64,7 @@ export function HeroProduto({ onAgendar }: HeroProdutoProps) {
                   onKeyDown={(event) => tabs.onKeyDown(event, i)}
                   className={`rounded-full border px-[18px] py-3 text-[14.5px] font-medium transition ${focusRing} ${
                     selecionado
-                      ? 'border-primary bg-[var(--primary-soft)] text-primary'
+                      ? 'border-primary bg-[var(--primary-soft)] text-[var(--primary-text)]'
                       : 'border-border text-text-secondary hover:border-text-secondary hover:text-text-primary'
                   }`}
                 >

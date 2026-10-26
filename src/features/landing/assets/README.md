@@ -28,3 +28,11 @@ e o texto "Novo".
 Tamanho final: cada arquivo tem de 19 a 29 KB.
 
 Atualize também o `alt` de cada tela se o conteúdo da captura mudar.
+
+## Identidade provisória: favicon e imagem de compartilhamento (Story L4)
+
+`public/favicon.svg` (quadrado verde com "H") e `public/og-landing.png` (1200 x 630, fundo escuro, marca, tagline) são
+**provisórios**: a identidade visual vai mudar antes do lançamento e ambos serão trocados. A imagem é gerada por
+`scripts/gerar-og.mjs`, que lê nome, sigla e tagline de `../brand.ts` (rode de novo depois de trocar a marca, com
+`sharp` instalado fora do repositório, como descrito no cabeçalho do script) ou pode ser substituída por um PNG
+definitivo de mesmo caminho. O ícone `favicon.ico` é o do projeto, anterior à landing.

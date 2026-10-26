@@ -12,7 +12,7 @@ export function Normas() {
     <section id="conformidade" aria-labelledby="conformidade-titulo" className="mx-auto w-[min(1120px,100%-32px)]">
       <div className="rounded-[36px] bg-[var(--bg-deep)] px-[22px] py-16 text-center md:px-10 md:py-24">
         <Reveal>
-          <span className="mb-4 block text-sm font-semibold text-primary">Conformidade</span>
+          <span className="mb-4 block text-sm font-semibold text-[var(--primary-text)]">Conformidade</span>
           <h2 id="conformidade-titulo" className="mx-auto max-w-[20ch] text-[clamp(30px,4.6vw,52px)] font-semibold leading-[1.08] tracking-[-0.03em] [text-wrap:balance]">
             As normas viram parte do trabalho, não uma etapa à parte.
           </h2>
@@ -38,8 +38,8 @@ export function Normas() {
                   onKeyDown={(event) => tabs.onKeyDown(event, i)}
                   className={`landing-chip-norma font-mono rounded-full border px-4 py-2.5 text-[13px] ${focusRing} ${
                     selecionado
-                      ? 'border-primary bg-[var(--primary-soft)] text-primary'
-                      : 'border-border bg-surface text-text-secondary hover:border-primary hover:text-primary'
+                      ? 'border-primary bg-[var(--primary-soft)] text-[var(--primary-text)]'
+                      : 'border-border bg-surface text-text-secondary hover:border-primary hover:text-[var(--primary-text)]'
                   }`}
                 >
                   {norma.sigla}
@@ -61,19 +61,19 @@ export function Normas() {
                 className="landing-painel grid items-start gap-7 md:grid-cols-[1.1fr_.9fr] md:gap-12"
               >
                 <div>
-                  <span className="font-mono mb-3.5 block text-xs font-medium uppercase tracking-[0.06em] text-primary">{norma.orgao}</span>
+                  <span className="font-mono mb-3.5 block text-xs font-medium uppercase tracking-[0.06em] text-[var(--primary-text)]">{norma.orgao}</span>
                   <h3 className="mb-2.5 text-[clamp(26px,3.2vw,38px)] font-semibold leading-[1.12] tracking-tight">{norma.sigla}</h3>
                   <p className="mb-[18px] text-lg">{norma.lead}</p>
                   <p className="mb-3 text-[16.5px] text-text-secondary"><b className="font-semibold text-text-primary">O que é.</b> {norma.oQueE}</p>
                   <p className="mb-3 text-[16.5px] text-text-secondary"><b className="font-semibold text-text-primary">Por que importa.</b> {norma.porQueImporta}</p>
                 </div>
                 <div className="rounded-3xl border border-primary bg-[var(--bg-deep)] p-7">
-                  <span className="font-mono mb-3 block text-[12.5px] text-primary">No {NOME_PRODUTO}</span>
+                  <span className="font-mono mb-3 block text-[12.5px] text-[var(--primary-text)]">No {NOME_PRODUTO}</span>
                   <p className="mb-[18px] text-lg leading-snug">{norma.noProduto}</p>
                   <ul className="grid gap-3">
                     {norma.itens.map((item) => (
                       <li key={item} className="relative pl-7 text-[15.5px] text-text-secondary">
-                        <span aria-hidden="true" className="absolute left-0 top-[3px] grid size-4 place-items-center rounded-full bg-[var(--primary-soft)] text-primary">
+                        <span aria-hidden="true" className="absolute left-0 top-[3px] grid size-4 place-items-center rounded-full bg-[var(--primary-soft)] text-[var(--primary-text)]">
                           <Check className="size-3" strokeWidth={2.4} />
                         </span>
                         {item}
@@ -90,7 +90,7 @@ export function Normas() {
           {trilhaNormativa.map((bloco, i) => (
             <li key={bloco.etapa}>
               <Reveal delay={i * 120}>
-                <span className="font-mono mb-3 block text-[12.5px] text-primary">{bloco.etapa}</span>
+                <span className="font-mono mb-3 block text-[12.5px] text-[var(--primary-text)]">{bloco.etapa}</span>
                 <h3 className="mb-2 text-xl font-semibold tracking-tight">{bloco.titulo}</h3>
                 <p className="text-base text-text-secondary">{bloco.texto}</p>
               </Reveal>

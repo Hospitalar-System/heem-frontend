@@ -6,7 +6,9 @@ import { LandingLayout } from '../components/LandingLayout'
 import { Normas } from '../components/Normas'
 import { ParaQuem } from '../components/ParaQuem'
 import { Recursos } from '../components/Recursos'
+import { DESCRICAO_SEO, NOME_PRODUTO, TAGLINE } from '../brand'
 import type { Interesse } from '../content/vitrine'
+import { useDocumentHead } from '../useDocumentHead'
 
 interface LandingPageProps {
   /** Substitui o comportamento padrão (abrir o formulário "Agendar demonstração"); usado em testes. */
@@ -15,6 +17,7 @@ interface LandingPageProps {
 
 export function LandingPage({ onAgendar }: LandingPageProps) {
   const [dialogo, setDialogo] = useState<{ interesse?: Interesse } | null>(null)
+  useDocumentHead({ title: `${NOME_PRODUTO} | ${TAGLINE}`, description: DESCRICAO_SEO, path: '/' })
   const agendar = onAgendar ?? ((interesse?: Interesse) => setDialogo({ interesse }))
 
   return (

@@ -1,0 +1,23 @@
+# Landing e páginas legais públicas; áreas autenticadas do sistema ficam fora dos buscadores.
+# O mapa do site (sitemap.xml) só é gerado no build quando VITE_SITE_URL está definida (URLs absolutas).
+User-agent: *
+Allow: /$
+Allow: /privacidade
+Allow: /termos
+Disallow: /dashboard
+Disallow: /login
+Disallow: /platform
+Disallow: /hospitals
+Disallow: /sectors
+Disallow: /users
+Disallow: /reports
+Disallow: /tickets
+Disallow: /work-orders
+Disallow: /checklists
+Disallow: /settings
+Disallow: /imports
+Disallow: /preventive-plans
+Disallow: /field
+Disallow: /hospital
+Disallow: /access-denied
+# /assets/ (JS e CSS do build) fica liberado de propósito: os buscadores precisam dele para renderizar a página.
