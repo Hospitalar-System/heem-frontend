@@ -1,19 +1,30 @@
 # Telas do aplicativo na landing
 
-Hoje todas as telas usam um placeholder gerado em código (`telas.ts`, "Tela do aplicativo — em breve").
-Para trocar, coloque o arquivo nesta pasta e altere só o `src` da chave correspondente em `telas.ts`
-(por exemplo `src: new URL('./novo-chamado.webp', import.meta.url).href`). Nenhum componente muda.
+As telas da vitrine são capturas reais do aplicativo móvel (build de desenvolvimento, tema escuro, dados de exemplo:
+"Hospital Dev", "Tecnico Hospital Dev", EQ-0001 e afins; nenhum dado real de paciente, pessoa ou cliente).
+Cada chave de `telas.ts` aponta para um arquivo desta pasta via `new URL('./arquivo.webp', import.meta.url).href`.
+Uma chave sem `src` cai no placeholder gerado em código (`placeholderTela`), sem mexer nos componentes.
 
-Formato: WebP, 472 x 968 px (2x de um celular de 236 px de largura), tema escuro, dados de exemplo
-(sem dados reais de paciente ou de cliente).
+## Como foram geradas
 
-| Chave em `telas.ts` | Arquivo esperado | Tela |
-| --- | --- | --- |
-| `novoChamado` | `novo-chamado.webp` | Abrir chamado: equipamento, severidade e descrição |
-| `inicio` | `inicio.webp` | Tela inicial, com atalho de emergência e fila do técnico |
-| `fichaEquipamento` | `ficha-equipamento.webp` | Ficha do equipamento, com dados técnicos e atalhos |
-| `minhasOts` | `minhas-ots.webp` | Minhas OTs, com uma preventiva atrasada |
-| `chamados` | `chamados.webp` | Lista de chamados, com severidade e status |
-| (opcional, nova chave) | `offline-sessao.webp` | Aviso de modo offline / sessão perto de expirar |
+Capturas de tela do celular (1080 x 2400, retrato), a partir de `Screenshot_20261021_*_HEEM (dev).jpg`. Os originais
+**não** ficam no repositório. Para cada tela: corte da barra de status do Android (topo, 78 px) e da barra de navegação
+(fundo, 42 px), ficando 1080 x 2280; redução para 472 x 996 px (2x de um celular de 236 px de largura); WebP qualidade 80,
+sem metadados EXIF. Feito com `sharp` instalado fora do repositório (não é dependência do projeto).
+
+A engrenagem flutuante do build de desenvolvimento (menu de depuração) que aparece sobre as capturas foi retirada
+repintando o fundo ao redor. Na tela de chamados ela cobria o botão "Novo", que foi redesenhado com o mesmo verde
+e o texto "Novo".
+
+| Chave em `telas.ts` | Arquivo | Origem (captura) | Tela |
+| --- | --- | --- | --- |
+| `novoChamado` | `novo-chamado.webp` | `..._152002_...` | Novo chamado: equipamento, severidade e descrição |
+| `inicio` | `inicio.webp` | `..._151935_...` | Hoje: atalho de emergência, fila do técnico e hospitais |
+| `fichaEquipamento` | `ficha-equipamento.webp` | `..._151942_...` | Ficha do equipamento: atalhos e dados técnicos |
+| `minhasOts` | `minhas-ots.webp` | `..._151928_...` | Ordens de trabalho, com uma preventiva atrasada |
+| `chamados` | `chamados.webp` | `..._151915_...` | Lista de chamados, com severidade e status |
+| `offlineSessao` | `offline-sessao.webp` | `..._151902_...` | Perfil: sincronização, pendências e sessão (chave ainda não usada em nenhum painel) |
+
+Tamanho final: cada arquivo tem de 19 a 29 KB.
 
 Atualize também o `alt` de cada tela se o conteúdo da captura mudar.

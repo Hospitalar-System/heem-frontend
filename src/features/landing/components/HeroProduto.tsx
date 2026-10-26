@@ -1,5 +1,5 @@
 import { ArrowRight } from 'lucide-react'
-import { telas } from '../assets/telas'
+import { resolverTela } from '../assets/telas'
 import { paineis } from '../content/vitrine'
 import type { Interesse } from '../content/vitrine'
 import { useTabs } from '../hooks/useTabs'
@@ -104,7 +104,7 @@ export function HeroProduto({ onAgendar }: HeroProdutoProps) {
                     <JanelaIndicadores />
                   ) : (
                     painel.telas.map((chave, j) => (
-                      <TelaApp key={chave} src={telas[chave].src} alt={telas[chave].alt} className={j > 0 ? 'max-[900px]:hidden' : ''} />
+                      <TelaApp key={chave} {...resolverTela(chave)} className={j > 0 ? 'max-[900px]:hidden' : ''} />
                     ))
                   )}
                 </div>
