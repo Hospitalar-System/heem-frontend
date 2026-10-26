@@ -73,6 +73,8 @@ export interface CorrectiveWorkOrder {
 }
 
 export interface ChecklistSummary {
+  /** Hospital dono do checklist; ausente ou nulo vale para qualquer hospital do tenant. */
+  hospitalId?: string | null
   id: string
   nome: string
   ativo?: boolean
@@ -179,4 +181,42 @@ export interface WorkOrderChecklistItem {
   obrigatorio?: boolean
   concluido?: boolean
   ordem?: number
+}
+
+/** Contrato de `/planos-preventivos` (Stories 9.1 e 9.2). Datas civis `YYYY-MM-DD`; instantes ISO-8601. */
+export interface PreventivePlan {
+  id: string
+  equipamentoId: string
+  checklistId: string
+  tecnicoPadraoId: string
+  intervaloDias: number
+  dataAncora: string
+  proximaData: string
+  ativo: boolean
+  /** Story 9.2: técnico padrão inativo ou desvinculado; nenhuma OT foi gerada. */
+  pendencia: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreatePreventivePlanInput {
+  equipamentoId: string
+  checklistId: string
+  tecnicoPadraoId: string
+  intervaloDias: number
+  dataAncora: string
+}
+
+export type UpdatePreventivePlanInput = Omit<CreatePreventivePlanInput, 'equipamentoId' | 'checklistId'>
+
+export interface PreventivePlanFilters {
+  equipamentoId?: string
+  ativo?: boolean
+  pagina: number
+  tamanho: number
+}
+
+export interface PreventivePlanPage {
+  items: PreventivePlan[]
+  total: number
 }

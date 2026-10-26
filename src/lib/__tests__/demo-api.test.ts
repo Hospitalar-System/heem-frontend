@@ -46,4 +46,21 @@ describe('modo de demonstração', () => {
 
     expect(response.data).toEqual([])
   })
+
+  it('simula listar, criar, editar e desativar planos preventivos', async () => {
+    const listed = await apiClient.get('/planos-preventivos', { params: { ativo: true } })
+    expect(listed.data.length).toBeGreaterThanOrEqual(2)
+    expect(listed.data[0]).toEqual(expect.objectContaining({ equipamentoId: expect.any(String), intervaloDias: expect.any(Number), proximaData: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), ativo: true, pendencia: expect.any(Boolean) }))
+
+    const created = await apiClient.post('/planos-preventivos', { equipamentoId: 'equipment-demo-3', checklistId: 'checklist-demo-1', tecnicoPadraoId: 'user-demo-2', intervaloDias: 15, dataAncora: '2999-01-10' })
+    expect(created.data).toEqual(expect.objectContaining({ ativo: true, pendencia: false, proximaData: '2999-01-10' }))
+
+    const updated = await apiClient.put(`/planos-preventivos/${created.data.id}`, { tecnicoPadraoId: 'user-demo-2', intervaloDias: 20, dataAncora: '2999-02-01' })
+    expect(updated.data).toEqual(expect.objectContaining({ intervaloDias: 20, proximaData: '2999-02-01' }))
+
+    const deactivated = await apiClient.post(`/planos-preventivos/${created.data.id}/desativar`)
+    expect(deactivated.data.ativo).toBe(false)
+    const inactive = await apiClient.get('/planos-preventivos', { params: { ativo: false } })
+    expect(inactive.data.map((plan: { id: string }) => plan.id)).toContain(created.data.id)
+  })
 })
