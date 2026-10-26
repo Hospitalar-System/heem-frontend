@@ -3,7 +3,8 @@ export const batchImportTypes = [
     id: 'equipamentos',
     label: 'Equipamentos',
     description: 'Cadastros do parque de equipamentos do tenant.',
-    headers: ['setorId', 'codigo', 'nome', 'modelo', 'numeroSerie', 'marca', 'classeRiscoAnvisa', 'statusCicloVida', 'criticidade', 'tipoProtecao', 'parteAplicada', 'modoOperacao', 'dataInstalacao', 'dataGarantiaFim', 'dadosGerais'],
+    requiredNote: 'A coluna categoria é obrigatória e deve trazer o nome de uma categoria ativa já cadastrada em Categorias (a importação não cria categorias).',
+    headers: ['setorId', 'codigo', 'nome', 'categoria', 'modelo', 'numeroSerie', 'marca', 'classeRiscoAnvisa', 'statusCicloVida', 'criticidade', 'tipoProtecao', 'parteAplicada', 'modoOperacao', 'dataInstalacao', 'dataGarantiaFim', 'dadosGerais'],
   },
   {
     id: 'setores',
@@ -18,6 +19,16 @@ export const batchImportTypes = [
     headers: ['codigo', 'nome', 'email', 'role'],
   },
 ] as const
+
+/** Mensagens pt-BR para os códigos de erro do retorno da importação (cabeçalho e linha). */
+export const batchImportErrorMessages: Record<string, string> = {
+  CABECALHO_INVALIDO: 'O cabeçalho do arquivo está incompleto. Use o modelo atual: a coluna categoria é obrigatória na importação de equipamentos.',
+  CATEGORIA_NAO_ENCONTRADA: 'Categoria não encontrada ou desativada. Cadastre ou ative a categoria em Categorias e use o nome exato na coluna categoria.',
+}
+
+export function describeBatchImportError(code: string) {
+  return batchImportErrorMessages[code] ?? code
+}
 
 export type BatchImportType = (typeof batchImportTypes)[number]['id']
 

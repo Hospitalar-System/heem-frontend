@@ -13,9 +13,14 @@ const sectors: RecordValue[] = [
   { id: 'sector-demo-3', hospitalId: 'hospital-demo-2', codigo: 'EM-01', nome: 'Emergência', andar: 'Térreo', classificacaoRisco: 'SEMI_CRITICO', grupoInstalacao: 'GRUPO_1' },
 ]
 const equipment: RecordValue[] = [
-  { id: 'equipment-demo-1', setorId: 'sector-demo-1', codigo: 'EQ-1001', nome: 'Monitor multiparamétrico', modelo: 'MX-500', numeroSerie: 'DEMO-MX500-01', marca: 'MedTech', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'ATIVO', criticidade: 'ALTA', tipoProtecao: 'CLASSE_I', parteAplicada: 'TIPO_CF', modoOperacao: 'CONTINUO', dataInstalacao: '2024-03-15', dataGarantiaFim: '2027-03-15', nivelRisco: 'ALTO' },
-  { id: 'equipment-demo-2', setorId: 'sector-demo-2', codigo: 'EQ-1002', nome: 'Ventilador pulmonar', modelo: 'Vento 4', numeroSerie: 'DEMO-V4-02', marca: 'MedTech', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'EM_MANUTENCAO', criticidade: 'ALTA', tipoProtecao: 'CLASSE_I', parteAplicada: 'TIPO_BF', modoOperacao: 'CONTINUO', dataInstalacao: '2023-08-10', dataGarantiaFim: '2026-08-10', nivelRisco: 'MEDIO' },
-  { id: 'equipment-demo-3', setorId: 'sector-demo-3', codigo: 'EQ-1003', nome: 'Desfibrilador', modelo: 'Heart 2', numeroSerie: 'DEMO-H2-03', marca: 'CardioCare', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'ATIVO', criticidade: 'ALTA', tipoProtecao: 'CLASSE_II', parteAplicada: 'TIPO_BF', modoOperacao: 'INTERMITENTE', dataInstalacao: '2024-01-20', dataGarantiaFim: '2027-01-20', nivelRisco: 'BAIXO' },
+  { id: 'equipment-demo-1', setorId: 'sector-demo-1', codigo: 'EQ-1001', nome: 'Monitor multiparamétrico', categoriaId: 'category-demo-1', categoriaNome: 'Monitor Multiparamétrico', modelo: 'MX-500', numeroSerie: 'DEMO-MX500-01', marca: 'MedTech', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'ATIVO', criticidade: 'ALTA', tipoProtecao: 'CLASSE_I', parteAplicada: 'TIPO_CF', modoOperacao: 'CONTINUO', dataInstalacao: '2024-03-15', dataGarantiaFim: '2027-03-15', nivelRisco: 'ALTO' },
+  { id: 'equipment-demo-2', setorId: 'sector-demo-2', codigo: 'EQ-1002', nome: 'Ventilador pulmonar', categoriaId: 'category-demo-2', categoriaNome: 'Ventilador Pulmonar', modelo: 'Vento 4', numeroSerie: 'DEMO-V4-02', marca: 'MedTech', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'EM_MANUTENCAO', criticidade: 'ALTA', tipoProtecao: 'CLASSE_I', parteAplicada: 'TIPO_BF', modoOperacao: 'CONTINUO', dataInstalacao: '2023-08-10', dataGarantiaFim: '2026-08-10', nivelRisco: 'MEDIO' },
+  { id: 'equipment-demo-3', setorId: 'sector-demo-3', codigo: 'EQ-1003', nome: 'Desfibrilador', categoriaId: null, categoriaNome: null, modelo: 'Heart 2', numeroSerie: 'DEMO-H2-03', marca: 'CardioCare', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'ATIVO', criticidade: 'ALTA', tipoProtecao: 'CLASSE_II', parteAplicada: 'TIPO_BF', modoOperacao: 'INTERMITENTE', dataInstalacao: '2024-01-20', dataGarantiaFim: '2027-01-20', nivelRisco: 'BAIXO' },
+]
+const categories: RecordValue[] = [
+  { id: 'category-demo-1', nome: 'Monitor Multiparamétrico', ativa: true, checklistPadraoId: 'checklist-demo-1', origem: 'manual', revisada: true },
+  { id: 'category-demo-2', nome: 'Ventilador Pulmonar', ativa: true, checklistPadraoId: null, origem: 'carga', revisada: false },
+  { id: 'category-demo-3', nome: 'Desfibrilador', ativa: true, checklistPadraoId: null, origem: 'carga', revisada: false },
 ]
 const tickets: RecordValue[] = [
   { id: 'ticket-demo-1', hospitalId: hospitals[0].id, setorId: sectors[0].id, equipamentoId: equipment[0].id, abertoPor: 'user-demo-1', descricao: 'Leitura de SpO2 oscilando durante o monitoramento.', severidade: 'ALTA', status: 'ABERTO', abertoEm: now, slaStatus: 'em_risco', codigo: 'CH-0001', tecnicoResponsavelId: null, primeiraRespostaEm: null, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false },
@@ -139,6 +144,14 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     if (method === 'put') slaPolicy = body as unknown as RecordValue[]
     return slaPolicy
   }
+  const categoryResult = handleCategories(method, path, body, params)
+  if (categoryResult !== undefined) return categoryResult
+  if (path === '/equipamentos' && method === 'post') return createRecord(equipment, { ...categorizedBody(body), ativo: true })
+  const equipmentUpdate = path.match(/^\/equipamentos\/([^/]+)$/)
+  if (equipmentUpdate && method === 'put') {
+    const record = equipment.find((item) => item.id === equipmentUpdate[1])
+    if (record) { Object.assign(record, categorizedBody(body)); return record }
+  }
   if (path === '/tenants' || path === '/hospitais' || path === '/equipamentos' || path === '/ordens-de-trabalho' || path === '/checklists' || path === '/chamados' || path === '/users' || path === '/platform-users') {
     const collection = routeCollection(path)
     if (method === 'get') return filterCollection(collection, path, params)
@@ -248,7 +261,55 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   return null
 }
 
+function categoryName(id: unknown) { return (categories.find((item) => item.id === id)?.nome as string | undefined) ?? null }
+
+function categorizedBody(body: RecordValue): RecordValue {
+  if (!body.categoriaId) return { ...body, categoriaId: null, categoriaNome: null }
+  return { ...body, categoriaNome: categoryName(body.categoriaId) }
+}
+
+function withCount(category: RecordValue): RecordValue {
+  return { ...category, quantidadeEquipamentos: equipment.filter((item) => item.categoriaId === category.id).length }
+}
+
+function handleCategories(method: string, path: string, body: RecordValue, params?: Record<string, unknown>): unknown {
+  if (path === '/categorias-equipamento') {
+    if (method === 'get') {
+      return categories
+        .filter((item) => params?.ativa === undefined || item.ativa === params.ativa)
+        .filter((item) => !params?.revisar || (item.origem === 'carga' && !item.revisada))
+        .map(withCount)
+    }
+    if (method === 'post') {
+      const created = { id: makeId('category'), origem: 'manual', revisada: true, ativa: true, checklistPadraoId: null, ...body }
+      categories.push(created)
+      return withCount(created)
+    }
+  }
+  const route = path.match(/^\/categorias-equipamento\/([^/]+)(?:\/(revisada|mesclar))?$/)
+  if (!route) return undefined
+  const record = categories.find((item) => item.id === route[1])
+  if (!record) return null
+  if (route[2] === 'revisada' && method === 'put') { record.revisada = true; return withCount(record) }
+  if (route[2] === 'mesclar' && method === 'post') {
+    const origin = categories.find((item) => item.id === body.origemId)
+    if (origin) {
+      equipment.filter((item) => item.categoriaId === origin.id).forEach((item) => Object.assign(item, { categoriaId: record.id, categoriaNome: record.nome }))
+      origin.ativa = false
+      if (!record.checklistPadraoId) record.checklistPadraoId = origin.checklistPadraoId
+    }
+    return withCount(record)
+  }
+  if (method === 'get') return withCount(record)
+  if (method === 'put') { Object.assign(record, body); equipment.filter((item) => item.categoriaId === record.id).forEach((item) => { item.categoriaNome = record.nome }); return withCount(record) }
+  if (method === 'delete') { record.ativa = false; return null }
+  return undefined
+}
+
 function filterCollection(collection: RecordValue[], path: string, params?: Record<string, unknown>) {
+  if (path === '/equipamentos' && (params?.categoriaId || params?.semCategoria)) {
+    collection = collection.filter((item) => params.semCategoria ? !item.categoriaId : item.categoriaId === params.categoriaId)
+  }
   if (path === '/equipamentos' && params?.hospitalId) {
     const sectorIds = new Set(sectors.filter((item) => item.hospitalId === params.hospitalId).map((item) => item.id))
     return collection.filter((item) => sectorIds.has(item.setorId as string) && (!params.setorId || item.setorId === params.setorId))

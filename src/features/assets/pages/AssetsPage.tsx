@@ -5,6 +5,7 @@ import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { EquipmentStatusBadge } from '../components/EquipmentStatusBadge'
 import { useEquipments, useHospitals, useSectorsForHospitals } from '../api/assets'
+import { useCategories } from '../api/categories'
 import type { EquipmentLifecycle } from '../types'
 import { Select } from '@/components/ui/Select'
 
@@ -18,6 +19,8 @@ const lifecycleOptions: Array<{ value: EquipmentLifecycle | ''; label: string }>
   { value: 'DESCARTADO', label: 'Descartado' },
 ]
 
+const NO_CATEGORY = '__sem_categoria__'
+
 export function AssetsPage() {
   const navigate = useNavigate()
   const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
@@ -26,8 +29,15 @@ export function AssetsPage() {
   const [hospitalId, setHospitalId] = useState('')
   const [sectorId, setSectorId] = useState('')
   const [status, setStatus] = useState<EquipmentLifecycle | ''>('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const categories = useCategories()
   const [search, setSearch] = useState('')
-  const equipment = useEquipments({ hospitalId: hospitalId || undefined, setorId: sectorId || undefined })
+  const equipment = useEquipments({
+    hospitalId: hospitalId || undefined,
+    setorId: sectorId || undefined,
+    categoriaId: categoryFilter && categoryFilter !== NO_CATEGORY ? categoryFilter : undefined,
+    semCategoria: categoryFilter === NO_CATEGORY ? true : undefined,
+  })
   const sectors = useSectorsForHospitals(hospitals.data?.map(({ id }) => id) ?? [])
   const sectorById = useMemo(() => new Map((sectors.data ?? []).map((sector) => [sector.id, sector])), [sectors.data])
   const visibleEquipment = useMemo(() => {
@@ -35,12 +45,12 @@ export function AssetsPage() {
     return (equipment.data ?? []).filter((item) => {
       if (status && item.statusCicloVida !== status) return false
       if (!term) return true
-      return [item.codigo, item.nome, item.modelo, item.numeroSerie]
+      return [item.codigo, item.nome, item.modelo, item.numeroSerie, item.categoriaNome]
         .some((value) => value?.toLocaleLowerCase('pt-BR').includes(term))
     })
   }, [equipment.data, search, status])
 
-  const clearFilters = () => { setHospitalId(''); setSectorId(''); setStatus(''); setSearch('') }
+  const clearFilters = () => { setHospitalId(''); setSectorId(''); setStatus(''); setCategoryFilter(''); setSearch('') }
 
   return <AdminPageShell title="Equipamentos" subtitle="Ativos dos hospitais do tenant">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -57,10 +67,14 @@ export function AssetsPage() {
           <span className="sr-only">Filtrar por status</span>
           <Select size="sm" aria-label="Filtrar por status" value={status} onChange={(next) => setStatus(next as EquipmentLifecycle | '')} options={lifecycleOptions} />
         </label>
+        <label className="min-w-[170px] flex-1 sm:max-w-[220px]">
+          <span className="sr-only">Filtrar por categoria</span>
+          <Select size="sm" aria-label="Filtrar por categoria" value={categoryFilter} onChange={setCategoryFilter} options={[{ value: '', label: 'Todas as categorias' }, { value: NO_CATEGORY, label: 'Sem categoria' }, ...(categories.data ?? []).map((category) => ({ value: category.id, label: category.ativa ? category.nome : `${category.nome} (inativa)` }))]} />
+        </label>
         <label className="relative min-w-[200px] flex-1 sm:max-w-[280px]">
           <span className="sr-only">Buscar equipamento</span>
           <Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-          <input aria-label="Buscar equipamento" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, nome, modelo ou série" className={`${inputClass} pl-8`} />
+          <input aria-label="Buscar equipamento" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, nome, modelo, série ou categoria" className={`${inputClass} pl-8`} />
         </label>
       </div>
       {isAdmin && <button type="button" onClick={() => navigate('/assets/new')} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg"><Plus size={14} />Novo equipamento</button>}
@@ -76,10 +90,10 @@ export function AssetsPage() {
       </div>
     </section> : null}
     {!equipment.isLoading && !equipment.isError && visibleEquipment.length > 0 ? <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-      <table className="w-full min-w-[980px] border-collapse text-left">
-        <thead><tr className="table-head h-12 text-[11px]">{['Código', 'Nome', 'Modelo', 'Nº série', 'Setor', 'Últ. manut.', 'Status'].map((heading) => <th key={heading} scope="col" className="px-4">{heading}</th>)}</tr></thead>
+      <table className="w-full min-w-[1080px] border-collapse text-left">
+        <thead><tr className="table-head h-12 text-[11px]">{['Código', 'Nome', 'Categoria', 'Modelo', 'Nº série', 'Setor', 'Últ. manut.', 'Status'].map((heading) => <th key={heading} scope="col" className="px-4">{heading}</th>)}</tr></thead>
         <tbody>{visibleEquipment.map((item) => <tr key={item.id} role="link" tabIndex={0} aria-label={`Abrir ${item.codigo}, ${item.nome}`} onClick={() => navigate(`/assets/${item.id}`)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/assets/${item.id}`) } }} className="h-12 row-clickable border-b border-border/70 text-xs last:border-0">
-          <td className="whitespace-nowrap px-4 font-medium text-text-secondary">{item.codigo}</td><td className="max-w-[280px] truncate px-4 text-sm font-medium text-text-primary">{item.nome}</td><td className="px-4 text-text-secondary">{item.modelo || '—'}</td><td className="px-4 text-text-secondary">{item.numeroSerie || '—'}</td><td className="px-4 text-text-secondary">{sectorById.get(item.setorId)?.nome ?? '—'}</td><td className="px-4 text-text-muted" title="A API não fornece a data da última manutenção na listagem">—</td><td className="px-4"><EquipmentStatusBadge status={item.statusCicloVida} /></td>
+          <td className="whitespace-nowrap px-4 font-medium text-text-secondary">{item.codigo}</td><td className="max-w-[280px] truncate px-4 text-sm font-medium text-text-primary">{item.nome}</td><td className="px-4 text-text-secondary">{item.categoriaNome ?? <span className="text-text-muted">Sem categoria</span>}</td><td className="px-4 text-text-secondary">{item.modelo || '—'}</td><td className="px-4 text-text-secondary">{item.numeroSerie || '—'}</td><td className="px-4 text-text-secondary">{sectorById.get(item.setorId)?.nome ?? '—'}</td><td className="px-4 text-text-muted" title="A API não fornece a data da última manutenção na listagem">—</td><td className="px-4"><EquipmentStatusBadge status={item.statusCicloVida} /></td>
         </tr>)}</tbody>
       </table>
     </div> : null}
