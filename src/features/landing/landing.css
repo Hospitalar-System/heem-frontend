@@ -82,7 +82,7 @@ html:has(.landing) {
     var(--surface);
 }
 
-/* Revelação ao rolar: os atributos só existem quando há IntersectionObserver e sem reduced motion. */
+/* Revelação ao rolar: data-reveal só existe depois que o IntersectionObserver está ativo (ver useRevelar). */
 .landing [data-reveal] {
   transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
   transition-delay: var(--reveal-delay, 0ms);
@@ -97,6 +97,28 @@ html:has(.landing) {
   transform: translateY(24px) scale(0.94);
 }
 
+.landing [data-reveal='pending'][data-reveal-variant='left'] {
+  transform: translateX(-28px);
+}
+
+.landing [data-reveal='pending'][data-reveal-variant='right'] {
+  transform: translateX(28px);
+}
+
+.landing [data-reveal='in'] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Chips de norma e cartões: elevação no hover (a referência usa -2px e -4px). */
+.landing-chip-norma {
+  transition: border-color 0.15s, color 0.15s, background-color 0.15s, transform 0.15s;
+}
+
+.landing-chip-norma:hover {
+  transform: translateY(-2px);
+}
+
 /* Gráfico de indicadores (SVG próprio, cores pelo tema). */
 .landing-chart-grid line { stroke: var(--border); fill: none; }
 .landing-chart-text { fill: var(--text-muted); font-family: Inter, sans-serif; }
@@ -108,17 +130,171 @@ html:has(.landing) {
   stroke-linejoin: round;
   stroke-linecap: round;
   stroke-dasharray: 1200;
-  animation: landing-draw 1.6s ease 0.3s both;
+}
+
+/* O traço só é escondido depois que o observador está ativo; desenha quando a janela entra na tela. */
+.landing-chart[data-draw='pending'] .landing-chart-line {
+  stroke-dashoffset: 1200;
+}
+
+.landing-chart[data-draw='in'] .landing-chart-line {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1.6s ease 0.3s;
 }
 .landing-chart-point circle { fill: var(--surface); stroke: var(--primary); stroke-width: 2; }
 .landing-chart-dot { fill: var(--primary); }
 .landing-chart-value { fill: var(--text-primary); font-weight: 600; font-family: Inter, sans-serif; }
 
-@keyframes landing-draw {
-  from { stroke-dashoffset: 1200; }
-  to { stroke-dashoffset: 0; }
+/* Dropdown próprio (SelectLanding), reproduz .sel/.dd-btn/.dd-list da referência. */
+.landing-sel {
+  position: relative;
+  display: block;
 }
 
+.landing-sel::after {
+  content: '';
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--text-secondary);
+  border-bottom: 2px solid var(--text-secondary);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+  transition: border-color 0.15s, transform 0.2s;
+}
+
+.landing-sel:hover::after,
+.landing-sel:focus-within::after {
+  border-color: var(--primary);
+}
+
+.landing-sel[data-open='true']::after {
+  transform: translateY(-30%) rotate(225deg);
+  border-color: var(--primary);
+}
+
+.landing-dd-btn {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 44px 12px 14px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--text-primary);
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.landing-dd-btn[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.landing-dd-btn:hover {
+  border-color: var(--text-secondary);
+}
+
+.landing-dd-btn:focus-visible,
+.landing-sel[data-open='true'] .landing-dd-btn {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+  border-color: var(--primary);
+}
+
+.landing-dd-btn.empty {
+  color: var(--text-muted);
+}
+
+.landing-dd-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 18px 50px var(--shadow);
+  max-height: 236px;
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.landing-dd-list::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.landing-dd-list[hidden] {
+  display: none;
+}
+
+.landing-sel[data-up='true'] .landing-dd-list {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.landing-dd-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.landing-dd-list li:hover,
+.landing-dd-list li[data-active='true'] {
+  background: var(--surface-hi);
+}
+
+.landing-sel:has(.landing-dd-btn:focus-visible) .landing-dd-list li[data-active='true'] {
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+
+.landing-dd-list li[aria-selected='true'] {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.landing-dd-list li[aria-selected='true']::after {
+  content: '';
+  width: 6px;
+  height: 11px;
+  flex: none;
+  border-right: 2px solid var(--primary);
+  border-bottom: 2px solid var(--primary);
+  transform: rotate(45deg) translate(-2px, -2px);
+}
+
+@keyframes landing-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/*
+ * prefers-reduced-motion: remove o MOVIMENTO (translate, scale, desenho do traço, cascata, barra de progresso,
+ * giro da seta) mas não deixa a página "quebrada": ficam transições de opacidade curtas (<= 150 ms) e o
+ * conteúdo nunca fica oculto.
+ */
 @media (prefers-reduced-motion: reduce) {
   html:has(.landing) {
     scroll-behavior: auto;
@@ -127,13 +303,29 @@ html:has(.landing) {
     transition: none;
   }
   .landing-hin,
-  .landing .landing-painel,
-  .landing-chart-line {
-    animation: none;
+  .landing .landing-painel {
+    animation: landing-fade 0.15s linear both;
+    animation-delay: 0s !important;
   }
-  .landing [data-reveal] {
+  .landing [data-reveal],
+  .landing [data-reveal='pending'],
+  .landing [data-reveal='pending'][data-reveal-variant] {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+  .landing-chart-line {
+    stroke-dasharray: none;
+  }
+  .landing-chart[data-draw] .landing-chart-line {
+    stroke-dashoffset: 0;
+    transition: none;
+  }
+  .landing-chip-norma,
+  .landing-sel::after {
+    transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+  }
+  .landing-chip-norma:hover {
+    transform: none;
   }
 }

@@ -77,26 +77,35 @@ describe('abertura pelos botões "Agendar demonstração"', () => {
     const user = userEvent.setup()
     renderLanding()
     await user.click(screen.getByRole('button', { name: /Quero abrir um chamado para um equipamento/ }))
-    expect(screen.getByLabelText('O que você quer resolver?')).toHaveValue('chamados_e_os')
+    expect(screen.getByRole('combobox', { name: 'O que você quer resolver?' })).toHaveTextContent('Chamados e ordens de serviço')
   })
 
   it.each<[Interesse, string]>([
-    ['chamado', 'chamados_e_os'],
-    ['equipamento', 'gestao_de_ativos'],
-    ['ordens', 'manutencao_preventiva'],
-    ['indicadores', 'indicadores'],
-  ])('interesse %s vira %s', (interesse, valor) => {
+    ['chamado', 'Chamados e ordens de serviço'],
+    ['equipamento', 'Gestão de ativos e equipamentos'],
+    ['ordens', 'Manutenção preventiva'],
+    ['indicadores', 'Indicadores e relatórios'],
+  ])('interesse %s vem selecionado como "%s"', async (interesse, rotulo) => {
+    const user = userEvent.setup()
     renderDialogo(interesse)
-    expect(screen.getByLabelText('O que você quer resolver?')).toHaveValue(valor)
+    const combo = screen.getByRole('combobox', { name: 'O que você quer resolver?' })
+    expect(combo).toHaveTextContent(rotulo)
+    await user.click(combo)
+    expect(screen.getByRole('option', { name: rotulo })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getAllByRole('option', { selected: true })).toHaveLength(1)
   })
 
   it('sem interesse, nada vem selecionado e há os 5 rótulos em português', () => {
     renderDialogo()
-    const select = screen.getByLabelText('O que você quer resolver?')
-    expect(select).toHaveValue('')
-    expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual([
-      'Selecione', 'Gestão de ativos e equipamentos', 'Manutenção preventiva', 'Chamados e ordens de serviço', 'Indicadores e relatórios', 'Outro',
+    const combo = screen.getByRole('combobox', { name: 'O que você quer resolver?' })
+    expect(combo).toHaveTextContent('Selecione')
+    expect(combo).toHaveClass('empty')
+    const lista = document.getElementById(combo.getAttribute('aria-controls') ?? '') as HTMLElement
+    expect(lista).toHaveAttribute('role', 'listbox')
+    expect(within(lista).getAllByRole('option', { hidden: true }).map((o) => o.textContent)).toEqual([
+      'Gestão de ativos e equipamentos', 'Manutenção preventiva', 'Chamados e ordens de serviço', 'Indicadores e relatórios', 'Outro',
     ])
+    expect(within(lista).queryAllByRole('option', { selected: true, hidden: true })).toHaveLength(0)
   })
 
   it('"Entrar" continua levando a /login', () => {
@@ -228,7 +237,8 @@ describe('envio', () => {
     enviar.mockResolvedValue(undefined)
     const { onFechar } = renderDialogo('ordens')
     await preencher(user)
-    await user.selectOptions(screen.getByLabelText('Cargo'), 'Engenharia clínica')
+    await user.click(screen.getByRole('combobox', { name: 'Cargo' }))
+    await user.click(screen.getByRole('option', { name: 'Engenharia clínica' }))
     await user.type(screen.getByLabelText('Telefone (opcional)'), ' (51) 90000-0000 ')
     await user.click(botaoEnviar())
 

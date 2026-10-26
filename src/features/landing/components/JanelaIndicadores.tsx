@@ -1,9 +1,14 @@
 import { indicadoresExemplo } from '../content/textos'
+import { useRevelar } from '../hooks/useRevelar'
 
-/** Janela web com KPIs e gráfico de linha de exemplo, em SVG próprio (cores por variáveis do tema). */
+/**
+ * Janela web com KPIs e gráfico de linha de exemplo, em SVG próprio (cores por variáveis do tema).
+ * A linha só é desenhada (1,6 s) quando a janela entra na tela, como `.show.in .gline` da referência.
+ */
 export function JanelaIndicadores() {
+  const [ref, fase] = useRevelar<HTMLDivElement>()
   return (
-    <div className="w-full max-w-[520px] overflow-hidden rounded-[22px] border border-border bg-surface shadow-[0_30px_70px_var(--shadow)]">
+    <div ref={ref} data-draw={fase === 'off' ? undefined : fase} className="landing-chart w-full max-w-[520px] overflow-hidden rounded-[22px] border border-border bg-surface shadow-[0_30px_70px_var(--shadow)]">
       <div aria-hidden="true" className="flex gap-1.5 border-b border-border bg-[var(--bg-deep)] px-3.5 py-3">
         <i className="size-[9px] rounded-full bg-border" />
         <i className="size-[9px] rounded-full bg-border" />
