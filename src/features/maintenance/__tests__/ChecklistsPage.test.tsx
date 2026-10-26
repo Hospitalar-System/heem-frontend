@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
 import { ChecklistsPage } from '../pages/ChecklistsPage'
+import { chooseOption, listOptions } from '@/test/select-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -60,10 +61,25 @@ describe('ChecklistsPage', () => {
     await screen.findByText('1. Verificar cabo')
     expect(screen.getByText('Sim ou Não · Obrigatório')).toBeInTheDocument()
     expect(screen.getByText('Número (medição) · mmHg')).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Tipo' })).toHaveValue('BOOLEANO')
-    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(expect.arrayContaining(['Número (medição)', 'Sim ou Não', 'Texto livre', 'Lista de opções']))
+    expect(screen.getByRole('combobox', { name: 'Tipo' })).toHaveTextContent('Sim ou Não')
+    expect(await listOptions(user, 'Tipo')).toEqual(['Número (medição)', 'Sim ou Não', 'Texto livre'])
     await user.click(screen.getByText('2. Medir pressão'))
-    expect(screen.getByRole('combobox', { name: 'Tipo' })).toHaveValue('NUMERICO')
+    expect(screen.getByRole('combobox', { name: 'Tipo' })).toHaveTextContent('Número (medição)')
+  })
+
+  it('não oferece Lista de opções ao criar, mas preserva o tipo de um item existente que já o usa', async () => {
+    const user = userEvent.setup()
+    const legacyItems = [...items, { id: 'item-3', descricao: 'Escolher modo', tipo: 'SELECAO', unidade: null, obrigatorio: false, ordem: 2 }]
+    vi.mocked(apiClient.get).mockImplementation(async (url) => ({ data: url === '/checklists' ? checklistList : url === '/checklists/checklist-1/itens' ? legacyItems : [] }) as never)
+    render(<ChecklistsPage />, { wrapper: TestProviders })
+    expect(await screen.findByText('Lista de opções')).toBeInTheDocument()
+    await user.click(screen.getByText('3. Escolher modo'))
+    expect(screen.getByRole('combobox', { name: 'Tipo' })).toHaveTextContent('Lista de opções')
+    expect(await listOptions(user, 'Tipo')).toEqual(['Número (medição)', 'Sim ou Não', 'Texto livre', 'Lista de opções'])
+    await user.click(screen.getByText('1. Verificar cabo'))
+    expect(await listOptions(user, 'Tipo')).not.toContain('Lista de opções')
+    await user.click(screen.getAllByRole('button', { name: 'Novo' })[0])
+    expect(await listOptions(user, 'Tipo')).toEqual(['Número (medição)', 'Sim ou Não', 'Texto livre'])
   })
 
   it('creates a checklist and adds an item with configured properties', async () => {
@@ -73,7 +89,7 @@ describe('ChecklistsPage', () => {
     await user.type(screen.getByRole('textbox', { name: 'Código do checklist' }), 'CL-001')
     await user.type(screen.getByRole('textbox', { name: 'Nome do checklist' }), 'Novo modelo')
     await user.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Verificar cabo')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Tipo' }), 'Sim ou Não')
+    await chooseOption(user, 'Tipo', 'Sim ou Não')
     await user.click(screen.getByRole('button', { name: 'Criar checklist' }))
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/checklists', {
       codigo: 'CL-001', nome: 'Novo modelo', itens: [
@@ -83,11 +99,11 @@ describe('ChecklistsPage', () => {
 
     await user.click((await screen.findAllByRole('button', { name: 'Adicionar item' }))[0])
     await user.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Teste funcional')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Tipo' }), 'Lista de opções')
+    await chooseOption(user, 'Tipo', 'Texto livre')
     await user.click(screen.getByRole('checkbox', { name: 'Item obrigatório' }))
     await user.click(screen.getAllByRole('button', { name: 'Adicionar item' })[1])
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/checklists/checklist-new/itens', {
-      descricao: 'Teste funcional', tipo: 'SELECAO', unidade: null, obrigatorio: true,
+      descricao: 'Teste funcional', tipo: 'TEXTO', unidade: null, obrigatorio: true,
     }))
   })
 

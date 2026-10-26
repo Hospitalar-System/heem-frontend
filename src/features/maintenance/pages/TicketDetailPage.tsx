@@ -14,6 +14,7 @@ import { useCreateCorrectiveWorkOrder, useTicket, useTicketHistory } from '../ap
 import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import { formatSlaDeadline } from '../utils/sla'
 import type { TicketStatus } from '../types'
+import { Select } from '@/components/ui/Select'
 
 const fieldClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const severityLabel: Record<string, string> = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }
@@ -159,7 +160,7 @@ export function TicketDetailPage() {
     {isCreateOpen && <Modal title="Gerar OT corretiva" description={`Chamado ${ticket.data.id}`} busy={createWorkOrder.isPending} onClose={() => setIsCreateOpen(false)}>
       <form className="space-y-4" onSubmit={(event) => void submitCorrectiveWorkOrder(event)}>
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Código da OT<input autoFocus required maxLength={40} value={codigo} onChange={(event) => setCodigo(event.target.value)} placeholder="Ex.: OT-2042" className={fieldClass} /></label>
-        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<select required value={tecnicoId} onChange={(event) => setTecnicoId(event.target.value)} className={fieldClass}><option value="">Selecione um técnico</option>{activeTechnicians.map((user) => <option key={user.id} value={user.id}>{user.nome}</option>)}</select></label>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<Select required value={tecnicoId} onChange={setTecnicoId} placeholder="Selecione um técnico" options={activeTechnicians.map((user) => ({ value: user.id, label: user.nome }))} /></label>
         {isAdmin && !users.isLoading && !hospitalLinks.some((query) => query.isLoading) && activeTechnicians.length === 0 && <p role="status" className="text-xs text-warning">Não há técnicos ativos vinculados ao hospital deste chamado.</p>}
         {isTechnician && <p className="text-xs text-text-muted">A OT será atribuída a você; o backend validará seu vínculo com o hospital.</p>}
         {createWorkOrder.isError && <p role="alert" className="text-xs text-danger">{getErrorMessage(createWorkOrder.error)}</p>}

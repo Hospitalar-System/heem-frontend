@@ -1,9 +1,11 @@
-import { CalendarDays, Download, FileSpreadsheet, FileText, RotateCw } from 'lucide-react'
+import { Download, FileSpreadsheet, FileText, RotateCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { useHospitals, useSectors } from '@/features/assets/api/assets'
 import { useReportExport, useReportIndicators, useRequestReportExport, useRiskCompliance } from '../api/reports'
 import type { ExportRequest, ReportFilters } from '../api/reports'
+import { Select } from '@/components/ui/Select'
+import { DatePicker } from '@/components/ui/DatePicker'
 
 type ExportContent = ExportRequest['conteudo']
 type ExportFormat = ExportRequest['formato']
@@ -85,41 +87,24 @@ export function ReportsPage() {
         <section aria-label="Filtros do relatório" className="flex flex-wrap items-end gap-3">
           <label className="grid gap-1 text-xs text-text-secondary">
             <span>Desde</span>
-            <span className="flex h-[38px] items-center gap-2 rounded-md border border-border bg-surface px-3">
-              <CalendarDays aria-hidden="true" size={14} className="text-text-muted" />
-              <input aria-label="Data inicial" type="date" value={desde} max={ate || undefined} onChange={(event) => setDesde(event.target.value)} className="min-w-0 bg-transparent text-xs text-text-primary outline-none" />
-            </span>
+            <DatePicker size="sm" required aria-label="Data inicial" value={desde} max={ate || undefined} onChange={setDesde} />
           </label>
           <label className="grid gap-1 text-xs text-text-secondary">
             <span>Até</span>
-            <span className="flex h-[38px] items-center gap-2 rounded-md border border-border bg-surface px-3">
-              <CalendarDays aria-hidden="true" size={14} className="text-text-muted" />
-              <input aria-label="Data final" type="date" value={ate} min={desde || undefined} onChange={(event) => setAte(event.target.value)} className="min-w-0 bg-transparent text-xs text-text-primary outline-none" />
-            </span>
+            <DatePicker size="sm" required aria-label="Data final" value={ate} min={desde || undefined} onChange={setAte} />
           </label>
           <label className="grid min-w-40 gap-1 text-xs text-text-secondary">
             <span>Hospital</span>
-            <select aria-label="Hospital" value={hospitalId} onChange={(event) => { setHospitalId(event.target.value); setSetorId('') }} className="h-[38px] rounded-md border border-border bg-surface px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-              <option value="">Todos</option>
-              {(hospitals.data ?? []).map((hospital) => <option key={hospital.id} value={hospital.id}>{hospital.nome}</option>)}
-            </select>
+            <Select size="sm" aria-label="Hospital" value={hospitalId} onChange={(next) => { setHospitalId(next); setSetorId('') }} options={[{ value: '', label: 'Todos' }, ...(hospitals.data ?? []).map((hospital) => ({ value: hospital.id, label: hospital.nome }))]} />
           </label>
           <label className="grid min-w-40 gap-1 text-xs text-text-secondary">
             <span>Setor</span>
-            <select aria-label="Setor" value={setorId} disabled={!hospitalId} onChange={(event) => setSetorId(event.target.value)} className="h-[38px] rounded-md border border-border bg-surface px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50">
-              <option value="">Todos</option>
-              {(sectors.data ?? []).map((sector) => <option key={sector.id} value={sector.id}>{sector.nome}</option>)}
-            </select>
+            <Select size="sm" aria-label="Setor" value={setorId} disabled={!hospitalId} onChange={setSetorId} options={[{ value: '', label: 'Todos' }, ...(sectors.data ?? []).map((sector) => ({ value: sector.id, label: sector.nome }))]} />
           </label>
           <div className="ml-auto flex flex-wrap items-end gap-2">
             <label className="grid gap-1 text-xs text-text-secondary">
               <span>Conteúdo</span>
-              <select aria-label="Conteúdo da exportação" value={conteudo} onChange={(event) => setConteudo(event.target.value as ExportContent)} className="h-[38px] rounded-md border border-border bg-surface px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
-                <option value="INDICADORES">Indicadores</option>
-                <option value="chamados">Chamados</option>
-                <option value="ordens_trabalho">Ordens de trabalho</option>
-                <option value="medicoes">Medições</option>
-              </select>
+              <Select size="sm" aria-label="Conteúdo da exportação" value={conteudo} onChange={(next) => setConteudo(next as ExportContent)} options={[{ value: 'INDICADORES', label: 'Indicadores' }, { value: 'chamados', label: 'Chamados' }, { value: 'ordens_trabalho', label: 'Ordens de trabalho' }, { value: 'medicoes', label: 'Medições' }]} />
             </label>
             <button type="button" aria-label="Exportar Excel" disabled={invalidRange || requestExport.isPending} onClick={() => void handleExport('xlsx')} className="inline-flex h-[38px] items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
               <FileSpreadsheet aria-hidden="true" size={14} /> Excel

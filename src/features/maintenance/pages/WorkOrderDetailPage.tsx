@@ -7,8 +7,8 @@ import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { Modal } from '@/components/ui/Modal'
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
 import { useReassignWorkOrderTechnician, useWorkOrder, useWorkOrderChecklistItems } from '../api/work-orders'
+import { Select } from '@/components/ui/Select'
 
-const fieldClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const statusLabels: Record<string, string> = { AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída', CANCELADA: 'Cancelada', CANCELADO: 'Cancelada' }
 
 function canonical(value: string) { return value.toLocaleUpperCase('pt-BR').replaceAll('Ç', 'C').replaceAll('Ã', 'A') }
@@ -121,7 +121,7 @@ export function WorkOrderDetailPage() {
 
     {isReassignOpen && <Modal title="Reatribuir técnico" description="A alteração solicita apenas o novo responsável; o status da OT não é enviado." busy={reassign.isPending} onClose={() => setIsReassignOpen(false)}>
       <form className="space-y-4" onSubmit={(event) => void submitReassignment(event)}>
-        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<select required value={tecnicoId} onChange={(event) => setTecnicoId(event.target.value)} className={fieldClass}><option value="">Selecione um técnico</option>{currentTechnician && !activeTechnicians.some((user) => user.id === currentTechnician.id) && <option value={currentTechnician.id}>{currentTechnician.nome} (responsável atual)</option>}{activeTechnicians.map((user) => <option key={user.id} value={user.id}>{user.nome}</option>)}</select></label>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<Select required value={tecnicoId} onChange={setTecnicoId} placeholder="Selecione um técnico" options={[...(currentTechnician && !activeTechnicians.some((user) => user.id === currentTechnician.id) ? [{ value: currentTechnician.id, label: `${currentTechnician.nome} (responsável atual)` }] : []), ...activeTechnicians.map((user) => ({ value: user.id, label: user.nome }))]} /></label>
         {!sector && <p role="alert" className="text-xs text-warning">Não foi possível identificar o hospital do equipamento para validar o vínculo dos técnicos.</p>}
         {users.isError || hospitalLinks.some((query) => query.isError) ? <p role="alert" className="text-xs text-danger">Não foi possível carregar os técnicos vinculados.</p> : null}
         {reassign.isError && <p role="alert" className="text-xs text-danger">{getErrorMessage(reassign.error)}</p>}

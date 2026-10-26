@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { AssetsPage } from '../pages/AssetsPage'
+import { chooseOption } from '@/test/select-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -60,7 +61,7 @@ describe('AssetsPage', () => {
     const search = await screen.findByRole('searchbox', { name: 'Buscar equipamento' })
     fireEvent.change(search, { target: { value: 'not found' } })
     expect(await screen.findByText('Nenhum equipamento encontrado')).toBeInTheDocument()
-    fireEvent.change(screen.getByRole('combobox', { name: 'Filtrar por status' }), { target: { value: 'ATIVO' } })
+    await chooseOption(userEvent.setup(), 'Filtrar por status', 'Ativo')
     await userEvent.setup().click(screen.getByRole('button', { name: 'Limpar filtros' }))
     expect(await screen.findByText('Ventilador VentPro')).toBeInTheDocument()
   })

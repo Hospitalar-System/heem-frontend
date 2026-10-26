@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { apiClient } from '@/lib/axios'
 import { WorkOrderDetailPage } from '../pages/WorkOrderDetailPage'
+import { chooseOption, listOptions } from '@/test/select-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), put: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -68,8 +69,8 @@ describe('WorkOrderDetailPage', () => {
     render(<WorkOrderDetailPage />, { wrapper: TestProviders })
     await user.click(await screen.findByRole('button', { name: 'Reatribuir técnico' }))
     const technician = screen.getByRole('combobox', { name: 'Técnico responsável' })
-    await waitFor(() => expect(Array.from((technician as HTMLSelectElement).options).map((option) => option.textContent)).toEqual(['Selecione um técnico', 'Rafael', 'Marina']))
-    await user.selectOptions(technician, 'tech-2')
+    await waitFor(async () => expect(await listOptions(user, technician)).toEqual(['Rafael', 'Marina']))
+    await chooseOption(user, technician, 'Marina')
     await user.click(screen.getByRole('button', { name: 'Salvar responsável' }))
     await waitFor(() => expect(apiClient.put).toHaveBeenCalledWith('/ordens-de-trabalho/order-1', { tecnicoId: 'tech-2' }))
     expect(screen.getByText('Em execução')).toBeInTheDocument()

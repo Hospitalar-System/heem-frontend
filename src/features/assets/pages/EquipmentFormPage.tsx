@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Plus, Trash2, Upload } from 'lucide-react'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm, useFieldArray, type Control } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -9,6 +9,9 @@ import { Field } from '@/components/ui/Modal'
 import { equipmentSchema, toEquipmentInput, type EquipmentFormValues } from '../schemas/assets.schema'
 import { useEquipment, useHospitals, useSaveEquipment, useSector, useSectors, useUploadEquipmentPhoto } from '../api/assets'
 import type { CreateEquipmentInput } from '../types'
+import { Select } from '@/components/ui/Select'
+import { FormSelect } from '@/components/ui/FormSelect'
+import { FormDatePicker } from '@/components/ui/FormDatePicker'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60'
 const emptyValues: EquipmentFormValues = {
@@ -92,8 +95,8 @@ export function EquipmentFormPage() {
             <Field label="Número de série"><input className={inputClass} {...form.register('numeroSerie')} /></Field>
             <Field label="Fabricante"><input className={inputClass} {...form.register('marca')} /></Field>
             {editing ? <Field label="Setor e hospital"><input value={`${currentSector.data?.nome ?? '—'} · ${hospitals.data?.find((hospital) => hospital.id === currentSector.data?.hospitalId)?.nome ?? '—'}`} disabled className={inputClass} /></Field> : <>
-              <Field label="Hospital" error={hospitals.isError ? 'Não foi possível carregar hospitais.' : undefined}><select value={hospitalId} onChange={(event) => { setHospitalId(event.target.value); form.setValue('setorId', '') }} className={inputClass}><option value="">Selecione um hospital</option>{hospitals.data?.map((hospital) => <option key={hospital.id} value={hospital.id}>{hospital.nome}</option>)}</select></Field>
-              <Field label="Setor" error={form.formState.errors.setorId?.message}><select disabled={!hospitalId || sectors.isLoading} className={inputClass} {...form.register('setorId')}><option value="">{hospitalId ? 'Selecione um setor' : 'Selecione primeiro um hospital'}</option>{sectors.data?.map((sector) => <option key={sector.id} value={sector.id}>{sector.codigo} · {sector.nome}</option>)}</select></Field>
+              <Field label="Hospital" error={hospitals.isError ? 'Não foi possível carregar hospitais.' : undefined}><Select value={hospitalId} onChange={(next) => { setHospitalId(next); form.setValue('setorId', '') }} placeholder="Selecione um hospital" options={(hospitals.data ?? []).map((hospital) => ({ value: hospital.id, label: hospital.nome }))} /></Field>
+              <Field label="Setor" error={form.formState.errors.setorId?.message}><FormSelect control={form.control} name="setorId" disabled={!hospitalId || sectors.isLoading} placeholder={hospitalId ? 'Selecione um setor' : 'Selecione primeiro um hospital'} aria-invalid={Boolean(form.formState.errors.setorId)} options={(sectors.data ?? []).map((sector) => ({ value: sector.id, label: `${sector.codigo} · ${sector.nome}` }))} /></Field>
             </>}
           </div>
         </section>
@@ -101,14 +104,14 @@ export function EquipmentFormPage() {
         <section className="rounded-lg border border-border bg-surface p-5">
           <h2 className="text-sm font-semibold">Classificação técnica</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <SelectField label="Classe de risco ANVISA" name="classeRiscoAnvisa" register={form.register} options={['I', 'II', 'III', 'IV']} />
-            <SelectField label="Status do ciclo de vida" name="statusCicloVida" register={form.register} options={['ATIVO', 'EM_MANUTENCAO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']} />
-            <SelectField label="Criticidade" name="criticidade" register={form.register} options={['ALTA', 'MEDIA', 'BAIXA']} />
-            <SelectField label="Tipo de proteção" name="tipoProtecao" register={form.register} options={['CLASSE_I', 'CLASSE_II', 'ALIMENTACAO_INTERNA']} />
-            <SelectField label="Parte aplicada" name="parteAplicada" register={form.register} options={['TIPO_B', 'TIPO_BF', 'TIPO_CF']} />
-            <SelectField label="Modo de operação" name="modoOperacao" register={form.register} options={['CONTINUO', 'INTERMITENTE', 'CURTA_DURACAO']} />
-            <Field label="Data de instalação"><input type="date" className={inputClass} {...form.register('dataInstalacao')} /></Field>
-            <Field label="Fim da garantia"><input type="date" className={inputClass} {...form.register('dataGarantiaFim')} /></Field>
+            <SelectField label="Classe de risco ANVISA" name="classeRiscoAnvisa" control={form.control} options={['I', 'II', 'III', 'IV']} />
+            <SelectField label="Status do ciclo de vida" name="statusCicloVida" control={form.control} options={['ATIVO', 'EM_MANUTENCAO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']} />
+            <SelectField label="Criticidade" name="criticidade" control={form.control} options={['ALTA', 'MEDIA', 'BAIXA']} />
+            <SelectField label="Tipo de proteção" name="tipoProtecao" control={form.control} options={['CLASSE_I', 'CLASSE_II', 'ALIMENTACAO_INTERNA']} />
+            <SelectField label="Parte aplicada" name="parteAplicada" control={form.control} options={['TIPO_B', 'TIPO_BF', 'TIPO_CF']} />
+            <SelectField label="Modo de operação" name="modoOperacao" control={form.control} options={['CONTINUO', 'INTERMITENTE', 'CURTA_DURACAO']} />
+            <Field label="Data de instalação"><FormDatePicker control={form.control} name="dataInstalacao" /></Field>
+            <Field label="Fim da garantia"><FormDatePicker control={form.control} name="dataGarantiaFim" /></Field>
           </div>
         </section>
 
@@ -131,8 +134,8 @@ export function EquipmentFormPage() {
 }
 
 type EquipmentFieldName = 'classeRiscoAnvisa' | 'statusCicloVida' | 'criticidade' | 'tipoProtecao' | 'parteAplicada' | 'modoOperacao'
-function SelectField({ label, name, register, options }: { label: string; name: EquipmentFieldName; register: ReturnType<typeof useForm<EquipmentFormValues>>['register']; options: string[] }) {
-  return <Field label={label}><select className={inputClass} {...register(name)}>{options.map((option) => <option key={option} value={option}>{option.replaceAll('_', ' ')}</option>)}</select></Field>
+function SelectField({ label, name, control, options }: { label: string; name: EquipmentFieldName; control: Control<EquipmentFormValues>; options: string[] }) {
+  return <Field label={label}><FormSelect control={control} name={name} options={options.map((option) => ({ value: option, label: option.replaceAll('_', ' ') }))} /></Field>
 }
 
 function stringifyValue(value: unknown) {

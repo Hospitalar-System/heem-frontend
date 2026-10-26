@@ -74,6 +74,12 @@ export function checklistItemTypeLabel(tipo?: string | null): string {
   return normalized ? checklistItemTypeLabels[normalized] : (tipo ?? '')
 }
 
+/** Tipos oferecidos ao criar/editar: SELECAO (lista de opções) só aparece como valor atual de um item já existente. */
+export function checklistItemTypeChoices(current?: string | null): Array<{ value: ChecklistItemType; label: string }> {
+  const types = checklistItemTypes.filter((tipo) => tipo !== 'SELECAO' || normalizeChecklistItemType(current) === 'SELECAO')
+  return types.map((tipo) => ({ value: tipo, label: checklistItemTypeLabels[tipo] }))
+}
+
 export interface ChecklistItem {
   id: string
   descricao: string

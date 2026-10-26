@@ -7,6 +7,7 @@ import { apiClient } from '@/lib/axios'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { UsersPage } from '../pages/UsersPage'
 import type { TenantUser } from '../types'
+import { chooseOption, listOptions } from '@/test/select-helpers'
 
 const { success, error } = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 
@@ -117,8 +118,8 @@ describe('UsersPage F2.2', () => {
     await user.click(await screen.findByRole('button', { name: 'Convidar usuário' }))
 
     const roleSelect = screen.getByLabelText('Papel')
-    expect(within(roleSelect).getAllByRole('option').map((option) => option.getAttribute('value'))).toEqual(['admin_cliente', 'tecnico', 'interno_hospital'])
-    await user.selectOptions(roleSelect, 'interno_hospital')
+    expect(await listOptions(user, roleSelect)).toEqual(['Admin do Cliente', 'Técnico', 'Interno do Hospital'])
+    await chooseOption(user, roleSelect, 'Interno do Hospital')
     await user.type(screen.getByLabelText('Código'), 'USR-02')
     await user.type(screen.getByLabelText('Nome'), 'Leo Silva')
     await user.type(screen.getByLabelText('E-mail'), 'leo@example.com')

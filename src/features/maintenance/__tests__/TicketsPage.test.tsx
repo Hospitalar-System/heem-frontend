@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { TicketsPage } from '../pages/TicketsPage'
+import { chooseOption } from '@/test/select-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -65,7 +66,7 @@ describe('TicketsPage', () => {
     render(<TicketsPage />, { wrapper: TestProviders })
     await user.click(await screen.findByRole('button', { name: 'Gerar OT corretiva' }))
     await user.type(screen.getByRole('textbox', { name: 'Código da OT' }), 'OT-2042')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Técnico responsável' }), 'tech-1')
+    await chooseOption(user, 'Técnico responsável', 'Rafael')
     await user.click(screen.getByRole('button', { name: 'Criar OT' }))
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/ordens-de-trabalho/corretivas', {
       codigo: 'OT-2042', chamadoId: 'ticket-critical', tecnicoId: 'tech-1',
@@ -76,7 +77,7 @@ describe('TicketsPage', () => {
   it('filters by status and hides corrective action for ineligible calls', async () => {
     render(<TicketsPage />, { wrapper: TestProviders })
     await screen.findByText('Falha crítica de pressão')
-    fireEvent.change(screen.getByRole('combobox', { name: 'Filtrar por status' }), { target: { value: 'RESOLVIDO' } })
+    await chooseOption(userEvent.setup(), 'Filtrar por status', 'Resolvido')
     expect(await screen.findByText('Falha resolvida')).toBeInTheDocument()
     const card = screen.getByRole('article')
     expect(within(card).queryByRole('button', { name: 'Gerar OT corretiva' })).not.toBeInTheDocument()

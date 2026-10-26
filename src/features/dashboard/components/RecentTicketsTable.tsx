@@ -28,7 +28,7 @@ export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicke
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] border-collapse text-left text-xs">
-          <thead className="bg-bg/50 text-[10px] font-medium text-text-muted">
+          <thead className="table-head text-[10px]">
             <tr className="h-9 2xl:h-12">
               <th scope="col" className="px-5 font-medium">Chamado</th>
               <th scope="col" className="px-4 font-medium">Status</th>
@@ -41,7 +41,7 @@ export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicke
             {visibleTickets.map((ticket) => {
               const severity = ticket.severity ? severityStyle[ticket.severity] : null
               return (
-                <tr key={ticket.id} className="h-10 border-t border-border/80 transition hover:bg-bg/50 2xl:h-12">
+                <tr key={ticket.id} className="h-10 border-t border-border/80 transition hover:bg-bg/60 2xl:h-12">
                   <td className="px-5">
                     <Link to={`/tickets/${ticket.id}`} className="rounded text-text-secondary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">{ticket.code}</Link>
                   </td>

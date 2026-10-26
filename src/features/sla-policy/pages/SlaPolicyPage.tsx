@@ -5,6 +5,7 @@ import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { useSaveSlaPolicy, useSlaPolicy } from '../api/sla-policy'
 import { slaPolicyFormSchema } from '../types'
 import type { SlaPolicyEntry, SlaPolicyFormValues, SlaPolicyUpdateEntry } from '../types'
+import { FormSelect } from '@/components/ui/FormSelect'
 
 const severityLabels: Record<SlaPolicyEntry['severidade'], string> = {
   CRITICA: 'Crítica',
@@ -89,7 +90,7 @@ export function SlaPolicyPage() {
         {policy.data && <form onSubmit={form.handleSubmit(submit)}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] border-collapse text-left">
-              <thead><tr className="border-b border-border text-[10px] font-medium text-text-muted">
+              <thead><tr className="table-head text-[10px]">
                 <th scope="col" className="px-3 py-3">Severidade</th>
                 <th scope="col" className="px-3 py-3">Prazo de atendimento</th>
                 <th scope="col" className="px-3 py-3">Prazo de resolução</th>
@@ -105,9 +106,7 @@ export function SlaPolicyPage() {
                     <div className="flex items-start gap-2">
                       <div className="flex gap-1.5">
                         <input type="number" min="1" step="1" aria-label={`Prazo de atendimento, ${label}`} aria-invalid={Boolean(rowError?.atendimento?.valor)} className={`${inputClass} w-24`} {...form.register(`${rowPath}.atendimento.valor`, { valueAsNumber: true })} onChange={(event) => { form.register(`${rowPath}.atendimento.valor`, { valueAsNumber: true }).onChange(event); setSaveNotice('') }} />
-                        <select aria-label={`Unidade do atendimento, ${label}`} className={`${inputClass} w-[84px]`} {...form.register(`${rowPath}.atendimento.unidade`)} onChange={(event) => { form.register(`${rowPath}.atendimento.unidade`).onChange(event); setSaveNotice('') }}>
-                          <option value="min">min</option><option value="h">horas</option>
-                        </select>
+                        <FormSelect size="sm" control={form.control} name={`${rowPath}.atendimento.unidade`} aria-label={`Unidade do atendimento, ${label}`} className="w-[96px]" onValueChange={() => setSaveNotice('')} options={[{ value: 'min', label: 'min' }, { value: 'h', label: 'horas' }]} />
                       </div>
                       {rowError?.atendimento?.valor?.message && <p role="alert" className="max-w-32 text-[10px] text-danger">{rowError.atendimento.valor.message}</p>}
                     </div>
@@ -116,9 +115,7 @@ export function SlaPolicyPage() {
                     <div className="flex items-start gap-2">
                       <div className="flex gap-1.5">
                         <input type="number" min="1" step="1" aria-label={`Prazo de resolução, ${label}`} aria-invalid={Boolean(rowError?.resolucao?.valor)} className={`${inputClass} w-24`} {...form.register(`${rowPath}.resolucao.valor`, { valueAsNumber: true })} onChange={(event) => { form.register(`${rowPath}.resolucao.valor`, { valueAsNumber: true }).onChange(event); setSaveNotice('') }} />
-                        <select aria-label={`Unidade da resolução, ${label}`} className={`${inputClass} w-[84px]`} {...form.register(`${rowPath}.resolucao.unidade`)} onChange={(event) => { form.register(`${rowPath}.resolucao.unidade`).onChange(event); setSaveNotice('') }}>
-                          <option value="min">min</option><option value="h">horas</option>
-                        </select>
+                        <FormSelect size="sm" control={form.control} name={`${rowPath}.resolucao.unidade`} aria-label={`Unidade da resolução, ${label}`} className="w-[96px]" onValueChange={() => setSaveNotice('')} options={[{ value: 'min', label: 'min' }, { value: 'h', label: 'horas' }]} />
                       </div>
                       {rowError?.resolucao?.valor?.message && <p role="alert" className="max-w-36 text-[10px] text-danger">{rowError.resolucao.valor.message}</p>}
                     </div>

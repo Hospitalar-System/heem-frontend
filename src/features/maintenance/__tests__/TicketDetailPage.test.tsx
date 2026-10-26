@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { TicketDetailPage } from '../pages/TicketDetailPage'
+import { chooseOption } from '@/test/select-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -71,7 +72,7 @@ describe('TicketDetailPage', () => {
     render(<TicketDetailPage />, { wrapper: TestProviders })
     await user.click(await screen.findByRole('button', { name: 'Gerar OT corretiva' }))
     await user.type(screen.getByRole('textbox', { name: 'Código da OT' }), 'OT-1001')
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Técnico responsável' }), 'tech-1')
+    await chooseOption(user, 'Técnico responsável', 'Rafael')
     await user.click(screen.getByRole('button', { name: 'Criar OT' }))
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/ordens-de-trabalho/corretivas', {
       codigo: 'OT-1001', chamadoId: 'ticket-12345678', tecnicoId: 'tech-1',
