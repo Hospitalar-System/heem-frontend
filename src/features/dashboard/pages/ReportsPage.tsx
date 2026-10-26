@@ -2,8 +2,14 @@ import { Download, FileSpreadsheet, FileText, RotateCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { useHospitals, useSectors } from '@/features/assets/api/assets'
-import { useReportExport, useReportIndicators, useRequestReportExport, useRiskCompliance } from '../api/reports'
-import type { ExportRequest, ReportFilters } from '../api/reports'
+import { useReportBacklog, useReportExport, useReportIndicators, useReportTopEquipment, useRequestReportExport, useRiskCompliance } from '../api/reports'
+import type { ExportRequest, ReportFilters, ReportGrouping } from '../api/reports'
+import { ReportBacklog } from '../components/ReportBacklog'
+import { ReportGroups } from '../components/ReportGroups'
+import { ReportIndicatorCards } from '../components/ReportIndicatorCards'
+import { ReportTopEquipment } from '../components/ReportTopEquipment'
+import { formatPercent, getErrorMessage } from '../components/report-format'
+import { SectionError, SectionSkeleton } from '../components/report-ui'
 import { Select } from '@/components/ui/Select'
 import { DatePicker } from '@/components/ui/DatePicker'
 
@@ -30,10 +36,6 @@ function endOfDay(value: string) {
   return new Date(`${value}T23:59:59.999Z`).toISOString()
 }
 
-function formatMetric(value: number | null | undefined, suffix = '') {
-  return value == null ? '—' : `${value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}${suffix}`
-}
-
 const riskLabels: Record<string, string> = {
   CRITICO: 'Crítico',
   SEMI_CRITICO: 'Semicrítico',
@@ -46,6 +48,7 @@ export function ReportsPage() {
   const [ate, setAte] = useState(dateInputValue(initialRange.ate))
   const [hospitalId, setHospitalId] = useState('')
   const [setorId, setSetorId] = useState('')
+  const [agrupar, setAgrupar] = useState<ReportGrouping>('hospital')
   const [conteudo, setConteudo] = useState<ExportContent>('chamados')
   const [exportId, setExportId] = useState<string | null>(null)
   const hospitals = useHospitals()
@@ -56,7 +59,9 @@ export function ReportsPage() {
     ...(hospitalId ? { hospitalId } : {}),
     ...(setorId ? { setorId } : {}),
   }
-  const indicators = useReportIndicators(filters)
+  const indicators = useReportIndicators(filters, agrupar)
+  const backlog = useReportBacklog({ ...(hospitalId ? { hospitalId } : {}), ...(setorId ? { setorId } : {}) })
+  const topEquipment = useReportTopEquipment(filters)
   const compliance = useRiskCompliance(filters)
   const requestExport = useRequestReportExport()
   const exportStatus = useReportExport(exportId)
@@ -101,6 +106,10 @@ export function ReportsPage() {
             <span>Setor</span>
             <Select size="sm" aria-label="Setor" value={setorId} disabled={!hospitalId} onChange={setSetorId} options={[{ value: '', label: 'Todos' }, ...(sectors.data ?? []).map((sector) => ({ value: sector.id, label: sector.nome }))]} />
           </label>
+          <label className="grid min-w-40 gap-1 text-xs text-text-secondary">
+            <span>Agrupar por</span>
+            <Select size="sm" aria-label="Agrupar por" value={agrupar} onChange={(next) => setAgrupar(next as ReportGrouping)} options={[{ value: 'hospital', label: 'Hospital' }, { value: 'setor', label: 'Setor' }]} />
+          </label>
           <div className="ml-auto flex flex-wrap items-end gap-2">
             <label className="grid gap-1 text-xs text-text-secondary">
               <span>Conteúdo</span>
@@ -129,58 +138,41 @@ export function ReportsPage() {
 
         {indicators.isLoading ? <ReportSkeleton /> : indicators.isError ? (
           <ReportError message={getErrorMessage(indicators.error, 'Não foi possível carregar os indicadores.')} onRetry={() => void indicators.refetch()} />
-        ) : (
+        ) : metrics && (
           <>
-            <section aria-label="Indicadores do período" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:gap-4">
-              <MetricCard label="MTBF médio" value={formatMetric(metrics?.mtbfHoras, ' h')} />
-              <MetricCard label="Tempo médio de atendimento" value={formatMetric(metrics?.tempoMedioAtendimentoHoras, ' h')} />
-              <MetricCard label="Tempo médio de resolução" value={formatMetric(metrics?.tempoMedioResolucaoHoras, ' h')} />
-              <MetricCard label="Disponibilidade média" value={formatMetric(metrics?.disponibilidadePercentual, '%')} />
-            </section>
-
-            <section aria-label="Ordens de trabalho no período" className="flex flex-wrap items-center gap-6 rounded-lg border border-border bg-surface px-5 py-4">
-              <div><p className="text-xs text-text-secondary">OT preventivas</p><p className="mt-1 text-2xl font-semibold text-text-primary">{metrics?.qtdOtsPreventivas.toLocaleString('pt-BR') ?? '—'}</p></div>
-              <div><p className="text-xs text-text-secondary">OT corretivas</p><p className="mt-1 text-2xl font-semibold text-text-primary">{metrics?.qtdOtsCorretivas.toLocaleString('pt-BR') ?? '—'}</p></div>
-            </section>
-
-            {compliance.isLoading ? <ReportSkeleton /> : compliance.isError ? (
-              <ReportError message={getErrorMessage(compliance.error, 'Não foi possível carregar a conformidade.')} onRetry={() => void compliance.refetch()} />
-            ) : (
-              <section aria-labelledby="compliance-title" className="rounded-lg border border-border bg-surface p-4 xl:p-5">
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div><h2 id="compliance-title" className="text-sm font-semibold text-text-primary">Conformidade por nível de risco</h2><p className="mt-1 text-xs text-text-muted">Percentual conforme e medições no período</p></div>
-                </div>
-                {compliance.data?.length ? <div className="grid gap-x-8 gap-y-4 md:grid-cols-3">
-                  {compliance.data.map((item) => <div key={item.nivelRisco}>
-                    <div className="mb-2 flex items-baseline justify-between gap-2"><span className="text-xs font-medium text-text-secondary">{riskLabels[item.nivelRisco] ?? item.nivelRisco}</span><span className="text-sm font-semibold text-text-primary">{formatMetric(item.percentualConforme, '%')}</span></div>
-                    <div role="progressbar" aria-label={`Conformidade ${riskLabels[item.nivelRisco] ?? item.nivelRisco}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.percentualConforme ?? 0} className="h-2 overflow-hidden rounded-full bg-bg"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, item.percentualConforme ?? 0))}%` }} /></div>
-                    <p className="mt-1.5 text-[11px] text-text-muted">{item.totalMedicoes.toLocaleString('pt-BR')} medições</p>
-                  </div>)}
-                </div> : <p className="rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-text-muted">Nenhuma medição encontrada para os filtros selecionados.</p>}
-              </section>
-            )}
-
-            <section aria-label="Detalhamento por hospital e setor" className="grid gap-4 xl:grid-cols-2">
-              <UnavailablePanel title="Disponibilidade por hospital" />
-              <UnavailablePanel title="MTBF por setor" />
-            </section>
-            <section aria-labelledby="sector-details-title" className="overflow-hidden rounded-lg border border-border bg-surface">
-              <h2 id="sector-details-title" className="border-b border-border px-5 py-4 text-sm font-semibold text-text-primary">Detalhamento por setor</h2>
-              <p className="px-5 py-6 text-center text-xs text-text-muted">A API atual retorna indicadores agregados pelos filtros e não fornece uma linha por setor.</p>
-            </section>
+            <ReportIndicatorCards metrics={metrics} />
+            <ReportGroups groups={metrics.grupos ?? []} grouping={agrupar} />
           </>
         )}
+
+        {compliance.isLoading ? <ReportSkeleton /> : compliance.isError ? (
+          <ReportError message={getErrorMessage(compliance.error, 'Não foi possível carregar a conformidade.')} onRetry={() => void compliance.refetch()} />
+        ) : (
+          <section aria-labelledby="compliance-title" className="rounded-lg border border-border bg-surface p-4 xl:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div><h2 id="compliance-title" className="text-sm font-semibold text-text-primary">Conformidade por nível de risco</h2><p className="mt-1 text-xs text-text-muted">Percentual conforme e medições no período</p></div>
+            </div>
+            {compliance.data?.length ? <div className="grid gap-x-8 gap-y-4 md:grid-cols-3">
+              {compliance.data.map((item) => <div key={item.nivelRisco}>
+                <div className="mb-2 flex items-baseline justify-between gap-2"><span className="text-xs font-medium text-text-secondary">{riskLabels[item.nivelRisco] ?? item.nivelRisco}</span><span className="text-sm font-semibold text-text-primary">{formatPercent(item.percentualConforme)}</span></div>
+                <div role="progressbar" aria-label={`Conformidade ${riskLabels[item.nivelRisco] ?? item.nivelRisco}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={item.percentualConforme ?? 0} className="h-2 overflow-hidden rounded-full bg-bg"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, item.percentualConforme ?? 0))}%` }} /></div>
+                <p className="mt-1.5 text-[11px] text-text-muted">{item.totalMedicoes.toLocaleString('pt-BR')} medições</p>
+              </div>)}
+            </div> : <p className="rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-text-muted">Nenhuma medição encontrada para os filtros selecionados.</p>}
+          </section>
+        )}
+
+
+        {backlog.isLoading ? <SectionSkeleton label="Carregando backlog" /> : backlog.isError ? (
+          <SectionError message={getErrorMessage(backlog.error, 'Não foi possível carregar o backlog.')} onRetry={() => void backlog.refetch()} />
+        ) : backlog.data && <ReportBacklog backlog={backlog.data} />}
+
+        {topEquipment.isLoading ? <SectionSkeleton label="Carregando equipamentos com mais chamados" /> : topEquipment.isError ? (
+          <SectionError message={getErrorMessage(topEquipment.error, 'Não foi possível carregar os equipamentos com mais chamados.')} onRetry={() => void topEquipment.refetch()} />
+        ) : topEquipment.data && <ReportTopEquipment items={topEquipment.data} />}
       </div>
     </AdminPageShell>
   )
-}
-
-function MetricCard({ label, value }: { label: string; value: string }) {
-  return <article className="min-h-[126px] rounded-lg border border-border bg-surface p-5"><h2 className="text-xs font-medium text-text-secondary">{label}</h2><p className="mt-5 text-3xl font-semibold text-text-primary">{value}</p></article>
-}
-
-function UnavailablePanel({ title }: { title: string }) {
-  return <section className="grid min-h-[220px] place-content-center rounded-lg border border-border bg-surface p-5 text-center"><h2 className="text-sm font-semibold text-text-primary">{title}</h2><p className="mt-2 max-w-sm text-xs leading-5 text-text-muted">A API ainda não disponibiliza essa agregação. Os indicadores não são estimados no navegador.</p></section>
 }
 
 function ReportSkeleton() {
@@ -188,13 +180,5 @@ function ReportSkeleton() {
 }
 
 function ReportError({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger/30 bg-danger/5 p-5"><p className="text-sm text-text-primary">{message}</p><button type="button" onClick={onRetry} className="rounded-md border border-border bg-surface px-3 py-2 text-xs font-medium text-text-primary outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary">Tentar novamente</button></div>
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-  if (typeof error === 'object' && error !== null && 'response' in error) {
-    const response = (error as { response?: { data?: { detail?: string; code?: string } } }).response
-    return response?.data?.detail || response?.data?.code || fallback
-  }
-  return error instanceof Error ? error.message : fallback
+  return <SectionError message={message} onRetry={onRetry} />
 }

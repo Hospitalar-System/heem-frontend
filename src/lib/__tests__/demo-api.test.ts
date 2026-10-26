@@ -21,6 +21,26 @@ describe('modo de demonstração', () => {
     expect(orders.data).toHaveLength(2)
   })
 
+  it('responde indicadores (mtta/mttr, agrupados), backlog e top de equipamentos sem campos deprecated', async () => {
+    const [total, byHospital, bySector, backlog, top] = await Promise.all([
+      apiClient.get('/relatorios/indicadores'),
+      apiClient.get('/relatorios/indicadores', { params: { agrupar: 'hospital' } }),
+      apiClient.get('/relatorios/indicadores', { params: { agrupar: 'setor' } }),
+      apiClient.get('/relatorios/backlog'),
+      apiClient.get('/relatorios/top-equipamentos'),
+    ])
+
+    expect(total.data).toMatchObject({ mttaHoras: expect.any(Number), mttrHoras: expect.any(Number), slaAtendimentoPct: expect.any(Number) })
+    expect(total.data).not.toHaveProperty('tempoMedioAtendimentoHoras')
+    expect(total.data).not.toHaveProperty('tempoMedioResolucaoHoras')
+    expect(total.data.grupos).toBeNull()
+    expect(byHospital.data.grupos).toHaveLength(2)
+    expect(bySector.data.grupos).toHaveLength(3)
+    expect(backlog.data.porSeveridade).toHaveLength(4)
+    expect(backlog.data.total).toBe(backlog.data.porSeveridade.reduce((sum: number, row: { total: number }) => sum + row.total, 0))
+    expect(top.data[0]).toMatchObject({ equipamentoId: expect.any(String), qtdChamados: expect.any(Number) })
+  })
+
   it('entrega listas vazias para recursos sem registros de demonstração', async () => {
     const response = await apiClient.get('/api-exemplo-sem-dados')
 
