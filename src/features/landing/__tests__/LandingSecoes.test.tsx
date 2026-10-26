@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from '@/app/theme-provider'
-import { TELA_ALTURA, TELA_LARGURA } from '../assets/telas'
+import { TELA_ALTURA, TELA_LARGURA, resolverTela, telas, type ChaveTela } from '../assets/telas'
 import { TelaApp } from '../components/TelaApp'
 import { Reveal } from '../components/Reveal'
 import { NOME_PRODUTO } from '../brand'
@@ -112,7 +112,7 @@ describe('TelaApp', () => {
     expect(img).toHaveAttribute('src', '/x.webp')
     expect(img).toHaveAttribute('loading', 'lazy')
     expect(img).toHaveAttribute('width', '472')
-    expect(img).toHaveAttribute('height', '968')
+    expect(img).toHaveAttribute('height', String(TELA_ALTURA))
   })
 })
 
@@ -232,5 +232,45 @@ describe('revelação ao rolar', () => {
   it('a landing usa revelação quando o movimento é permitido', () => {
     const { container } = renderLanding()
     expect(container.querySelectorAll('[data-reveal="pending"]').length).toBeGreaterThan(8)
+  })
+})
+
+describe('capturas das telas do app', () => {
+  const chaves = Object.keys(telas) as ChaveTela[]
+  const esperados: Record<ChaveTela, string> = {
+    novoChamado: 'novo-chamado.webp',
+    inicio: 'inicio.webp',
+    fichaEquipamento: 'ficha-equipamento.webp',
+    minhasOts: 'minhas-ots.webp',
+    chamados: 'chamados.webp',
+    offlineSessao: 'offline-sessao.webp',
+  }
+
+  it.each(chaves)('%s usa o arquivo WebP da captura e um alt descritivo', (chave) => {
+    const { src, alt } = resolverTela(chave)
+    expect(src).toContain(esperados[chave])
+    expect(src).not.toMatch(/^data:/)
+    expect(alt.length).toBeGreaterThan(30)
+  })
+
+  it.each(chaves)('%s renderiza o <img> lazy, async e com dimensões fixas', (chave) => {
+    const { src, alt } = resolverTela(chave)
+    render(<TelaApp src={src} alt={alt} />)
+    const img = screen.getByRole('img', { name: alt })
+    expect(img).toHaveAttribute('src', src)
+    expect(img).toHaveAttribute('loading', 'lazy')
+    expect(img).toHaveAttribute('decoding', 'async')
+    expect(img).toHaveAttribute('width', String(TELA_LARGURA))
+    expect(img).toHaveAttribute('height', String(TELA_ALTURA))
+  })
+
+  it('a chave sem captura cai no placeholder', () => {
+    const original = telas.chamados.src
+    telas.chamados.src = undefined
+    try {
+      expect(resolverTela('chamados').src).toMatch(/^data:image\/svg\+xml/)
+    } finally {
+      telas.chamados.src = original
+    }
   })
 })

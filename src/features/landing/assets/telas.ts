@@ -1,12 +1,12 @@
 /**
- * Mapa das telas do aplicativo mostradas na vitrine. Hoje todas apontam para um placeholder gerado em código;
- * quando as capturas existirem (ver README.md desta pasta), troque o `src` de cada chave
- * (por exemplo `new URL('./novo-chamado.webp', import.meta.url).href`) sem mexer nos componentes.
+ * Mapa das telas do aplicativo mostradas na vitrine. Cada chave aponta para uma captura WebP desta pasta
+ * (ver README.md); uma chave sem `src` cai no placeholder gerado em código.
  */
-export type ChaveTela = 'novoChamado' | 'inicio' | 'fichaEquipamento' | 'minhasOts' | 'chamados'
+export type ChaveTela = 'novoChamado' | 'inicio' | 'fichaEquipamento' | 'minhasOts' | 'chamados' | 'offlineSessao'
 
+/** Proporção das capturas: 1080 x 2280 do original (sem barra de status e de navegação), a 472 px de largura. */
 export const TELA_LARGURA = 472
-export const TELA_ALTURA = 968
+export const TELA_ALTURA = 996
 
 /**
  * Placeholder honesto: linhas esquemáticas neutras e o aviso "em breve", sem texto de interface inventado.
@@ -29,14 +29,40 @@ export function placeholderTela(): string {
 const placeholder = placeholderTela()
 
 export interface TelaInfo {
-  src: string
+  /** Sem `src`, a vitrine usa o placeholder. */
+  src?: string
   alt: string
 }
 
 export const telas: Record<ChaveTela, TelaInfo> = {
-  novoChamado: { src: placeholder, alt: 'Tela Novo chamado do aplicativo, com equipamento, severidade e descrição' },
-  inicio: { src: placeholder, alt: 'Tela inicial do aplicativo, com atalho de chamado de emergência e fila do técnico' },
-  fichaEquipamento: { src: placeholder, alt: 'Ficha do equipamento no aplicativo, com dados técnicos e atalhos' },
-  minhasOts: { src: placeholder, alt: 'Lista de ordens de trabalho do aplicativo, com uma preventiva atrasada' },
-  chamados: { src: placeholder, alt: 'Lista de chamados do aplicativo, com severidade e status' },
+  novoChamado: {
+    src: new URL('./novo-chamado.webp', import.meta.url).href,
+    alt: 'Tela Novo chamado do aplicativo: equipamento escolhido, quatro níveis de severidade (crítica, alta, média e baixa) e campo de descrição',
+  },
+  inicio: {
+    src: new URL('./inicio.webp', import.meta.url).href,
+    alt: 'Tela inicial do aplicativo, com o atalho Abrir chamado de emergência, a fila do técnico (OTs agendadas, OTs atrasadas e chamados abertos) e a lista de hospitais',
+  },
+  fichaEquipamento: {
+    src: new URL('./ficha-equipamento.webp', import.meta.url).href,
+    alt: 'Ficha do equipamento no aplicativo, com atalhos para chamado, histórico, checklist e etiqueta, e os dados técnicos (modelo, fabricante, número de série e instalação)',
+  },
+  minhasOts: {
+    src: new URL('./minhas-ots.webp', import.meta.url).href,
+    alt: 'Lista de ordens de trabalho do aplicativo, com uma preventiva atrasada e o aviso de que a sessão expira em 1 dia',
+  },
+  chamados: {
+    src: new URL('./chamados.webp', import.meta.url).href,
+    alt: 'Lista de chamados do aplicativo, com severidade (alta, crítica e média) e status (aberto, em andamento e cancelado) em cada chamado',
+  },
+  offlineSessao: {
+    src: new URL('./offline-sessao.webp', import.meta.url).href,
+    alt: 'Perfil do aplicativo, com o estado online e sincronizado, última sincronização, pendências e a situação da sessão com o botão Renovar',
+  },
+}
+
+/** Resolve a imagem de uma tela, com o placeholder como fallback quando a chave não tem captura. */
+export function resolverTela(chave: ChaveTela): { src: string; alt: string } {
+  const { src, alt } = telas[chave]
+  return { src: src ?? placeholder, alt }
 }
