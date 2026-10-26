@@ -6,6 +6,7 @@ import { getRoleLandingPath } from '@/features/auth/hooks/useLogin'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { ScrollProgress } from './ScrollProgress'
 import { NOME_PRODUTO } from '../brand'
+import type { Interesse } from '../content/vitrine'
 import { Marca } from './Marca'
 import { focusRing, landingButtonClasses } from './button-classes'
 import '@fontsource/inter/latin-400.css'
@@ -42,7 +43,11 @@ function useScrolled() {
   return scrolled
 }
 
-export function LandingLayout({ children }: PropsWithChildren) {
+interface LandingLayoutProps {
+  onAgendar: (interesse?: Interesse) => void
+}
+
+export function LandingLayout({ children, onAgendar }: PropsWithChildren<LandingLayoutProps>) {
   const enter = useEnterTarget()
   const scrolled = useScrolled()
 
@@ -71,7 +76,7 @@ export function LandingLayout({ children }: PropsWithChildren) {
           <div className="ml-auto flex items-center gap-2 md:ml-0">
             <ThemeSwitcher />
             <Link to={enter.to} className={`${landingButtonClasses.ghost} px-4`}>{enter.label}</Link>
-            <a href="#contato" className={`${landingButtonClasses.primary} hidden px-4 sm:inline-flex`}>Agendar demonstração</a>
+            <button type="button" onClick={() => onAgendar()} className={`${landingButtonClasses.primary} hidden px-4 sm:inline-flex`}>Agendar demonstração</button>
           </div>
         </div>
       </header>
@@ -88,6 +93,7 @@ export function LandingLayout({ children }: PropsWithChildren) {
               <a href="#para-quem" className={`rounded-md hover:text-text-primary ${focusRing}`}>Para quem</a>
               <Link to="/privacidade" className={`rounded-md hover:text-text-primary ${focusRing}`}>Política de Privacidade</Link>
               <Link to="/termos" className={`rounded-md hover:text-text-primary ${focusRing}`}>Termos</Link>
+              <Link to={enter.to} className={`rounded-md hover:text-text-primary ${focusRing}`}>{enter.label}</Link>
             </nav>
           </div>
           <p className="mt-6">Telas e números são exemplos ilustrativos.</p>

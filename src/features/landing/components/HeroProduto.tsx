@@ -28,7 +28,7 @@ export function HeroProduto({ onAgendar }: HeroProdutoProps) {
             Chamados, ordens de serviço, medições e indicadores de todos os equipamentos do hospital, no computador e no celular, até sem internet.
           </p>
           <div className="landing-hin mt-9 flex flex-wrap justify-center gap-3" style={{ animationDelay: '200ms' }}>
-            <a href="#contato" className={`${landingButtonClasses.primary} h-12 px-7`}>Agendar demonstração</a>
+            <button type="button" onClick={() => onAgendar()} className={`${landingButtonClasses.primary} h-12 px-7`}>Agendar demonstração</button>
             <a href="#recursos" className={`${landingButtonClasses.ghost} h-12 px-7`}>Conhecer recursos</a>
           </div>
 

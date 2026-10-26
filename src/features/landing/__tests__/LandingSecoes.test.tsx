@@ -140,15 +140,12 @@ describe('recursos, para quem e chamada final', () => {
     expect(onAgendar).toHaveBeenCalledTimes(1)
   })
 
-  it('sem gancho, rola até #contato', async () => {
+  it('sem gancho, abre o formulário', async () => {
     const user = userEvent.setup()
-    const scrollIntoView = vi.fn()
-    Element.prototype.scrollIntoView = scrollIntoView
     renderLanding()
     const secao = screen.getByRole('region', { name: new RegExp(`Veja o ${NOME_PRODUTO}`) })
     await user.click(within(secao).getByRole('button', { name: 'Agendar demonstração' }))
-    expect(scrollIntoView).toHaveBeenCalledTimes(1)
-    expect(scrollIntoView.mock.instances[0]).toBe(document.getElementById('contato'))
+    expect(screen.getByRole('dialog', { name: 'Quero conhecer o HEEM' })).toBeInTheDocument()
   })
 })
 
