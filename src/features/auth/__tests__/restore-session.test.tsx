@@ -137,3 +137,26 @@ describe('restoreSession', () => {
     expect(await screen.findByText('conteudo protegido')).toBeTruthy()
   })
 })
+
+describe('restoreSession: falhas transitórias e abas concorrentes', () => {
+  it.each(['account_locked', 'network', 'unknown'] as const)('refresh com %s não limpa a sessão', async (kind) => {
+    window.sessionStorage.setItem(KEY, 'ref1')
+    mocks.refreshTokens.mockRejectedValue(new KeycloakAuthError(kind))
+
+    await restoreSession()
+
+    expect(window.sessionStorage.getItem(KEY)).toBe('ref1')
+  })
+
+  it('invalid_grant não apaga o token se outra aba já o rotacionou', async () => {
+    window.localStorage.setItem(KEY, 'ref1')
+    mocks.refreshTokens.mockImplementation(async () => {
+      window.localStorage.setItem(KEY, 'ref-da-outra-aba')
+      throw new KeycloakAuthError('invalid_credentials')
+    })
+
+    await restoreSession()
+
+    expect(window.localStorage.getItem(KEY)).toBe('ref-da-outra-aba')
+  })
+})
