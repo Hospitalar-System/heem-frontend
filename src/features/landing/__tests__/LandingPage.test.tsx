@@ -61,7 +61,9 @@ describe('LandingPage', () => {
 
   it('"Entrar" aponta para /login sem sessão', () => {
     renderLanding()
-    expect(screen.getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login')
+    for (const regiao of [screen.getByRole('banner'), screen.getByRole('contentinfo')]) {
+      expect(within(regiao).getByRole('link', { name: 'Entrar' })).toHaveAttribute('href', '/login')
+    }
   })
 
   it('"Entrar" leva ao painel do papel quando há sessão', () => {
@@ -69,15 +71,18 @@ describe('LandingPage', () => {
       setAuthSession('token', { id: '1', name: 'Ana', email: 'a@b.c', roles: ['tecnico'], tenantId: 't' })
     })
     renderLanding()
-    expect(screen.getByRole('link', { name: 'Ir para o painel' })).toHaveAttribute('href', '/dashboard')
+    for (const regiao of [screen.getByRole('banner'), screen.getByRole('contentinfo')]) {
+      expect(within(regiao).getByRole('link', { name: 'Ir para o painel' })).toHaveAttribute('href', '/dashboard')
+    }
     expect(screen.queryByRole('link', { name: 'Entrar' })).not.toBeInTheDocument()
   })
 
-  it('"Agendar demonstração" aponta para #contato', () => {
+  it('"Agendar demonstração" é botão que abre o formulário (não mais link para #contato)', async () => {
+    const user = userEvent.setup()
     renderLanding()
-    for (const link of screen.getAllByRole('link', { name: 'Agendar demonstração' })) {
-      expect(link).toHaveAttribute('href', '#contato')
-    }
+    expect(screen.queryByRole('link', { name: 'Agendar demonstração' })).not.toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: 'Agendar demonstração' })[0])
+    expect(screen.getByRole('dialog', { name: 'Quero conhecer o HEEM' })).toBeInTheDocument()
   })
 
   it('links de navegação e rodapé existem', () => {
