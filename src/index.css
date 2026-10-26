@@ -97,10 +97,11 @@
     @apply border-border bg-surface;
   }
   .row-clickable {
-    @apply cursor-pointer transition-colors hover:bg-bg/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary;
+    @apply cursor-pointer transition-colors hover:bg-surface-hi focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary;
   }
   .row-selected {
-    @apply border-primary bg-primary/5;
+    @apply border-primary;
+    background-color: color-mix(in srgb, var(--primary) 5%, transparent);
   }
 }
 
