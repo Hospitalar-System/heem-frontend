@@ -12,7 +12,6 @@ import { DashboardPage } from '../pages/DashboardPage'
 const { get } = vi.hoisted(() => ({ get: vi.fn() }))
 vi.mock('@/lib/axios', () => ({ apiClient: { get } }))
 vi.mock('../components/WorkOrdersChart', () => ({ WorkOrdersChart: () => null }))
-vi.mock('../components/MtbfChart', () => ({ MtbfChart: () => null }))
 
 const adminUser: UserProfileDTO = {
   id: 'user-admin',
@@ -24,36 +23,25 @@ const adminUser: UserProfileDTO = {
 
 function response() {
   return {
-    tenant: { name: 'Hospital Exemplo', hospitalCount: 2 },
-    kpis: {
-      activeEquipment: { value: 1284, changePercent: 2.4 },
-      openWorkOrders: { value: 47, newToday: 5 },
-      emergencies: { value: 12, criticalOpen: 3 },
-      availability: { percent: 97.4, weeklyChangePp: 0.8 },
-      overdueSla: { count: 4 },
-      overduePreventiveWorkOrders: { count: 7 },
-      expiringDocuments: { count: 2, withinDays: 30 },
-    },
-    emergenciesBySeverity: [
-      { severity: 'critical', count: 3 },
-      { severity: 'high', count: 4 },
-      { severity: 'medium', count: 3 },
-      { severity: 'low', count: 2 },
-    ],
-    workOrdersByStatus: [
-      { status: 'open', count: 16 },
-      { status: 'inProgress', count: 19 },
-      { status: 'completed', count: 8 },
-      { status: 'overdue', count: 4 },
-    ],
-    mtbfBySector: [{ sector: 'UTI', hours: 320 }],
-    recentTickets: [{
-      id: 'CH-3391',
-      equipmentName: 'Monitor multiparamétrico',
-      hospitalName: 'Hospital Exemplo',
-      sectorName: 'UTI',
-      severity: 'critical',
-      openedAt: '2026-10-15T15:30:00Z',
+    agendadas: 2,
+    emExecucao: 1,
+    concluidas: 4,
+    canceladas: 1,
+    equipamentosAtivos: 1284,
+    chamadosAbertosPorSeveridade: { BAIXA: 0, MEDIA: 1, ALTA: 1, CRITICA: 1 },
+    chamadosSlaVencido: 4,
+    disponibilidadePercentual: 77.68,
+    otsPreventivasAtrasadas: 7,
+    documentosVencendo30d: 2,
+    chamadosRecentes: [{
+      id: 'ticket-uuid-5',
+      codigo: 'CH-5',
+      hospitalId: 'h-1',
+      equipamentoId: 'e-1',
+      severidade: 'alta',
+      status: 'aberto',
+      abertoEm: '2026-10-03T22:07:46.304410Z',
+      slaStatus: null,
     }],
   }
 }
@@ -99,27 +87,16 @@ describe('DashboardPage', () => {
     expect(screen.getByLabelText('Carregando dashboard')).toHaveAttribute('aria-busy', 'true')
     expect(await screen.findByRole('region', { name: 'Indicadores operacionais' })).toBeInTheDocument()
     expect(get).toHaveBeenCalledWith('/relatorios/dashboard')
-    expect(screen.getByText('Hospital Exemplo · 2 hospitais')).toBeInTheDocument()
     expect(screen.getByText('1.284')).toBeInTheDocument()
+    expect(screen.getByText('77,68%')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Chamados recentes' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'CH-3391' })).toHaveAttribute('href', '/tickets/CH-3391')
+    expect(screen.getByRole('link', { name: 'CH-5' })).toHaveAttribute('href', '/tickets/ticket-uuid-5')
     expect(screen.getByText('SLAs vencidos')).toBeInTheDocument()
     expect(screen.getByText('7')).toBeInTheDocument()
   })
 
   it('apresenta o empty state para um agregado sem atividade', async () => {
-    const empty = response()
-    empty.kpis.activeEquipment.value = 0
-    empty.kpis.openWorkOrders.value = 0
-    empty.kpis.emergencies.value = 0
-    empty.kpis.availability.percent = 0
-    empty.kpis.overdueSla.count = 0
-    empty.kpis.overduePreventiveWorkOrders.count = 0
-    empty.kpis.expiringDocuments.count = 0
-    empty.emergenciesBySeverity.forEach((entry) => { entry.count = 0 })
-    empty.workOrdersByStatus.forEach((entry) => { entry.count = 0 })
-    empty.mtbfBySector = []
-    empty.recentTickets = []
+    const empty = { agendadas: 0, emExecucao: 0, concluidas: 0, canceladas: 0, equipamentosAtivos: 0, chamadosAbertosPorSeveridade: {}, chamadosSlaVencido: 0, disponibilidadePercentual: null, otsPreventivasAtrasadas: 0, documentosVencendo30d: 0, chamadosRecentes: [] }
     get.mockResolvedValueOnce({ data: empty })
     setAuthSession('access-token', adminUser)
     renderDashboard()
@@ -134,10 +111,12 @@ describe('DashboardPage', () => {
     setAuthSession('access-token', adminUser)
     renderDashboard()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar o dashboard')
+    const networkAlert = await screen.findByRole('alert')
+    expect(networkAlert).toHaveTextContent('Não foi possível carregar o dashboard')
+    expect(networkAlert).toHaveTextContent('Verifique sua conexão')
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
     await waitFor(() => expect(get).toHaveBeenCalledTimes(2))
-    expect(await screen.findByText('Hospital Exemplo · 2 hospitais')).toBeInTheDocument()
+    expect(await screen.findByText('1.284')).toBeInTheDocument()
   })
 
   it('não renderiza como real uma resposta fora do contrato do agregado', async () => {
@@ -145,8 +124,21 @@ describe('DashboardPage', () => {
     setAuthSession('access-token', adminUser)
     renderDashboard()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Não foi possível carregar o dashboard')
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Não foi possível carregar o dashboard')
+    expect(alert).toHaveTextContent('formato que o painel ainda não reconhece')
     expect(screen.queryByText('1.284')).not.toBeInTheDocument()
+  })
+
+  it('não quebra com campos nulos, ausentes ou desconhecidos', async () => {
+    get.mockResolvedValueOnce({ data: { equipamentosAtivos: 3, disponibilidadePercentual: null, chamadosRecentes: [{ id: 'x', codigo: null, severidade: 'desconhecida', slaStatus: 'novo' }], campoNovo: true } })
+    setAuthSession('access-token', adminUser)
+    renderDashboard()
+
+    expect(await screen.findByRole('region', { name: 'Indicadores operacionais' })).toBeInTheDocument()
+    expect(screen.getByText('Disponibilidade')).toBeInTheDocument()
+    expect(screen.queryByText(/%$/)).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'x' })).toHaveAttribute('href', '/tickets/x')
   })
 
   it('abre notificações indisponíveis e oferece os três modos de tema', async () => {

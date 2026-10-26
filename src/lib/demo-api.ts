@@ -27,9 +27,9 @@ const workOrders: RecordValue[] = [
 ]
 const checklists: RecordValue[] = [{ id: 'checklist-demo-1', codigo: 'CHK-ROT-01', nome: 'Inspeção funcional', descricao: 'Verificação operacional de rotina', ativo: true, quantidadeItens: 3 }]
 const checklistItems: RecordValue[] = [
-  { id: 'check-item-demo-1', descricao: 'Inspecionar cabos e conectores', tipo: 'INSPECAO', unidade: null, obrigatorio: true, ordem: 0 },
-  { id: 'check-item-demo-2', descricao: 'Verificar alarmes sonoros', tipo: 'FUNCIONAL', unidade: null, obrigatorio: true, ordem: 1 },
-  { id: 'check-item-demo-3', descricao: 'Registrar resultado do autoteste', tipo: 'MEDICAO', unidade: 'resultado', obrigatorio: false, ordem: 2 },
+  { id: 'check-item-demo-1', descricao: 'Inspecionar cabos e conectores', tipo: 'BOOLEANO', unidade: null, obrigatorio: true, ordem: 0 },
+  { id: 'check-item-demo-2', descricao: 'Verificar alarmes sonoros', tipo: 'BOOLEANO', unidade: null, obrigatorio: true, ordem: 1 },
+  { id: 'check-item-demo-3', descricao: 'Registrar resultado do autoteste', tipo: 'NUMERICO', unidade: 'resultado', obrigatorio: false, ordem: 2 },
 ]
 const users: RecordValue[] = [
   { id: 'user-demo-1', codigo: 'ADM-001', nome: 'Clara Mendes', email: 'clara.mendes@example.test', role: 'admin_cliente', ativo: true },
@@ -225,21 +225,24 @@ function lastPart(path: string) { return path.split('/').filter(Boolean).at(-1) 
 function makeId(prefix: string) { return `${prefix}-${Math.random().toString(36).slice(2, 9)}` }
 
 const dashboard = {
-  tenant: { name: 'Rede Hospitalar Exemplo', hospitalCount: hospitals.length },
-  kpis: {
-    activeEquipment: { value: equipment.length, changePercent: 4.2 },
-    openWorkOrders: { value: workOrders.length, newToday: 1 },
-    emergencies: { value: tickets.length, criticalOpen: 1 },
-    availability: { percent: 98.6, weeklyChangePp: 0.8 },
-    overdueSla: { count: 1 },
-    overduePreventiveWorkOrders: { count: 0 },
-    expiringDocuments: { count: 2, withinDays: 30 },
-  },
-  emergenciesBySeverity: [{ severity: 'critical', count: 1 }, { severity: 'high', count: 1 }, { severity: 'medium', count: 0 }, { severity: 'low', count: 0 }],
-  workOrdersByStatus: [{ status: 'open', count: 1 }, { status: 'inProgress', count: 1 }, { status: 'completed', count: 4 }, { status: 'overdue', count: 0 }],
-  mtbfBySector: [{ sector: 'UTI Adulto', hours: 186 }, { sector: 'Centro Cirúrgico', hours: 142 }, { sector: 'Emergência', hours: 210 }],
-  recentTickets: [
-    { id: tickets[0].id, equipmentName: equipment[0].nome, hospitalName: hospitals[0].nome, sectorName: sectors[0].nome, severity: 'high', openedAt: now },
-    { id: tickets[1].id, equipmentName: equipment[1].nome, hospitalName: hospitals[0].nome, sectorName: sectors[1].nome, severity: 'medium', openedAt: now },
-  ],
+  agendadas: 1,
+  emExecucao: 1,
+  concluidas: 4,
+  canceladas: 0,
+  equipamentosAtivos: equipment.length,
+  chamadosAbertosPorSeveridade: { BAIXA: 0, MEDIA: 1, ALTA: 1, CRITICA: 0 },
+  chamadosSlaVencido: 1,
+  disponibilidadePercentual: 98.6,
+  otsPreventivasAtrasadas: 0,
+  documentosVencendo30d: 2,
+  chamadosRecentes: tickets.map((ticket, index) => ({
+    id: ticket.id,
+    codigo: `CH-${index + 1}`,
+    hospitalId: ticket.hospitalId,
+    equipamentoId: ticket.equipamentoId,
+    severidade: String(ticket.severidade).toLowerCase(),
+    status: String(ticket.status).toLowerCase(),
+    abertoEm: now,
+    slaStatus: ticket.slaStatus,
+  })),
 }

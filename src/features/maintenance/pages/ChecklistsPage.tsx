@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { useAddChecklistItem, useChecklistItems, useChecklists, useCreateChecklist, useReorderChecklistItems, useUpdateChecklistItem } from '../api/work-orders'
 import { checklistItemSchema, createChecklistSchema } from '../schemas/checklists.schema'
-import type { ChecklistItem } from '../types'
+import { checklistItemTypeLabel, checklistItemTypes, normalizeChecklistItemType, type ChecklistItem } from '../types'
 
 const inputClass = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const initialItem = { descricao: '', tipo: '', unidade: '', obrigatorio: false }
@@ -65,7 +65,7 @@ export function ChecklistsPage() {
   useEffect(() => {
     setDraft(selectedItem ? {
       descricao: selectedItem.descricao,
-      tipo: selectedItem.tipo,
+      tipo: normalizeChecklistItemType(selectedItem.tipo) ?? '',
       unidade: selectedItem.unidade ?? '',
       obrigatorio: selectedItem.obrigatorio,
     } : initialItem)
@@ -162,7 +162,7 @@ export function ChecklistsPage() {
             <fieldset className="space-y-3 rounded-md border border-border p-4">
               <legend className="px-1 text-xs font-semibold text-text-primary">Primeiro item obrigatório</legend>
               <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Descrição<input required maxLength={240} value={firstItem.descricao} onChange={(event) => setFirstItem((item) => ({ ...item, descricao: event.target.value }))} className={inputClass} placeholder="O que deve ser verificado?" /></label>
-              <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Tipo<input required maxLength={60} value={firstItem.tipo} onChange={(event) => setFirstItem((item) => ({ ...item, tipo: event.target.value }))} className={inputClass} placeholder="Conforme o tipo aceito pela API" /></label>
+              <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Tipo<select required value={firstItem.tipo} onChange={(event) => setFirstItem((item) => ({ ...item, tipo: event.target.value }))} className={inputClass}><option value="" disabled>Selecione o tipo</option>{checklistItemTypes.map((tipo) => <option key={tipo} value={tipo}>{checklistItemTypeLabel(tipo)}</option>)}</select></label>
               <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Unidade<input maxLength={40} value={firstItem.unidade} onChange={(event) => setFirstItem((item) => ({ ...item, unidade: event.target.value }))} className={inputClass} placeholder="Opcional" /></label>
               <label className="flex min-h-8 items-center gap-2 text-xs text-text-secondary"><input type="checkbox" checked={firstItem.obrigatorio} onChange={(event) => setFirstItem((item) => ({ ...item, obrigatorio: event.target.checked }))} className="size-4 accent-primary" />Item obrigatório</label>
             </fieldset>
@@ -184,7 +184,7 @@ export function ChecklistsPage() {
               <div><h3 className="text-xs font-semibold text-text-primary">{selectedItem ? 'Configurar item' : 'Novo item'}</h3><p className="mt-1 text-[10px] text-text-muted">A ordem salva será refletida nas ordens de trabalho.</p></div>
               {itemsQuery.isError && <p className="text-xs text-text-muted">Carregue os itens antes de editar este checklist.</p>}
               <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Descrição<input required maxLength={240} value={draft.descricao} onChange={(event) => setDraft((value) => ({ ...value, descricao: event.target.value }))} className={inputClass} placeholder="O que deve ser verificado?" /></label>
-              <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Tipo<input required maxLength={60} value={draft.tipo} onChange={(event) => setDraft((value) => ({ ...value, tipo: event.target.value }))} className={inputClass} placeholder="Conforme o tipo aceito pela API" /></label>
+              <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Tipo<select required value={draft.tipo} onChange={(event) => setDraft((value) => ({ ...value, tipo: event.target.value }))} className={inputClass}><option value="" disabled>Selecione o tipo</option>{checklistItemTypes.map((tipo) => <option key={tipo} value={tipo}>{checklistItemTypeLabel(tipo)}</option>)}</select></label>
               <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Unidade<input maxLength={40} value={draft.unidade} onChange={(event) => setDraft((value) => ({ ...value, unidade: event.target.value }))} className={inputClass} placeholder="Opcional" /></label>
               <label className="flex min-h-9 items-center gap-2 text-xs text-text-secondary"><input type="checkbox" checked={draft.obrigatorio} onChange={(event) => setDraft((value) => ({ ...value, obrigatorio: event.target.checked }))} className="size-4 accent-primary" />Item obrigatório</label>
               <div className="flex justify-end border-t border-border pt-3"><button type="submit" disabled={!selectedId || itemsQuery.isLoading || itemsQuery.isError || addItem.isPending || updateItem.isPending || reorderItems.isPending} className="h-8 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand disabled:opacity-50">{addItem.isPending || updateItem.isPending ? 'Salvando…' : selectedItem ? 'Salvar item' : 'Adicionar item'}</button></div>
@@ -200,7 +200,7 @@ function SortableChecklistItem({ item, index, total, selected, disabled, onSelec
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, disabled })
   return <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={`flex items-stretch gap-2 rounded-md border p-2 ${selected ? 'border-primary/40 bg-primary/5' : 'border-border bg-bg'} ${isDragging ? 'z-10 opacity-60' : ''}`}>
     <button ref={setActivatorNodeRef} type="button" aria-label={`Mover ${item.descricao}; posição ${index + 1} de ${total}`} {...attributes} {...listeners} disabled={disabled} className="grid w-8 shrink-0 place-items-center rounded text-text-muted hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"><GripVertical aria-hidden="true" size={15} /></button>
-    <button type="button" onClick={onSelect} className="min-w-0 flex-1 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><span className="block truncate text-xs font-medium text-text-primary">{index + 1}. {item.descricao}</span><span className="mt-1 block truncate text-[10px] text-text-muted">{item.tipo}{item.unidade ? ` · ${item.unidade}` : ''}{item.obrigatorio ? ' · Obrigatório' : ''}</span></button>
+    <button type="button" onClick={onSelect} className="min-w-0 flex-1 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><span className="block truncate text-xs font-medium text-text-primary">{index + 1}. {item.descricao}</span><span className="mt-1 block truncate text-[10px] text-text-muted">{checklistItemTypeLabel(item.tipo)}{item.unidade ? ` · ${item.unidade}` : ''}{item.obrigatorio ? ' · Obrigatório' : ''}</span></button>
     <div className="flex shrink-0 flex-col justify-center"><button type="button" aria-label={`Mover ${item.descricao} para cima`} disabled={disabled || index === 0} onClick={() => onMove(-1)} className="grid size-6 place-items-center rounded text-text-muted hover:bg-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-30"><ArrowUp aria-hidden="true" size={13} /></button><button type="button" aria-label={`Mover ${item.descricao} para baixo`} disabled={disabled || index === total - 1} onClick={() => onMove(1)} className="grid size-6 place-items-center rounded text-text-muted hover:bg-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-30"><ArrowDown aria-hidden="true" size={13} /></button></div>
   </li>
 }
