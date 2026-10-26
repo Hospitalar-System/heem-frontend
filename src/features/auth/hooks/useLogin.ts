@@ -64,8 +64,9 @@ export function useLogin() {
   const navigate = useNavigate()
 
   return useMutation({
+    gcTime: 0, // não retém as credenciais (variables) no cache de mutações
     mutationFn: async (values?: LoginFormValues) => {
-      if (isDemoMode || !values) {
+      if (isDemoMode) {
         const accessToken = await getDevelopmentToken()
         const user = await getCurrentUser(accessToken)
         const destination = getRoleLandingPath(user.roles)
@@ -73,6 +74,8 @@ export function useLogin() {
         setAuthSession(accessToken, user)
         return destination
       }
+
+      if (!values) throw new Error('Informe e-mail e senha para entrar.')
 
       const { accessToken, refreshToken, expiresAt } = await loginWithPassword({
         email: values.email,
