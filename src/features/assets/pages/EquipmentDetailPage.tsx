@@ -5,8 +5,9 @@ import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { getAuthState } from '@/features/auth/session'
 import { EquipmentStatusBadge } from '../components/EquipmentStatusBadge'
 import { EquipmentDocumentsSection } from '../components/EquipmentDocumentsSection'
+import { EquipmentPhotoSection } from '../components/EquipmentPhotoSection'
 import { EquipmentLabelsSection } from '../components/EquipmentLabelsSection'
-import { useEquipment, useEquipmentPhoto, useEquipmentWorkOrders, useHospital, useSector } from '../api/assets'
+import { useEquipment, useEquipmentWorkOrders, useHospital, useSector } from '../api/assets'
 import type { Equipment } from '../types'
 
 type EquipmentTab = 'dados' | 'medicoes' | 'checklists' | 'ots' | 'documentos' | 'etiquetas'
@@ -24,7 +25,6 @@ export function EquipmentDetailPage() {
   const equipment = useEquipment(id)
   const sector = useSector(equipment.data?.setorId ?? '')
   const hospital = useHospital(sector.data?.hospitalId ?? '')
-  const photo = useEquipmentPhoto(id, Boolean(equipment.data?.fotoUrl))
   const orders = useEquipmentWorkOrders(id)
   const roles = getAuthState().user?.roles ?? []
   const isAdmin = roles.includes('admin_cliente')
@@ -54,7 +54,7 @@ export function EquipmentDetailPage() {
       </div>
 
       <section id="equipment-tab-panel" role="tabpanel" aria-labelledby={`equipment-tab-${activeTab}`} className="mt-4 outline-none">
-        {activeTab === 'dados' ? <EquipmentData equipment={equipment.data} photoUrl={photo.data} photoLoading={photo.isLoading} order={nextPreventive} ordersLoading={orders.isLoading} isAdmin={isAdmin} /> : null}
+        {activeTab === 'dados' ? <EquipmentData equipment={equipment.data} canWritePhoto={canReadDocuments} order={nextPreventive} ordersLoading={orders.isLoading} isAdmin={isAdmin} /> : null}
         {activeTab === 'medicoes' ? <UnavailablePanel title="Histórico de medições indisponível" detail="A API ainda não fornece uma rota de consulta de medições por equipamento." /> : null}
         {activeTab === 'checklists' ? <UnavailablePanel title="Checklists vinculados indisponíveis" detail="A API ainda não fornece uma consulta dos checklists associados a este equipamento." /> : null}
         {activeTab === 'ots' ? <WorkOrdersPanel orders={orders.data ?? []} loading={orders.isLoading} error={orders.isError} retry={() => void orders.refetch()} /> : null}
@@ -65,7 +65,7 @@ export function EquipmentDetailPage() {
   </AdminPageShell>
 }
 
-function EquipmentData({ equipment, photoUrl, photoLoading, order, ordersLoading, isAdmin }: { equipment: Equipment; photoUrl?: string; photoLoading: boolean; order?: { codigo: string; dataAgendada: string | null; checklistId: string | null }; ordersLoading: boolean; isAdmin: boolean }) {
+function EquipmentData({ equipment, canWritePhoto, order, ordersLoading, isAdmin }: { equipment: Equipment; canWritePhoto: boolean; order?: { codigo: string; dataAgendada: string | null; checklistId: string | null }; ordersLoading: boolean; isAdmin: boolean }) {
   return <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr]">
     <section className="rounded-lg border border-border bg-surface p-5">
       <h3 className="text-sm font-semibold">Identificação</h3>
@@ -74,9 +74,9 @@ function EquipmentData({ equipment, photoUrl, photoLoading, order, ordersLoading
         ['Classe de risco ANVISA', equipment.classeRiscoAnvisa], ['Criticidade', equipment.criticidade], ['Instalação', formatDate(equipment.dataInstalacao)], ['Garantia até', formatDate(equipment.dataGarantiaFim)],
       ] as Array<[string, ReactNode]>).map(([label, value]) => <div key={label} className="flex min-h-10 items-center justify-between gap-4 py-2"><dt className="text-xs text-text-muted">{label}</dt><dd className="break-all text-right text-xs font-medium text-text-primary">{value || '—'}</dd></div>)}</dl>
       {Object.keys(equipment.dadosGerais ?? {}).length ? <div className="mt-5 border-t border-border pt-4"><h4 className="text-xs font-semibold">Dados gerais</h4><dl className="mt-2 divide-y divide-border/70">{Object.entries(equipment.dadosGerais ?? {}).map(([key, value]) => <div key={key} className="flex min-h-9 items-center justify-between gap-4 py-2"><dt className="text-xs text-text-muted">{key}</dt><dd className="break-all text-right text-xs text-text-primary">{displayValue(value)}</dd></div>)}</dl></div> : null}
-      {equipment.fotoUrl ? <div className="mt-5 border-t border-border pt-4"><h4 className="text-xs font-semibold">Foto</h4>{photoLoading ? <div aria-label="Carregando foto" aria-busy="true" className="mt-3 h-44 animate-pulse rounded-md bg-bg" /> : photoUrl ? <img src={photoUrl} alt={`Foto de ${equipment.nome}`} className="mt-3 max-h-64 w-full rounded-md border border-border object-contain" /> : <p className="mt-2 text-xs text-text-muted">Foto não disponível.</p>}</div> : null}
     </section>
     <div className="space-y-4">
+      <EquipmentPhotoSection equipmentId={equipment.id} nome={equipment.nome} fotoVersao={equipment.fotoVersao} hasLegacyPhoto={Boolean(equipment.fotoUrl)} canWrite={canWritePhoto} canDelete={isAdmin} />
       <section className="rounded-lg border border-border bg-surface p-5">
         <div className="flex items-center gap-2"><span className="grid size-8 place-items-center rounded-md bg-bg text-text-secondary"><Gauge size={16} /></span><h3 className="text-sm font-semibold">Indicadores</h3></div>
         <div className="mt-4 grid grid-cols-3 gap-2">{['MTBF', 'Disponibilidade', 'OTs no ano'].map((label) => <div key={label} className="min-w-0 rounded-md border border-border bg-surface p-3"><p className="truncate text-[10px] text-text-muted">{label}</p><p className="mt-1 text-sm font-semibold text-text-secondary">—</p></div>)}</div>

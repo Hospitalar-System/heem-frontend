@@ -89,4 +89,17 @@ describe('WorkOrderDetailPage', () => {
     expect(screen.queryByText('Item de checklist corretivo')).not.toBeInTheDocument()
     expect(apiClient.get).not.toHaveBeenCalledWith('/checklists/null/itens')
   })
+
+  it('shows the photos section only for preventive orders', async () => {
+    const { unmount } = render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+    expect(await screen.findByRole('heading', { name: /Fotos/ })).toBeInTheDocument()
+    expect(apiClient.get).toHaveBeenCalledWith('/ordens-de-trabalho/order-1/fotos')
+    unmount()
+    vi.mocked(apiClient.get).mockClear()
+    vi.mocked(apiClient.get).mockImplementation(async (url) => (url === '/ordens-de-trabalho/order-1' ? { data: { ...order, tipo: 'CORRETIVA', checklistId: null } } : { data: [] }) as never)
+    render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+    expect(await screen.findByRole('heading', { name: 'OT-2041' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Fotos/ })).not.toBeInTheDocument()
+    expect(apiClient.get).not.toHaveBeenCalledWith('/ordens-de-trabalho/order-1/fotos')
+  })
 })
