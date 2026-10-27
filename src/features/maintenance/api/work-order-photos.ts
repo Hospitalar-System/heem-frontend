@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
 import { prepareImage } from '@/lib/image-resize'
-import { uploadPreparedPhoto, type PhotoUploadUrls } from '@/lib/photo-upload'
+import { getPhotoErrorMessage, uploadPreparedPhoto, type PhotoUploadUrls } from '@/lib/photo-upload'
 import { workOrdersKey } from './work-orders'
 
 export const MAX_WORK_ORDER_PHOTOS = 5
@@ -52,12 +52,22 @@ export function useRemoveWorkOrderPhoto(orderId: string) {
   })
 }
 
-/** Regra de escrita (backend): técnico responsável ou admin_cliente; OT em execução ou concluída; só preventiva. */
-export function canEditWorkOrderPhotos(order: { tipo: string; status: string; tecnicoId?: string | null }, user: { id: string; roles: string[] } | null | undefined) {
+/**
+ * Regra de escrita (backend): técnico responsável ou admin_cliente; OT em execução ou concluída; só preventiva.
+ * Não comparamos ids no cliente (sub do Keycloak x id do banco): para técnico o backend decide (404 se não for o responsável).
+ */
+export function canEditWorkOrderPhotos(order: { tipo: string; status: string }, user: { roles: string[] } | null | undefined) {
   if (!user) return false
   const tipo = order.tipo.toUpperCase()
   const status = order.status.toUpperCase().replaceAll('Ç', 'C').replaceAll('Ã', 'A')
   if (tipo !== 'PREVENTIVA') return false
   if (status !== 'EM_EXECUCAO' && status !== 'CONCLUIDA' && status !== 'CONCLUIDO') return false
-  return user.roles.includes('admin_cliente') || (user.roles.includes('tecnico') && Boolean(order.tecnicoId) && order.tecnicoId === user.id)
+  return user.roles.includes('admin_cliente') || user.roles.includes('tecnico')
+}
+
+export const NOT_RESPONSIBLE_MESSAGE = 'Somente o técnico responsável pela OT ou o administrador pode alterar as fotos.'
+
+export function getWorkOrderPhotoErrorMessage(error: unknown) {
+  const status = typeof error === 'object' && error !== null && 'response' in error ? (error as { response?: { status?: number } }).response?.status : undefined
+  return status === 404 ? NOT_RESPONSIBLE_MESSAGE : getPhotoErrorMessage(error)
 }

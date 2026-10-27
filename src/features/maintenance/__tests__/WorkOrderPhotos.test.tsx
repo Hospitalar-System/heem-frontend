@@ -114,12 +114,7 @@ describe('WorkOrderPhotosSection', () => {
     await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith('/ordens-de-trabalho/order-1/fotos/p1'))
   })
 
-  it('is read-only for non-responsible technicians, interno_hospital and scheduled/cancelled orders', async () => {
-    const { unmount } = renderSection({}, { id: 'tech-2', roles: ['tecnico'] })
-    await screen.findByAltText('Foto 1 da OT OT-2041')
-    expect(screen.queryByRole('button', { name: 'Anexar foto' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Remover foto 1' })).not.toBeInTheDocument()
-    unmount()
+  it('is read-only for interno_hospital and scheduled/cancelled orders', async () => {
     const view = renderSection({}, { id: 'i1', roles: ['interno_hospital'] })
     await screen.findByAltText('Foto 1 da OT OT-2041')
     expect(screen.queryByRole('button', { name: 'Anexar foto' })).not.toBeInTheDocument()
@@ -129,21 +124,37 @@ describe('WorkOrderPhotosSection', () => {
     expect(screen.queryByRole('button', { name: 'Anexar foto' })).not.toBeInTheDocument()
   })
 
-  it('lets the responsible technician attach', async () => {
-    renderSection({}, tech)
+  it('shows actions to a technician even when the session id differs from tecnicoId (backend decides)', async () => {
+    renderSection({}, { id: 'keycloak-sub', roles: ['tecnico'] })
     expect(await screen.findByRole('button', { name: 'Anexar foto' })).toBeEnabled()
+    expect(await screen.findByRole('button', { name: 'Remover foto 1' })).toBeInTheDocument()
+  })
+
+  it('maps 404 on attach and remove to the not-responsible message', async () => {
+    const user = userEvent.setup()
+    const message = 'Somente o técnico responsável pela OT ou o administrador pode alterar as fotos.'
+    vi.mocked(apiClient.post).mockRejectedValue({ response: { status: 404, data: {} } })
+    vi.mocked(apiClient.delete).mockRejectedValue({ response: { status: 404, data: {} } })
+    renderSection({}, { id: 'keycloak-sub', roles: ['tecnico'] })
+    await screen.findByAltText('Foto 1 da OT OT-2041')
+    fireEvent.change(screen.getByLabelText('Selecionar arquivo da foto'), { target: { files: [jpeg()] } })
+    expect(await screen.findByRole('alert')).toHaveTextContent(message)
+    await user.click(screen.getByRole('button', { name: 'Remover foto 1' }))
+    await user.click(screen.getByRole('button', { name: 'Remover' }))
+    await waitFor(() => expect(apiClient.delete).toHaveBeenCalled())
+    expect(await screen.findByRole('alert')).toHaveTextContent(message)
   })
 })
 
 describe('canEditWorkOrderPhotos', () => {
-  it('requires preventive type, em_execucao/concluida status and responsible technician or admin', () => {
+  it('requires preventive type, em_execucao/concluida status and technician or admin role', () => {
     expect(canEditWorkOrderPhotos(order, admin)).toBe(true)
     expect(canEditWorkOrderPhotos({ ...order, status: 'CONCLUIDA' }, tech)).toBe(true)
     expect(canEditWorkOrderPhotos({ ...order, tipo: 'CORRETIVA' }, admin)).toBe(false)
     expect(canEditWorkOrderPhotos({ ...order, status: 'AGENDADA' }, admin)).toBe(false)
     expect(canEditWorkOrderPhotos({ ...order, status: 'CANCELADA' }, admin)).toBe(false)
-    expect(canEditWorkOrderPhotos(order, { id: 'tech-2', roles: ['tecnico'] })).toBe(false)
-    expect(canEditWorkOrderPhotos(order, { id: 'i', roles: ['interno_hospital'] })).toBe(false)
+    expect(canEditWorkOrderPhotos(order, { roles: ['tecnico'] })).toBe(true)
+    expect(canEditWorkOrderPhotos(order, { roles: ['interno_hospital'] })).toBe(false)
     expect(canEditWorkOrderPhotos(order, null)).toBe(false)
   })
 })

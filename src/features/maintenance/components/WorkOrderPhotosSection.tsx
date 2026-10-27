@@ -3,8 +3,7 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Modal } from '@/components/ui/Modal'
 import { photoAcceptAttr, validateImageFile } from '@/lib/image-resize'
-import { getPhotoErrorMessage } from '@/lib/photo-upload'
-import { canEditWorkOrderPhotos, MAX_WORK_ORDER_PHOTOS, useAttachWorkOrderPhoto, useRemoveWorkOrderPhoto, useWorkOrderPhotos, type WorkOrderPhoto } from '../api/work-order-photos'
+import { canEditWorkOrderPhotos, getWorkOrderPhotoErrorMessage, MAX_WORK_ORDER_PHOTOS, useAttachWorkOrderPhoto, useRemoveWorkOrderPhoto, useWorkOrderPhotos, type WorkOrderPhoto } from '../api/work-order-photos'
 import type { WorkOrderDetail } from '../types'
 
 interface Props { order: WorkOrderDetail; user: { id: string; roles: string[] } | null | undefined }
@@ -30,7 +29,7 @@ export function WorkOrderPhotosSection({ order, user }: Props) {
       await attach.mutateAsync(file)
       toast.success('Foto anexada.')
     } catch (failure) {
-      setError(getPhotoErrorMessage(failure))
+      setError(getWorkOrderPhotoErrorMessage(failure))
     } finally {
       if (inputRef.current) inputRef.current.value = ''
     }
@@ -43,7 +42,7 @@ export function WorkOrderPhotosSection({ order, user }: Props) {
       await remove.mutateAsync(removing.id)
       toast.success('Foto removida.')
     } catch (failure) {
-      setError(getPhotoErrorMessage(failure))
+      setError(getWorkOrderPhotoErrorMessage(failure))
     } finally {
       setRemoving(null)
     }
