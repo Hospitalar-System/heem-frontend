@@ -29,6 +29,10 @@ const SlaPolicyPage = lazy(() => import('@/features/sla-policy/pages/SlaPolicyPa
 const BatchImportPage = lazy(() => import('@/features/imports/pages/BatchImportPage').then((module) => ({ default: module.BatchImportPage })))
 const PreventivePlansPage = lazy(() => import('@/features/maintenance/pages/PreventivePlansPage').then((module) => ({ default: module.PreventivePlansPage })))
 
+const PreventiveCampaignsPage = lazy(() => import('@/features/maintenance/pages/PreventiveCampaignsPage').then((module) => ({ default: module.PreventiveCampaignsPage })))
+const PreventiveCampaignFormPage = lazy(() => import('@/features/maintenance/pages/PreventiveCampaignFormPage').then((module) => ({ default: module.PreventiveCampaignFormPage })))
+const PreventiveCampaignDetailPage = lazy(() => import('@/features/maintenance/pages/PreventiveCampaignDetailPage').then((module) => ({ default: module.PreventiveCampaignDetailPage })))
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -58,6 +62,9 @@ const router = createBrowserRouter([
   { path: '/settings/sla', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><SlaPolicyPage /></Suspense></RequireRole> },
   { path: '/imports', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><BatchImportPage /></Suspense></RequireRole> },
   { path: '/preventive-plans', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventivePlansPage /></Suspense></RequireRole> },
+  { path: '/preventive-campaigns', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignsPage /></Suspense></RequireRole> },
+  { path: '/preventive-campaigns/new', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignFormPage /></Suspense></RequireRole> },
+  { path: '/preventive-campaigns/:id', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignDetailPage /></Suspense></RequireRole> },
   {
     path: '/dashboard',
     element: (

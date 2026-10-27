@@ -140,6 +140,7 @@ const demoTopEquipment = [
 ]
 
 function handleRequest(method: string, path: string, body: RecordValue, params?: Record<string, unknown>): unknown {
+  if (path.startsWith('/campanhas-preventivas')) return handleCampaigns(method, path, body, params)
   if (path === '/planos-preventivos' && method === 'get') {
     return preventivePlans.filter((plan) => (!params?.equipamentoId || plan.equipamentoId === params.equipamentoId) && (params?.ativo === undefined || plan.ativo === params.ativo))
   }
@@ -491,6 +492,100 @@ function demoImportState(id: string, tipo: string, polls: number) {
     criadoEm: now,
     concluidoEm: done ? now : null,
   }
+}
+
+/**
+ * Campanha de preventiva simulada (Story 15.2): a prévia usa os equipamentos de exemplo; a execução avança a cada
+ * consulta do painel (1/3 dos equipamentos por vez) para exercitar o polling. Sem dado real.
+ */
+type DemoPending = { equipamentoId: string; codigo: string; motivo: string }
+type DemoCampaignPlan = { total: number; geradas: number; puladas: number; pendencias: DemoPending[] }
+const campaignPlans = new Map<string, DemoCampaignPlan>()
+const campaignPolls = new Map<string, number>()
+const campaigns: RecordValue[] = []
+const campaignReasons = ['SEM_CATEGORIA', 'CATEGORIA_SEM_CHECKLIST', 'CHECKLIST_INDISPONIVEL', 'SEM_TECNICO_DISPONIVEL']
+
+function planCampaign(body: RecordValue) {
+  const sectorIds = (body.setorIds as string[] | undefined) ?? []
+  const categoryIds = (body.categoriaIds as string[] | undefined) ?? []
+  const hospitalSectors = sectors.filter((sector) => sector.hospitalId === body.hospitalId).map((sector) => sector.id)
+  const eligible = equipment.filter((item) => hospitalSectors.includes(item.setorId)
+    && (sectorIds.length === 0 || sectorIds.includes(item.setorId as string))
+    && (categoryIds.length === 0 || categoryIds.includes(item.categoriaId as string))
+    && item.statusCicloVida !== 'INATIVO')
+  const pendencias: DemoPending[] = []
+  let geradas = 0
+  for (const item of eligible) {
+    const category = categories.find((entry) => entry.id === item.categoriaId)
+    const motivo = !category ? 'SEM_CATEGORIA' : !category.checklistPadraoId ? 'CATEGORIA_SEM_CHECKLIST' : undefined
+    if (motivo) pendencias.push({ equipamentoId: item.id as string, codigo: item.codigo as string, motivo })
+    else geradas += 1
+  }
+  return { total: eligible.length, geradas, puladas: 0, pendencias }
+}
+
+function previewCampaign(body: RecordValue) {
+  const plan = planCampaign(body)
+  const pendenciasPorMotivo = Object.fromEntries(campaignReasons.map((reason) => [reason, plan.pendencias.filter((item) => item.motivo === reason).length]))
+  const technician = users.find((user) => user.id === body.tecnicoId) ?? users[1]
+  return {
+    totalEquipamentos: plan.total,
+    aGerar: plan.geradas,
+    puladas: plan.puladas,
+    totalPendencias: plan.pendencias.length,
+    pendenciasPorMotivo,
+    pendencias: plan.pendencias,
+    distribuicaoPorTecnico: body.modoAtribuicao === 'sem_responsavel' || plan.geradas === 0 ? [] : [{ tecnicoId: technician.id, nome: technician.nome, quantidade: plan.geradas }],
+  }
+}
+
+function campaignView(campaign: RecordValue, detail: boolean): RecordValue {
+  const plan = campaignPlans.get(campaign.id as string)
+  if (!plan) return { ...campaign, pendenciasDetalhe: [] }
+  let { status } = campaign as { status: string }
+  const polls = campaignPolls.get(campaign.id as string) ?? 0
+  const step = Math.max(1, Math.ceil(plan.total / 3))
+  const processadas = status === 'cancelada' ? (campaign.execucao as { processadas: number }).processadas : Math.min(plan.total, polls * step)
+  if (status !== 'cancelada' && processadas >= plan.total) status = 'concluida'
+  else if (status !== 'cancelada') status = polls === 0 ? 'pendente' : 'processando'
+  const done = status === 'concluida'
+  const generated = done ? plan.geradas : Math.floor(plan.geradas * (processadas / Math.max(1, plan.total)))
+  Object.assign(campaign, { status, execucao: { totalEquipamentos: plan.total, processadas, geradas: generated, puladas: plan.puladas, pendencias: done ? plan.pendencias.length : 0 }, ots: { total: generated, agendadas: generated, emExecucao: 0, concluidas: 0, canceladas: 0, atrasadas: 0 } })
+  return { ...campaign, pendenciasDetalhe: detail && done ? plan.pendencias : [] }
+}
+
+function seedDemoCampaign() {
+  const body = { hospitalId: hospitals[0].id, nome: 'Preventiva semestral UTI', setorIds: [sectors[0].id], categoriaIds: [], dataInicio: dayIso(-10), dataFim: null, recorrencia: 'meses', intervalo: 6, modoAtribuicao: 'equilibrado', tecnicoId: null }
+  const id = 'campaign-demo-1'
+  campaigns.push({ id, ...body, proximaData: dayIso(170), status: 'concluida', ativa: true, janelaAtual: dayIso(-10), criadaEm: now, canceladaEm: null, execucao: { totalEquipamentos: 0, processadas: 0, geradas: 0, puladas: 0, pendencias: 0 }, ots: { total: 0, agendadas: 0, emExecucao: 0, concluidas: 0, canceladas: 0, atrasadas: 0 } })
+  campaignPlans.set(id, planCampaign(body))
+  campaignPolls.set(id, 99)
+}
+seedDemoCampaign()
+
+function handleCampaigns(method: string, path: string, body: RecordValue, params?: Record<string, unknown>): unknown {
+  if (path === '/campanhas-preventivas/previa' && method === 'post') return previewCampaign(body)
+  if (path === '/campanhas-preventivas' && method === 'post') {
+    const id = makeId('campaign-demo')
+    const periodic = body.recorrencia !== 'avulsa'
+    campaigns.unshift({ id, setorIds: [], categoriaIds: [], dataFim: null, intervalo: null, tecnicoId: null, ...body, proximaData: periodic ? body.dataInicio : null, status: 'pendente', ativa: true, janelaAtual: body.dataInicio, criadaEm: now, canceladaEm: null, execucao: { totalEquipamentos: 0, processadas: 0, geradas: 0, puladas: 0, pendencias: 0 }, ots: { total: 0, agendadas: 0, emExecucao: 0, concluidas: 0, canceladas: 0, atrasadas: 0 } })
+    campaignPlans.set(id, planCampaign(body))
+    campaignPolls.set(id, 0)
+    return { id, status: 'pendente' }
+  }
+  if (path === '/campanhas-preventivas' && method === 'get') {
+    return campaigns.filter((item) => (!params?.hospitalId || item.hospitalId === params.hospitalId) && (!params?.status || campaignView(item, false).status === params.status)).map((item) => campaignView(item, false))
+  }
+  const route = path.match(/^\/campanhas-preventivas\/([^/]+)(\/cancelar)?$/)
+  const campaign = route ? campaigns.find((item) => item.id === route[1]) : undefined
+  if (!campaign) throw Object.assign(new Error('Campanha não encontrada'), { response: { status: 404, data: { code: 'CAMPANHA_NAO_ENCONTRADA' } } })
+  if (route?.[2] && method === 'post') {
+    campaignView(campaign, true)
+    if (campaign.status !== 'cancelada') Object.assign(campaign, { status: 'cancelada', ativa: false, proximaData: null, canceladaEm: now })
+    return campaignView(campaign, true)
+  }
+  campaignPolls.set(campaign.id as string, (campaignPolls.get(campaign.id as string) ?? 0) + 1)
+  return campaignView(campaign, true)
 }
 
 function lastPart(path: string) { return path.split('/').filter(Boolean).at(-1) ?? '' }
