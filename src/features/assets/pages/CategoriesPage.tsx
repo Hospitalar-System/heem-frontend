@@ -13,6 +13,8 @@ import { useChecklists } from '@/features/maintenance/api/work-orders'
 import { getCategoryErrorMessage, useCategories, useDeactivateCategory, useMarkCategoryReviewed, useMergeCategory, useSaveCategory } from '../api/categories'
 import { categorySchema, type CategoryFormValues } from '../schemas/assets.schema'
 import type { EquipmentCategory } from '../types'
+import { Checkbox } from '@/components/ui/Checkbox'
+import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const statusOptions = [
@@ -20,7 +22,6 @@ const statusOptions = [
   { value: 'ativas', label: 'Ativas' },
   { value: 'inativas', label: 'Inativas' },
 ]
-const iconButton = 'grid size-8 place-items-center rounded-md text-text-secondary hover:bg-bg hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50'
 
 export function CategoriesPage() {
   const [status, setStatus] = useState('')
@@ -54,7 +55,7 @@ export function CategoriesPage() {
   return <AdminPageShell title="Categorias de equipamento" subtitle="Tipos de equipamento e checklist padrão" action={<PageAction onClick={() => setCreating(true)} collapseLabelOnMobile>Nova categoria</PageAction>}>
     <FilterBar label="Filtros de categorias" className="mb-4">
       <label className="min-w-0"><span className="sr-only">Filtrar por situação</span><Select size="sm" aria-label="Filtrar por situação" value={status} onChange={setStatus} options={statusOptions} /></label>
-      <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-border bg-bg px-3 text-xs text-text-primary"><input type="checkbox" checked={onlyReview} onChange={(event) => setOnlyReview(event.target.checked)} className="accent-primary" />A revisar</label>
+      <Checkbox label="A revisar" checked={onlyReview} onCheckedChange={setOnlyReview} containerClassName="h-9 justify-center rounded-md border border-border bg-bg px-3 text-xs text-text-primary" />
       <label className="relative min-w-0 sm:col-span-2"><span className="sr-only">Buscar categoria</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input aria-label="Buscar categoria" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nome da categoria" className={`${filterInputClass} pl-8`} /></label>
     </FilterBar>
 
@@ -72,12 +73,11 @@ export function CategoriesPage() {
             <td className="px-4 text-text-secondary">{category.origem === 'carga' ? 'Carga inicial' : 'Manual'}</td>
             <td className="px-4 tabular-nums text-text-secondary">{category.quantidadeEquipamentos ?? '—'}</td>
             <td className="px-4"><span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${category.ativa ? 'bg-primary/10 text-primary' : 'bg-bg text-text-muted'}`}>{category.ativa ? 'Ativa' : 'Inativa'}</span></td>
-            <td className="px-4"><div className="flex justify-end gap-1">
-              {needsReview ? <button type="button" aria-label={`Marcar ${category.nome} como revisada`} title="Marcar como revisada" disabled={reviewed.isPending} onClick={() => void markReviewed(category)} className={iconButton}><CheckCheck size={14} /></button> : null}
-              <button type="button" aria-label={`Editar ${category.nome}`} title="Editar" onClick={() => setEditing(category)} className={iconButton}><Pencil size={14} /></button>
-              {category.ativa ? <button type="button" aria-label={`Mesclar em ${category.nome}`} title="Mesclar outra categoria nesta" onClick={() => setMerging(category)} className={iconButton}><GitMerge size={14} /></button> : null}
-              {category.ativa ? <button type="button" aria-label={`Desativar ${category.nome}`} title="Desativar" onClick={() => setDeactivating(category)} className={`${iconButton} hover:text-danger`}><PowerOff size={14} /></button> : null}
-            </div></td>
+            <td className="px-4"><div className="flex justify-end"><RowActionsMenu label={category.nome} actions={[
+              ...(needsReview ? [{ label: 'Marcar como revisada', icon: <CheckCheck size={14} />, disabled: reviewed.isPending, onSelect: () => markReviewed(category) }] : []),
+              { label: 'Editar', icon: <Pencil size={14} />, onSelect: () => setEditing(category) },
+              ...(category.ativa ? [{ label: 'Mesclar outra categoria nesta', icon: <GitMerge size={14} />, onSelect: () => setMerging(category) }, { label: 'Desativar', icon: <PowerOff size={14} />, destructive: true, onSelect: () => setDeactivating(category) }] : []),
+            ]} /></div></td>
           </tr>
         })}</tbody>
       </table>
@@ -117,7 +117,7 @@ function CategoryForm({ category, onClose }: { category?: EquipmentCategory; onC
       <Field label="Nome" error={form.formState.errors.nome?.message}><input autoFocus className={inputClass} {...form.register('nome')} /></Field>
       <Field label="Checklist padrão"><FormSelect control={form.control} name="checklistPadraoId" disabled={checklists.isLoading} options={options} /></Field>
       {checklists.isError ? <p role="alert" className="text-xs text-danger">Não foi possível carregar os checklists.</p> : null}
-      <label className="inline-flex items-center gap-2 text-xs text-text-primary"><input type="checkbox" className="accent-primary" {...form.register('ativa')} />Categoria ativa</label>
+      <Checkbox label="Categoria ativa" containerClassName="text-xs text-text-primary" {...form.register('ativa')} />
       {submitError ? <p role="alert" className="rounded-md border border-danger/40 p-3 text-xs text-danger">{submitError}</p> : null}
       <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" disabled={save.isPending} onClick={onClose} className="h-9 rounded-md border border-border px-3 text-xs">Cancelar</button><button type="submit" disabled={save.isPending} className="h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand disabled:opacity-50">{save.isPending ? 'Salvando…' : 'Salvar categoria'}</button></div>
     </form>

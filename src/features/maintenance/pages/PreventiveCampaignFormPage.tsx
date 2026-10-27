@@ -14,6 +14,7 @@ import { PendingBreakdown } from '../components/CampaignParts'
 import { campaignFormSchema, type CampaignFormValues } from '../schemas/preventive-campaigns.schema'
 import type { CampaignPreview } from '../types/campaigns'
 import { assignmentModeLabels, campaignApiError, campaignBody } from '../utils/preventive-campaigns'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 const inputClass = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 aria-[invalid=true]:border-danger'
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
@@ -36,10 +37,7 @@ function CheckGroup({ legend, options, value, onChange, error, errorId, empty }:
     {options.length === 0
       ? <p className="rounded-md border border-dashed border-border p-3 text-xs text-text-muted">{empty}</p>
       : <div className="grid max-h-40 gap-1 overflow-y-auto rounded-md border border-border bg-bg p-2">
-        {options.map((option) => <label key={option.value} className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-xs text-text-primary hover:bg-surface">
-          <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={value.includes(option.value)} onChange={(event) => onChange(event.target.checked ? [...value, option.value] : value.filter((item) => item !== option.value))} />
-          {option.label}
-        </label>)}
+        {options.map((option) => <Checkbox key={option.value} label={option.label} checked={value.includes(option.value)} onCheckedChange={(checked) => onChange(checked ? [...value, option.value] : value.filter((item) => item !== option.value))} containerClassName="rounded px-1 py-1 text-xs text-text-primary hover:bg-surface" />)}
       </div>}
     {error && <p id={errorId} role="alert" className="text-xs text-danger">{error}</p>}
   </fieldset>

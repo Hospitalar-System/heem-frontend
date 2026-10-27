@@ -8,6 +8,7 @@ import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { UsersPage } from '../pages/UsersPage'
 import type { TenantUser } from '../types'
 import { chooseOption, listOptions } from '@/test/select-helpers'
+import { chooseRowAction, confirmRowAction, listRowActions } from '@/test/row-action-helpers'
 
 const { success, error } = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 
@@ -164,15 +165,43 @@ describe('UsersPage F2.2', () => {
   it('updates the visible status after a confirmed deactivation', async () => {
     const user = userEvent.setup()
     users = [activeUser]
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderPage()
     await screen.findByText('Clara Mendes')
     expect(screen.getByText('Ativo')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Desativar' }))
+    await chooseRowAction(user, 'Ações de Clara Mendes', 'Desativar')
+    await confirmRowAction(user, 'Desativar')
 
     expect(await screen.findByText('Inativo')).toBeInTheDocument()
     expect(apiClient.post).toHaveBeenCalledWith('/users/user-1/desativar')
     expect(success).toHaveBeenCalledWith('Usuário desativado.')
+  })
+
+  it('opens the edit form from the row actions menu', async () => {
+    const user = userEvent.setup()
+    users = [activeUser]
+    renderPage()
+    await screen.findByText('Clara Mendes')
+    await chooseRowAction(user, 'Ações de Clara Mendes', 'Editar')
+    expect(await screen.findByRole('dialog', { name: 'Editar usuário' })).toBeInTheDocument()
+  })
+
+  it('does not deactivate when the operator cancels the menu confirmation', async () => {
+    const user = userEvent.setup()
+    users = [activeUser]
+    renderPage()
+    await screen.findByText('Clara Mendes')
+    await chooseRowAction(user, 'Ações de Clara Mendes', 'Desativar')
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancelar' }))
+    expect(apiClient.post).not.toHaveBeenCalledWith('/users/user-1/desativar')
+    expect(screen.getByText('Ativo')).toBeInTheDocument()
+  })
+
+  it('hides anonymization from roles without permission', async () => {
+    users = [activeUser]
+    setAuthSession('token', { id: 'tec-1', name: 'Técnico', roles: ['tecnico'] })
+    renderPage()
+    await screen.findByText('Clara Mendes')
+    expect(await listRowActions(userEvent.setup(), 'Ações de Clara Mendes')).toEqual(['Editar', 'Desativar'])
   })
 
   it('requires an exact name confirmation and calls the CPF anonymization endpoint', async () => {
@@ -180,7 +209,8 @@ describe('UsersPage F2.2', () => {
     users = [activeUser]
     setAuthSession('token', { id: 'admin-1', name: 'Admin', roles: ['admin_cliente'] })
     renderPage()
-    await user.click(await screen.findByRole('button', { name: 'Anonimizar CPF' }))
+    await screen.findByText('Clara Mendes')
+    await chooseRowAction(user, 'Ações de Clara Mendes', 'Anonimizar CPF')
     const confirmButton = within(screen.getByRole('dialog')).getByRole('button', { name: /^Anonimizar CPF$/ })
     expect(confirmButton).toBeDisabled()
     const nameInput = screen.getByLabelText('Confirmação do nome do usuário')
@@ -201,7 +231,8 @@ describe('UsersPage F2.2', () => {
     users = [activeUser]
     setAuthSession('token', { id: 'admin-1', name: 'Admin', roles: ['admin_cliente'] })
     renderPage()
-    await user.click(await screen.findByRole('button', { name: 'Anonimizar CPF' }))
+    await screen.findByText('Clara Mendes')
+    await chooseRowAction(user, 'Ações de Clara Mendes', 'Anonimizar CPF')
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -217,7 +248,8 @@ describe('UsersPage F2.2', () => {
       throw new Error(`Unexpected POST ${url}`)
     })
     renderPage()
-    await user.click(await screen.findByRole('button', { name: 'Anonimizar CPF' }))
+    await screen.findByText('Clara Mendes')
+    await chooseRowAction(user, 'Ações de Clara Mendes', 'Anonimizar CPF')
     const nameInput = screen.getByLabelText('Confirmação do nome do usuário')
     await user.type(nameInput, 'Clara Mendes')
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^Anonimizar CPF$/ }))
@@ -233,7 +265,7 @@ describe('UsersPage F2.2', () => {
     renderPage()
 
     await screen.findByText('Clara Mendes')
-    expect(screen.queryByRole('button', { name: 'Anonimizar CPF' })).not.toBeInTheDocument()
+    expect(await listRowActions(userEvent.setup(), 'Ações de Clara Mendes')).toEqual(['Editar', 'Desativar'])
   })
 
   it('exposes the action to a Super Admin when the current user endpoint returns a tenant user', async () => {
@@ -241,6 +273,7 @@ describe('UsersPage F2.2', () => {
     setAuthSession('token', { id: 'platform-admin', name: 'Super Admin', roles: ['super_admin'] })
     renderPage()
 
-    expect(await screen.findByRole('button', { name: 'Anonimizar CPF' })).toBeInTheDocument()
+    await screen.findByText('Clara Mendes')
+    expect(await listRowActions(userEvent.setup(), 'Ações de Clara Mendes')).toContain('Anonimizar CPF')
   })
 })

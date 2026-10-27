@@ -1,4 +1,4 @@
-import { Building2, House, MoreHorizontal, Pencil, Rows3 } from 'lucide-react'
+import { Building2, House, Pencil, Rows3 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
@@ -11,6 +11,7 @@ import { hospitalSchema } from '../schemas/assets.schema'
 import type { Hospital, HospitalInput } from '../types'
 import { useHospital, useHospitals, useSaveHospital } from '../api/assets'
 import { useHospitalMetrics } from '../api/hospital-metrics'
+import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 
@@ -31,7 +32,7 @@ export function HospitalsPage() {
     {!isLoading && !isError && data.length > 0 ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{data.map((hospital) => <article key={hospital.id} className="min-h-[219px] rounded-lg border border-border bg-surface p-5">
       <div className="flex items-start justify-between gap-3">
         <button type="button" onClick={() => navigate(`/sectors?hospitalId=${encodeURIComponent(hospital.id)}`)} className="grid size-10 place-items-center rounded-md bg-bg text-primary outline-none hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary" aria-label={`Abrir setores de ${hospital.nome}`}><House size={17} /></button>
-        <details className="relative"><summary aria-label={`Ações de ${hospital.nome}`} className="grid size-8 cursor-pointer list-none place-items-center rounded-md text-text-muted hover:bg-bg hover:text-text-primary"><MoreHorizontal size={16} /></summary><div className="absolute right-0 top-9 z-10 w-40 rounded-md border border-border bg-surface p-1 shadow-xl"><button type="button" onClick={() => openEdit(hospital)} className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs hover:bg-bg"><Pencil size={13} /> Editar hospital</button><button type="button" onClick={() => navigate(`/sectors?hospitalId=${encodeURIComponent(hospital.id)}`)} className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs hover:bg-bg"><Rows3 size={13} /> Ver setores</button></div></details>
+        <RowActionsMenu label={hospital.nome} actions={[{ label: 'Editar hospital', icon: <Pencil size={14} />, onSelect: () => openEdit(hospital) }, { label: 'Ver setores', icon: <Rows3 size={14} />, to: `/sectors?hospitalId=${encodeURIComponent(hospital.id)}` }]} />
       </div>
       <button type="button" onClick={() => navigate(`/sectors?hospitalId=${encodeURIComponent(hospital.id)}`)} className="mt-4 block max-w-full truncate text-left text-base font-semibold hover:text-primary">{hospital.nome}</button>
       <p className="mt-1 truncate text-xs text-text-muted">{formatCnpj(hospital.cnpj)}</p>

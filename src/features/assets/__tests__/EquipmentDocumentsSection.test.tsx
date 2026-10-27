@@ -10,6 +10,7 @@ import { apiClient } from '@/lib/axios'
 import { chooseOption } from '@/test/select-helpers'
 import { EquipmentDocumentsSection } from '../components/EquipmentDocumentsSection'
 import { EquipmentDetailPage } from '../pages/EquipmentDetailPage'
+import { chooseRowAction, listRowActions } from '@/test/row-action-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() } }))
 vi.mock('axios', () => ({ default: { put: vi.fn() } }))
@@ -115,7 +116,8 @@ describe('EquipmentDocumentsSection', () => {
     const user = userEvent.setup()
     vi.mocked(apiClient.patch).mockResolvedValue({ data: docs[0] } as never)
     renderSection()
-    await user.click(await screen.findByRole('button', { name: 'Editar validade de nota.pdf' }))
+    await screen.findByText('nota.pdf')
+    await chooseRowAction(user, 'Ações de nota.pdf', 'Editar validade')
     await user.click(screen.getByRole('button', { name: 'Salvar validade' }))
     await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/equipamentos/equipment-1/documentos/d3/validade', { validadeAte: '2027-12-31' }))
   })
@@ -124,7 +126,8 @@ describe('EquipmentDocumentsSection', () => {
     const user = userEvent.setup()
     vi.mocked(apiClient.delete).mockResolvedValue({ status: 204 } as never)
     renderSection()
-    await user.click(await screen.findByRole('button', { name: 'Excluir laudo.pdf' }))
+    await screen.findByText('laudo.pdf')
+    await chooseRowAction(user, 'Ações de laudo.pdf', 'Excluir')
     expect(apiClient.delete).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Excluir' }))
     await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith('/equipamentos/equipment-1/documentos/d2'))
@@ -135,7 +138,8 @@ describe('EquipmentDocumentsSection', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null)
     vi.mocked(apiClient.get).mockImplementation(async (url) => ({ data: url.endsWith('/download-url') ? { url: 'https://storage.test/get?sig=2', chave: 'k', expiraEm: null } : docs }) as never)
     renderSection()
-    await user.click(await screen.findByRole('button', { name: 'Baixar manual.pdf' }))
+    await screen.findByText('manual.pdf')
+    await chooseRowAction(user, 'Ações de manual.pdf', 'Baixar')
     await waitFor(() => expect(open).toHaveBeenCalledWith('https://storage.test/get?sig=2', '_blank', 'noopener,noreferrer'))
     expect(apiClient.get).toHaveBeenCalledWith('/equipamentos/equipment-1/documentos/d4/download-url')
     open.mockRestore()
@@ -145,13 +149,12 @@ describe('EquipmentDocumentsSection', () => {
     const { unmount } = renderSection(false, false)
     await screen.findByText('manual.pdf')
     expect(screen.queryByRole('button', { name: 'Enviar documento' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Editar validade/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^Excluir/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Baixar manual.pdf' })).toBeInTheDocument()
+    expect(await listRowActions(userEvent.setup(), 'Ações de manual.pdf')).toEqual(['Baixar'])
     unmount()
     renderSection(true, false)
     expect(await screen.findByRole('button', { name: 'Enviar documento' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Editar validade/ })).not.toBeInTheDocument()
+    await screen.findByText('manual.pdf')
+    expect(await listRowActions(userEvent.setup(), 'Ações de manual.pdf')).toEqual(['Baixar'])
   })
 })
 

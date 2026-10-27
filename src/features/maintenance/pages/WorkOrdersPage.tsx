@@ -13,6 +13,7 @@ import { PageAction } from '@/components/ui/PageAction'
 import { FilterBar, FilterRange } from '@/components/ui/FilterBar'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const statusLabel: Record<string, string> = {
@@ -146,7 +147,7 @@ export function WorkOrdersPage() {
       <FilterBar label="Filtros de ordens de trabalho">
         <label className="relative min-w-0 sm:col-span-2"><span className="sr-only">Buscar ordens</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input type="search" aria-label="Buscar ordens" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, equipamento ou setor" className={`${inputClass} w-full pl-8`} /></label>
         <Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={setStatusFilter} options={[{ value: '', label: 'Todos os status' }, { value: 'AGENDADA', label: 'Agendada' }, { value: 'EM_EXECUCAO', label: 'Em execução' }, { value: 'CONCLUIDA', label: 'Concluída' }, { value: 'CANCELADA', label: 'Cancelada' }]} />
-        <label className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-bg px-3 text-xs text-text-secondary"><input type="checkbox" checked={onlyOverdue} onChange={(event) => setOnlyOverdue(event.target.checked)} className="size-4 accent-warning" />Atrasadas</label>
+        <Checkbox label="Atrasadas" checked={onlyOverdue} onCheckedChange={setOnlyOverdue} containerClassName="h-9 justify-center rounded-md border border-border bg-bg px-3 text-xs text-text-secondary" />
         <Select size="sm" aria-label="Filtrar por tipo" value={typeFilter} onChange={setTypeFilter} options={[{ value: '', label: 'Todos os tipos' }, { value: 'PREVENTIVA', label: 'Preventiva' }, { value: 'CORRETIVA', label: 'Corretiva' }]} />
         <Select size="sm" aria-label="Filtrar por técnico" value={technicianFilter} onChange={setTechnicianFilter} options={[{ value: '', label: 'Todos os técnicos' }, ...(users.data ?? []).filter((user) => user.role === 'tecnico').map((user) => ({ value: user.id, label: user.nome }))]} />
         <FilterRange from={<DatePicker size="sm" aria-label="Data inicial" value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} />} to={<DatePicker size="sm" aria-label="Data final" value={dateTo} min={dateFrom || undefined} onChange={setDateTo} />} />
