@@ -64,7 +64,7 @@ export function ReportGroups({ groups, grouping }: { groups: IndicatorGroup[]; g
               </thead>
               <tbody>
                 {sorted.map((group) => (
-                  <tr key={group.grupoId} className="border-b border-border last:border-0">
+                  <tr key={group.grupoId} className="row-divider">
                     <th scope="row" className="px-4 py-2 text-left font-medium text-text-primary">{group.grupoNome}</th>
                     {columns.map(({ key }) => <td key={key} className="px-4 py-2 text-right tabular-nums text-text-secondary">{cell(group, key)}</td>)}
                   </tr>

@@ -1,5 +1,6 @@
-import { CalendarClock, ChevronLeft, ChevronRight, Pencil, PowerOff } from 'lucide-react'
+import { CalendarClock, Pencil, PowerOff } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { WorkOrdersTabs } from '../components/WorkOrdersTabs'
@@ -7,24 +8,29 @@ import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
 import { PageAction } from '@/components/ui/PageAction'
 import { FilterBar } from '@/components/ui/FilterBar'
+import { Pagination } from '@/components/ui/Pagination'
+import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 import { useDeactivatePreventivePlan, usePlanLookups, usePreventivePlans } from '../api/preventive-plans'
 import { PreventivePlanFormModal } from '../components/PreventivePlanFormModal'
 import type { PreventivePlan } from '../types'
 import { formatPlanDate, planApiError } from '../utils/preventive-plans'
 import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
 
-const PAGE_SIZE = 20
 const statusOptions = [{ value: 'true', label: 'Ativos' }, { value: 'false', label: 'Inativos' }, { value: '', label: 'Todos os status' }]
+// Na URL: ausente = ativos (padrão), "false" = inativos, "todos" = sem filtro de status.
+const statusFromUrl = (raw: string | null) => (raw === 'false' ? 'false' : raw === 'todos' ? '' : 'true')
+const statusToUrl = (value: string) => (value === 'true' ? undefined : value === '' ? 'todos' : value)
 
 export function PreventivePlansPage() {
-  const [status, setStatus] = useState('true')
-  const [equipmentFilter, setEquipmentFilter] = useState('')
-  const [page, setPage] = useState(0)
+  const [searchParams] = useSearchParams()
+  const pagination = usePaginationParams()
+  const status = statusFromUrl(searchParams.get('status'))
+  const equipmentFilter = searchParams.get('equipamento') ?? ''
   const [formPlan, setFormPlan] = useState<PreventivePlan | 'new' | null>(null)
   const [toDeactivate, setToDeactivate] = useState<PreventivePlan | null>(null)
   const [deactivateError, setDeactivateError] = useState('')
   const lookups = usePlanLookups()
-  const plans = usePreventivePlans({ pagina: page, tamanho: PAGE_SIZE, equipamentoId: equipmentFilter || undefined, ativo: status === '' ? undefined : status === 'true' })
+  const plans = usePreventivePlans({ ...pagination.apiParams, equipamentoId: equipmentFilter || undefined, ativo: status === '' ? undefined : status === 'true' })
   const deactivate = useDeactivatePreventivePlan()
 
   const equipmentById = useMemo(() => new Map(lookups.equipment.map((item) => [item.id, item])), [lookups.equipment])
@@ -32,7 +38,7 @@ export function PreventivePlansPage() {
   const userById = useMemo(() => new Map(lookups.users.map((item) => [item.id, item])), [lookups.users])
 
   const total = plans.data?.total ?? 0
-  const lastPage = Math.max(0, Math.ceil(total / PAGE_SIZE) - 1)
+  usePageClamp(pagination, plans.data?.total, !plans.isPlaceholderData)
   const filtersActive = Boolean(equipmentFilter) || status !== 'true'
   const forbidden = plans.isError && planApiError(plans.error, '').status === 403
 
@@ -58,8 +64,8 @@ export function PreventivePlansPage() {
       </section>
 
       <FilterBar label="Filtros de planos preventivos">
-        <Select size="sm" aria-label="Filtrar por status" value={status} onChange={(next) => { setStatus(next); setPage(0) }} options={statusOptions} />
-        <Select size="sm" aria-label="Filtrar por equipamento" value={equipmentFilter} onChange={(next) => { setEquipmentFilter(next); setPage(0) }} options={[{ value: '', label: 'Todos os equipamentos' }, ...lookups.equipment.map((item) => ({ value: item.id, label: `${item.codigo} · ${item.nome}` }))]} />
+        <Select size="sm" aria-label="Filtrar por status" value={status} onChange={(next) => pagination.setFilters({ status: statusToUrl(next) })} options={statusOptions} />
+        <Select size="sm" aria-label="Filtrar por equipamento" value={equipmentFilter} onChange={(next) => pagination.setFilters({ equipamento: next })} options={[{ value: '', label: 'Todos os equipamentos' }, ...lookups.equipment.map((item) => ({ value: item.id, label: `${item.codigo} · ${item.nome}` }))]} />
       </FilterBar>
 
       {plans.isLoading && <div aria-label="Carregando planos preventivos" aria-busy="true" className="overflow-hidden rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando planos.</span><div className="mb-3 h-9 animate-pulse rounded-md bg-bg" />{Array.from({ length: 5 }, (_, index) => <div key={index} className="my-2 h-12 animate-pulse rounded-md bg-bg" />)}</div>}
@@ -75,7 +81,7 @@ export function PreventivePlansPage() {
           <h2 className="mt-3 text-sm font-semibold text-text-primary">{filtersActive ? 'Nenhum plano encontrado' : 'Nenhum plano preventivo cadastrado'}</h2>
           <p className="mt-1 text-xs leading-5 text-text-secondary">{filtersActive ? 'Ajuste os filtros para consultar outros planos.' : 'Crie um plano para que as OTs preventivas sejam geradas sozinhas a cada ciclo.'}</p>
           {filtersActive
-            ? <button type="button" onClick={() => { setStatus('true'); setEquipmentFilter(''); setPage(0) }} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Limpar filtros</button>
+            ? <button type="button" onClick={() => pagination.setFilters({ status: undefined, equipamento: undefined })} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Limpar filtros</button>
             : <div className="mt-3 flex justify-center"><PageAction onClick={() => setFormPlan('new')} fullWidthMobile>Cadastrar plano</PageAction></div>}
         </div>
       </section>}
@@ -86,7 +92,7 @@ export function PreventivePlansPage() {
           <tbody>{plans.data.items.map((plan) => {
             const equipment = equipmentById.get(plan.equipamentoId)
             const label = equipment ? `${equipment.codigo} · ${equipment.nome}` : 'equipamento'
-            return <tr key={plan.id} className="h-14 border-b border-border/70 text-xs last:border-0">
+            return <tr key={plan.id} className="row-divider h-14 text-xs">
               <td className="px-4"><span className="block font-medium text-text-primary">{equipment?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equipment?.codigo ?? ''}</span></td>
               <td className="px-4 text-text-secondary">{checklistById.get(plan.checklistId)?.nome ?? '—'}</td>
               <td className="px-4 text-text-secondary">A cada {plan.intervaloDias} {plan.intervaloDias === 1 ? 'dia' : 'dias'}<span className="block text-[10px] text-text-muted">Âncora {formatPlanDate(plan.dataAncora)}</span></td>
@@ -103,13 +109,7 @@ export function PreventivePlansPage() {
             </tr>
           })}</tbody>
         </table>
-        <nav aria-label="Paginação" className="flex items-center justify-between gap-3 border-t border-border px-4 py-2 text-xs text-text-secondary">
-          <span>{total} plano(s) · página {page + 1} de {lastPage + 1}</span>
-          <div className="flex gap-1">
-            <button type="button" aria-label="Página anterior" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))} className="grid size-8 place-items-center rounded-md hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"><ChevronLeft aria-hidden="true" size={14} /></button>
-            <button type="button" aria-label="Próxima página" disabled={page >= lastPage} onClick={() => setPage((current) => Math.min(lastPage, current + 1))} className="grid size-8 place-items-center rounded-md hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"><ChevronRight aria-hidden="true" size={14} /></button>
-          </div>
-        </nav>
+        <Pagination className="border-t border-border" page={pagination.page} size={pagination.size} total={total} onPageChange={pagination.setPage} onSizeChange={pagination.setSize} />
       </section>}
     </div>
 

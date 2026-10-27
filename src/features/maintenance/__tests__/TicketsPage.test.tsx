@@ -34,8 +34,12 @@ describe('TicketsPage', () => {
     currentTickets = tickets.map((ticket) => ({ ...ticket }))
     clearAuthSession()
     setAuthSession('token', { id: 'admin-1', name: 'Clara', roles: ['admin_cliente'], tenantId: 'tenant-1' })
-    vi.mocked(apiClient.get).mockImplementation(async (url) => {
-      if (url === '/chamados') return { data: currentTickets } as never
+    vi.mocked(apiClient.get).mockImplementation(async (url, config) => {
+      if (url === '/chamados') {
+        const status = (config?.params as { status?: string } | undefined)?.status
+        const data = status ? currentTickets.filter((ticket) => ticket.status === status) : currentTickets
+        return { data, headers: { 'x-total-count': String(data.length) } } as never
+      }
       if (url === '/equipamentos') return { data: [{ id: 'equipment-1', setorId: 'sector-1', codigo: 'EQ-01', nome: 'Bomba de infusão' }] } as never
       if (url === '/hospitais') return { data: [{ id: 'hospital-1', nome: 'Santa Casa', cnpj: '' }] } as never
       if (url === '/hospitais/hospital-1/setores') return { data: [{ id: 'sector-1', hospitalId: 'hospital-1', codigo: 'UTI', nome: 'UTI Adulto' }] } as never

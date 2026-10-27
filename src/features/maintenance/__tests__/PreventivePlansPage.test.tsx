@@ -100,7 +100,7 @@ describe('PreventivePlansPage', () => {
     const pending = rowOf('Monitor')
     expect(within(pending).getByText('Pendência')).toBeInTheDocument()
     expect(within(pending).getByText(/A cada 1 dia\b/)).toBeInTheDocument()
-    expect(listCalls()[0][1]).toEqual({ params: { pagina: 0, tamanho: 20, ativo: true } })
+    expect(listCalls()[0][1]).toEqual({ params: { pagina: 0, tamanho: 25, ativo: true } })
     expect(screen.queryByText(/dependem das Stories/)).not.toBeInTheDocument()
   })
 
@@ -142,19 +142,20 @@ describe('PreventivePlansPage', () => {
     renderPage()
     await screen.findByText('Bomba de infusão')
     await chooseOption(user, 'Filtrar por status', 'Inativos')
-    await waitFor(() => expect(listCalls().at(-1)?.[1]).toEqual({ params: { pagina: 0, tamanho: 20, ativo: false } }))
+    await waitFor(() => expect(listCalls().at(-1)?.[1]).toEqual({ params: { pagina: 0, tamanho: 25, ativo: false } }))
     await chooseOption(user, 'Filtrar por status', 'Todos os status')
     await chooseOption(user, 'Filtrar por equipamento', 'EQ-02 · Monitor')
-    await waitFor(() => expect(listCalls().at(-1)?.[1]).toEqual({ params: { pagina: 0, tamanho: 20, equipamentoId: 'equipment-2' } }))
+    await waitFor(() => expect(listCalls().at(-1)?.[1]).toEqual({ params: { pagina: 0, tamanho: 25, equipamentoId: 'equipment-2' } }))
   })
 
   it('pagina usando X-Total-Count', async () => {
     const user = userEvent.setup()
     mockApi(() => ({ data: plans, headers: { 'x-total-count': '45' } }))
     renderPage()
-    expect(await screen.findByText('45 plano(s) · página 1 de 3')).toBeInTheDocument()
+    expect(await screen.findByText('Mostrando 1–25 de 45')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Próxima página' }))
-    await waitFor(() => expect(listCalls().at(-1)?.[1]).toEqual({ params: { pagina: 1, tamanho: 20, ativo: true } }))
+    await waitFor(() => expect(listCalls().at(-1)?.[1]).toEqual({ params: { pagina: 1, tamanho: 25, ativo: true } }))
+    expect(await screen.findByText('Mostrando 26–45 de 45')).toBeInTheDocument()
   })
 
   it('cria um plano enviando o corpo exato do contrato, só com opções válidas para o hospital, e atualiza a lista', async () => {

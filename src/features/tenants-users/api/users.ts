@@ -1,10 +1,15 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
+import { usePagedQuery } from '@/lib/pagination'
 import type { Hospital } from '@/features/assets/types'
 import type { TenantUser, TenantUserInput } from '../types'
 
 const key = ['tenant-users'] as const
 export function useTenantUsers() { return useQuery({ queryKey: key, queryFn: async () => (await apiClient.get<TenantUser[]>('/users')).data }) }
+/** Usuários paginados no servidor (`pagina` 0-based, total em X-Total-Count). */
+export function useTenantUsersPage(params: { pagina: number; tamanho: number; role?: string; ativo?: boolean }) {
+  return usePagedQuery<TenantUser>([...key, 'list'], '/users', { ...params })
+}
 export function useTenantUser(id: string) { return useQuery({ queryKey: [...key, id], queryFn: async () => (await apiClient.get<TenantUser>(`/users/${id}`)).data, enabled: Boolean(id) }) }
 export function useUserHospitals(userId: string) { return useQuery({ queryKey: [...key, userId, 'hospitals'], queryFn: async () => (await apiClient.get<string[]>(`/users/${userId}/hospitais`)).data, enabled: Boolean(userId) }) }
 export function useUserHospitalLinks(users: TenantUser[]) {

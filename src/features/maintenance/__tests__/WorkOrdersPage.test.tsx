@@ -29,8 +29,9 @@ describe('WorkOrdersPage', () => {
     vi.clearAllMocks()
     clearAuthSession()
     setAuthSession('token', { id: 'admin-1', name: 'Clara', roles: ['admin_cliente'], tenantId: 'tenant-1' })
-    vi.mocked(apiClient.get).mockImplementation(async (url) => {
-      if (url === '/ordens-de-trabalho') return { data: orders } as never
+    vi.mocked(apiClient.get).mockImplementation(async (url, config) => {
+      const tipo = (config?.params as { tipo?: string } | undefined)?.tipo
+      if (url === '/ordens-de-trabalho') return { data: orders.filter((order) => !tipo || order.tipo === tipo), headers: { 'x-total-count': String(orders.filter((order) => !tipo || order.tipo === tipo).length) } } as never
       if (url === '/equipamentos') return { data: [{ id: 'equipment-1', setorId: 'sector-1', codigo: 'EQ-01', nome: 'Bomba de infusão' }] } as never
       if (url === '/hospitais') return { data: [{ id: 'hospital-1', nome: 'Santa Casa', cnpj: '' }] } as never
       if (url === '/hospitais/hospital-1/setores') return { data: [{ id: 'sector-1', hospitalId: 'hospital-1', codigo: 'UTI', nome: 'UTI Adulto' }] } as never
@@ -55,7 +56,7 @@ describe('WorkOrdersPage', () => {
     expect(screen.getByText('Atrasada')).toBeInTheDocument()
     expect(screen.getByText('Plano preventivo')).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: 'Atrasadas' }))
-    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/ordens-de-trabalho', { params: { atrasadas: true } }))
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/ordens-de-trabalho', { params: { pagina: 0, tamanho: 25, atrasadas: true } }))
     await chooseOption(user, 'Filtrar por tipo', 'Corretiva')
     expect(await screen.findByText('Nenhuma OT encontrada')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Limpar filtros' }))
