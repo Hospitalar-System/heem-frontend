@@ -31,6 +31,10 @@ const workOrders: RecordValue[] = [
   { id: 'order-demo-2', codigo: 'OT-2026-002', tipo: 'CORRETIVA', status: 'EM_EXECUCAO', equipamentoId: equipment[1].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', chamadoId: tickets[1].id, local: 'Centro Cirúrgico', dataAgendada: now, iniciadaEm: now, concluidaEm: null, atrasada: false },
 ]
 const checklists: RecordValue[] = [{ id: 'checklist-demo-1', codigo: 'CHK-ROT-01', nome: 'Inspeção funcional', descricao: 'Verificação operacional de rotina', ativo: true, quantidadeItens: 3 }]
+const preventivePlans: RecordValue[] = [
+  { id: 'plan-demo-1', equipamentoId: equipment[0].id, checklistId: 'checklist-demo-1', tecnicoPadraoId: 'user-demo-2', intervaloDias: 30, dataAncora: '2026-01-05', proximaData: nextPlanDate('2026-01-05', 30), ativo: true, pendencia: false, createdAt: now, updatedAt: now },
+  { id: 'plan-demo-2', equipamentoId: equipment[1].id, checklistId: 'checklist-demo-1', tecnicoPadraoId: 'user-demo-2', intervaloDias: 90, dataAncora: '2026-02-10', proximaData: nextPlanDate('2026-02-10', 90), ativo: true, pendencia: true, createdAt: now, updatedAt: now },
+]
 const checklistItems: RecordValue[] = [
   { id: 'check-item-demo-1', descricao: 'Inspecionar cabos e conectores', tipo: 'BOOLEANO', unidade: null, obrigatorio: true, ordem: 0 },
   { id: 'check-item-demo-2', descricao: 'Verificar alarmes sonoros', tipo: 'BOOLEANO', unidade: null, obrigatorio: true, ordem: 1 },
@@ -119,6 +123,22 @@ const demoTopEquipment = [
 ]
 
 function handleRequest(method: string, path: string, body: RecordValue, params?: Record<string, unknown>): unknown {
+  if (path === '/planos-preventivos' && method === 'get') {
+    return preventivePlans.filter((plan) => (!params?.equipamentoId || plan.equipamentoId === params.equipamentoId) && (params?.ativo === undefined || plan.ativo === params.ativo))
+  }
+  if (path === '/planos-preventivos' && method === 'post') {
+    const plan = { id: makeId('plan-demo'), ...body, proximaData: nextPlanDate(body.dataAncora as string, Number(body.intervaloDias)), ativo: true, pendencia: false, createdAt: now, updatedAt: now }
+    preventivePlans.push(plan)
+    return plan
+  }
+  const planRoute = path.match(/^\/planos-preventivos\/([^/]+)(\/desativar)?$/)
+  if (planRoute) {
+    const plan = preventivePlans.find((item) => item.id === planRoute[1])
+    if (!plan) return null
+    if (planRoute[2] && method === 'post') Object.assign(plan, { ativo: false, updatedAt: now })
+    else if (method === 'put') Object.assign(plan, body, { proximaData: nextPlanDate(body.dataAncora as string, Number(body.intervaloDias)), updatedAt: now })
+    return plan
+  }
   if (path === '/relatorios/dashboard') return dashboard
   if (path === '/relatorios/indicadores') return demoIndicators(params?.agrupar)
   if (path === '/relatorios/backlog') return demoBacklog
@@ -383,4 +403,13 @@ const dashboard = {
     abertoEm: now,
     slaStatus: ticket.slaStatus,
   })),
+}
+
+/** Primeira data >= hoje na sequência âncora + k * intervalo (mesma regra do backend, D5). */
+function nextPlanDate(anchor: string, intervalDays: number) {
+  const day = 86_400_000
+  const start = Date.parse(`${anchor}T00:00:00Z`)
+  const today = Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`)
+  if (!Number.isFinite(start) || intervalDays < 1 || start >= today) return anchor
+  return new Date(start + Math.ceil((today - start) / (intervalDays * day)) * intervalDays * day).toISOString().slice(0, 10)
 }
