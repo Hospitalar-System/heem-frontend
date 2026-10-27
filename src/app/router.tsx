@@ -12,7 +12,7 @@ const PoliticaPrivacidadePage = lazy(() => import('@/features/landing/pages/Pagi
 const TermosDeUsoPage = lazy(() => import('@/features/landing/pages/PaginasLegais').then((module) => ({ default: module.TermosDeUsoPage })))
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
 const HospitalsPage = lazy(() => import('@/features/assets/pages/HospitalsPage').then((module) => ({ default: module.HospitalsPage })))
-const SectorsPage = lazy(() => import('@/features/assets/pages/SectorsPage').then((module) => ({ default: module.SectorsPage })))
+const HospitalDetailPage = lazy(() => import('@/features/assets/pages/HospitalDetailPage').then((module) => ({ default: module.HospitalDetailPage })))
 const CategoriesPage = lazy(() => import('@/features/assets/pages/CategoriesPage').then((module) => ({ default: module.CategoriesPage })))
 const UsersPage = lazy(() => import('@/features/tenants-users/pages/UsersPage').then((module) => ({ default: module.UsersPage })))
 const ClientsPage = lazy(() => import('@/features/tenants/pages/ClientsPage').then((module) => ({ default: module.ClientsPage })))
@@ -46,7 +46,8 @@ export const routes = [
   { path: '/platform/clients', element: <RequireRole role="super_admin"><Suspense fallback={<DashboardRouteLoading />}><ClientsPage /></Suspense></RequireRole> },
   { path: '/platform/users', element: <RequireRole role="super_admin"><Suspense fallback={<DashboardRouteLoading />}><PlatformUsersPage /></Suspense></RequireRole> },
   { path: '/hospitals', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><HospitalsPage /></Suspense></RequireRole> },
-  { path: '/sectors', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><SectorsPage /></Suspense></RequireRole> },
+  { path: '/hospitals/:id', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><HospitalDetailPage /></Suspense></RequireRole> },
+  { path: '/sectors', element: <LegacyRedirect to="/hospitals" /> },
   { path: '/assets', element: <RequireRole><RequireEquipmentRole><Suspense fallback={<DashboardRouteLoading />}><AssetsPage /></Suspense></RequireEquipmentRole></RequireRole> },
   { path: '/assets/new', element: <RequireRole><RequireEquipmentRole editorOnly><Suspense fallback={<DashboardRouteLoading />}><EquipmentFormPage /></Suspense></RequireEquipmentRole></RequireRole> },
   { path: '/assets/:id/edit', element: <RequireRole><RequireEquipmentRole editorOnly><Suspense fallback={<DashboardRouteLoading />}><EquipmentFormPage /></Suspense></RequireEquipmentRole></RequireRole> },

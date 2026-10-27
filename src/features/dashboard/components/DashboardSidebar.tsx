@@ -10,7 +10,6 @@ import {
   Package,
   Settings,
   UsersRound,
-  Wrench,
 } from 'lucide-react'
 import { useSyncExternalStore } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
@@ -33,7 +32,6 @@ const navItems = [
   { label: 'Chamados de Emergência', to: '/tickets', Icon: Activity },
   { label: 'Checklists', to: '/checklists', Icon: ClipboardCheck },
   { label: 'Hospitais', to: '/hospitals', Icon: Building2 },
-  { label: 'Setores', to: '/sectors', Icon: Wrench },
   { label: 'Relatórios', to: '/reports', Icon: ChartNoAxesColumn },
   { label: 'Configurações', to: '/settings', Icon: Settings },
 ]
