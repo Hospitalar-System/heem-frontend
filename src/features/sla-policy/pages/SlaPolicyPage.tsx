@@ -100,7 +100,7 @@ export function SlaPolicyPage() {
                 const rowError = form.formState.errors.rows?.[index]
                 const label = severityLabels[item.severidade]
                 const rowPath = `rows.${index}` as const
-                return <tr key={item.severidade} className="border-b border-border/70 last:border-0">
+                return <tr key={item.severidade} className="row-divider">
                   <th scope="row" className="px-3 py-3 text-xs font-semibold text-text-primary">{label}</th>
                   <td className="px-3 py-3">
                     <div className="flex items-start gap-2">

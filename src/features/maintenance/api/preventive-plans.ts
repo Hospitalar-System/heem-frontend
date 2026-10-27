@@ -1,26 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { useEquipments, useHospitals, useSectorsForHospitals } from '@/features/assets/api/assets'
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
 import { apiClient } from '@/lib/axios'
+import { usePagedQuery } from '@/lib/pagination'
 import type { CreatePreventivePlanInput, PreventivePlan, PreventivePlanFilters, PreventivePlanPage, UpdatePreventivePlanInput } from '../types'
 import { useChecklists } from './work-orders'
 
 export const preventivePlansKey = ['preventive-plans'] as const
 
 export function usePreventivePlans(filters: PreventivePlanFilters) {
-  return useQuery({
-    queryKey: [...preventivePlansKey, filters],
-    queryFn: async (): Promise<PreventivePlanPage> => {
-      const params: Record<string, unknown> = { pagina: filters.pagina, tamanho: filters.tamanho }
-      if (filters.equipamentoId) params.equipamentoId = filters.equipamentoId
-      if (filters.ativo !== undefined) params.ativo = filters.ativo
-      const response = await apiClient.get<PreventivePlan[]>('/planos-preventivos', { params })
-      // O total vem em X-Total-Count; sem o header, cai para o tamanho da página recebida.
-      const header = Number((response.headers as Record<string, unknown> | undefined)?.['x-total-count'])
-      return { items: response.data, total: Number.isFinite(header) && header >= 0 ? header : response.data.length }
-    },
-  })
+  // O total vem em X-Total-Count; sem o header, cai para o tamanho da página recebida (ver lib/pagination).
+  return usePagedQuery<PreventivePlan>(preventivePlansKey, '/planos-preventivos', { ...filters })
 }
 
 export function useCreatePreventivePlan() {

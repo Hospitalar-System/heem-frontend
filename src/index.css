@@ -91,7 +91,16 @@
 /* Estados de linha e cartão (F6.2): repouso sem cinza, hover sutil só em clicáveis, selecionado destacado. */
 @layer components {
   .table-head {
-    @apply border-b border-border bg-surface text-[11px] font-medium text-text-secondary;
+    @apply bg-surface text-[11px] font-medium text-text-secondary;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  }
+  /* Separador de linha sutil (F6.5): token de borda em baixa opacidade, sem branco puro nos dois temas.
+     "border-border/NN" não compila aqui (as cores são var() de hex), por isso o color-mix. */
+  .row-divider {
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  }
+  .row-divider:last-child {
+    border-bottom-width: 0;
   }
   .row-idle {
     @apply border-border bg-surface;

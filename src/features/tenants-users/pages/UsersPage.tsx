@@ -3,11 +3,13 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
+import { Pagination } from '@/components/ui/Pagination'
+import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { PageAction } from '@/components/ui/PageAction'
 import { Field, Modal } from '@/components/ui/Modal'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
-import { useAnonymizeUserCpf, useDeactivateUser, useHospitalChoices, useSaveTenantUser, useSetUserHospitals, useTenantUser, useTenantUsers, useUserHospitalLinks, useUserHospitals } from '../api/users'
+import { useAnonymizeUserCpf, useDeactivateUser, useHospitalChoices, useSaveTenantUser, useSetUserHospitals, useTenantUser, useTenantUsersPage, useUserHospitalLinks, useUserHospitals } from '../api/users'
 import { userSchema } from '../schemas/user.schema'
 import type { TenantRole, TenantUser, TenantUserInput } from '../types'
 import { FormSelect } from '@/components/ui/FormSelect'
@@ -25,9 +27,14 @@ function getApiErrorMessage(error: unknown, fallback: string) {
 }
 
 export function UsersPage() {
-  const users = useTenantUsers()
+  const pagination = usePaginationParams()
+  // Paginação no servidor; a pesquisa por texto (o backend não filtra por nome/e-mail) vale para a página carregada.
+  const users = useTenantUsersPage(pagination.apiParams)
+  const items = useMemo(() => users.data?.items ?? [], [users.data])
+  const total = users.data?.total ?? 0
+  usePageClamp(pagination, users.data?.total, !users.isPlaceholderData)
   const hospitals = useHospitalChoices()
-  const linkQueries = useUserHospitalLinks(users.data ?? [])
+  const linkQueries = useUserHospitalLinks(items)
   const [query, setQuery] = useState('')
   const [modal, setModal] = useState<'create' | TenantUser | null>(null)
   const [anonymizeTarget, setAnonymizeTarget] = useState<TenantUser | null>(null)
@@ -37,7 +44,7 @@ export function UsersPage() {
   const anonymizeCpf = useAnonymizeUserCpf()
   const deactivate = useDeactivateUser()
   const allReady = linkQueries.every((item) => !item.isLoading)
-  const filtered = useMemo(() => (users.data ?? []).filter((user) => `${user.nome} ${user.email} ${roles[user.role]}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [users.data, query])
+  const filtered = useMemo(() => items.filter((user) => `${user.nome} ${user.email} ${roles[user.role]}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [items, query])
 
   async function deactivateUser(user: TenantUser) {
     try { await deactivate.mutateAsync(user.id); toast.success('Usuário desativado.') } catch (error) { toast.error(getApiErrorMessage(error, 'Não foi possível desativar o usuário.')) }
@@ -62,19 +69,23 @@ export function UsersPage() {
   }
 
   return <AdminPageShell title="Usuários & Papéis" subtitle="Acessos do tenant" action={<PageAction onClick={() => setModal('create')} collapseLabelOnMobile>Convidar usuário</PageAction>}>
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-text-secondary">{users.data?.length ?? 0} usuários</p><label className="relative block w-full sm:w-64"><Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Pesquisar usuários" placeholder="Pesquisar usuários" className={`${inputClass} pl-9`} /></label></div>
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-text-secondary">{total} usuários</p><label className="relative block w-full sm:w-64"><Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Pesquisar usuários" placeholder="Pesquisar usuários" className={`${inputClass} pl-9`} /></label></div>
     {users.isLoading ? <div aria-label="Carregando usuários" aria-busy="true" className="h-64 animate-pulse rounded-lg border border-border bg-surface" /> : null}
     {users.isError ? <section role="alert" className="rounded-lg border border-border bg-surface p-6"><p>Não foi possível carregar os usuários.</p><button type="button" onClick={() => void users.refetch()} className="mt-3 text-sm text-primary underline">Tentar novamente</button></section> : null}
-    {!users.isLoading && !users.isError && filtered.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><UserRound className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{query ? 'Nenhum resultado' : 'Nenhum usuário cadastrado'}</h2><p className="mt-1 text-sm text-text-secondary">{query ? 'Ajuste a pesquisa e tente novamente.' : 'Crie um registro de usuário para configurar o acesso ao tenant.'}</p>{!query && <div className="mt-4 flex justify-center"><PageAction onClick={() => setModal('create')} fullWidthMobile>Convidar usuário</PageAction></div>}</div></section> : null}
+    {!users.isLoading && !users.isError && filtered.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><UserRound className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{query || total > 0 ? 'Nenhum resultado' : 'Nenhum usuário cadastrado'}</h2><p className="mt-1 text-sm text-text-secondary">{query ? 'Ajuste a pesquisa e tente novamente.' : 'Crie um registro de usuário para configurar o acesso ao tenant.'}</p>{!query && <div className="mt-4 flex justify-center"><PageAction onClick={() => setModal('create')} fullWidthMobile>Convidar usuário</PageAction></div>}</div></section> : null}
     {!users.isLoading && !users.isError && filtered.length > 0 ? <div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[780px] border-collapse text-left"><thead><tr className="table-head text-[11px] uppercase">{['Nome', 'E-mail', 'Papel', 'Hospitais', 'Status', 'Ações'].map((heading) => <th key={heading} className="px-4 py-3 font-medium">{heading}</th>)}</tr></thead><tbody>{filtered.map((user) => {
-      const index = (users.data ?? []).findIndex((item) => item.id === user.id)
+      const index = items.findIndex((item) => item.id === user.id)
       const ids = linkQueries[index]?.data ?? []
       const names = ids.map((id) => hospitals.data?.find((hospital) => hospital.id === id)?.nome).filter(Boolean)
-      return <tr key={user.id} className="border-b border-border/70 last:border-0"><td className="px-4 py-3"><div className="font-medium text-sm">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm">{roles[user.role] ?? user.role}</td><td className="max-w-[240px] px-4 py-3 text-sm text-text-secondary">{linkQueries[index]?.isLoading ? 'Carregando…' : names.length ? names.join(', ') : '—'}</td><td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 text-xs ${user.ativo ? 'text-primary' : 'text-text-muted'}`}><span className={`size-1.5 rounded-full ${user.ativo ? 'bg-primary' : 'bg-text-muted'}`} />{user.ativo ? 'Ativo' : 'Inativo'}</span></td><td className="px-4 py-3"><RowActionsMenu label={user.nome} actions={userActions(user)} /></td></tr>
+      return <tr key={user.id} className="row-divider"><td className="px-4 py-3"><div className="font-medium text-sm">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm">{roles[user.role] ?? user.role}</td><td className="max-w-[240px] px-4 py-3 text-sm text-text-secondary">{linkQueries[index]?.isLoading ? 'Carregando…' : names.length ? names.join(', ') : '—'}</td><td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 text-xs ${user.ativo ? 'text-primary' : 'text-text-muted'}`}><span className={`size-1.5 rounded-full ${user.ativo ? 'bg-primary' : 'bg-text-muted'}`} />{user.ativo ? 'Ativo' : 'Inativo'}</span></td><td className="px-4 py-3"><RowActionsMenu label={user.nome} actions={userActions(user)} /></td></tr>
     })}</tbody></table></div> : null}
+    {!users.isLoading && !users.isError ? <>
+      {query && total > 0 ? <p className="mt-2 text-[11px] text-text-muted">A pesquisa filtra apenas os usuários desta página.</p> : null}
+      <Pagination className="mt-3 rounded-lg border border-border bg-surface" page={pagination.page} size={pagination.size} total={total} onPageChange={pagination.setPage} onSizeChange={pagination.setSize} />
+    </> : null}
     {modal && <UserForm user={modal === 'create' ? undefined : modal} hospitals={hospitals.data ?? []} hospitalsLoading={hospitals.isLoading} onClose={() => setModal(null)} onSaved={() => setModal(null)} />}
     {anonymizeTarget && <AnonymizeCpfModal user={anonymizeTarget} busy={anonymizeCpf.isPending} error={anonymizeError} onClose={() => setAnonymizeTarget(null)} onConfirm={() => void anonymizeUserCpf(anonymizeTarget)} />}
-    {!allReady && users.data?.length ? <span className="sr-only" aria-live="polite">Carregando vínculos de hospitais</span> : null}
+    {!allReady && items.length ? <span className="sr-only" aria-live="polite">Carregando vínculos de hospitais</span> : null}
   </AdminPageShell>
 }
 

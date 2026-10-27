@@ -94,14 +94,28 @@ export const demoApiAdapter: AxiosAdapter = async (config) => {
   const method = (config.method ?? 'get').toLowerCase()
   const path = getPath(config)
   const body = parseBody(config.data)
-  const data = handleRequest(method, path, body, config.params as Record<string, unknown> | undefined)
+  const params = config.params as Record<string, unknown> | undefined
+  const { data, headers } = paginate(method, path, handleRequest(method, path, body, params), params)
   return {
     config,
     data,
-    headers: {},
+    headers,
     status: method === 'post' ? 201 : 200,
     statusText: 'OK',
   } as AxiosResponse
+}
+
+/** Rotas que o backend pagina (`pagina` 0-based + `tamanho`, total em X-Total-Count). */
+const PAGINATED_PATHS = new Set(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos'])
+
+/** Espelha `Paginacao` do backend: o total sempre vai no header; sem `pagina`/`tamanho` a lista vem inteira. */
+function paginate(method: string, path: string, data: unknown, params?: Record<string, unknown>) {
+  if (method !== 'get' || !PAGINATED_PATHS.has(path) || !Array.isArray(data)) return { data, headers: {} as Record<string, string> }
+  const headers = { 'x-total-count': String(data.length) }
+  if (params?.pagina === undefined && params?.tamanho === undefined) return { data, headers }
+  const page = Math.max(0, Number(params?.pagina ?? 0))
+  const size = Math.min(200, Math.max(1, Number(params?.tamanho ?? 50)))
+  return { data: data.slice(page * size, page * size + size), headers }
 }
 
 const demoPreventive = { atrasadas: 2, concluidasNoPrazo: 19, concluidasForaDoPrazo: 3, percentualNoPrazo: 86.4, canceladas: 1 }
@@ -410,8 +424,13 @@ function filterCollection(collection: RecordValue[], path: string, params?: Reco
     return collection.filter((item) => sectorIds.has(item.setorId as string) && (!params.setorId || item.setorId === params.setorId))
   }
   if (path === '/ordens-de-trabalho' && params?.equipamentoId) return collection.filter((item) => item.equipamentoId === params.equipamentoId)
-  if (path === '/ordens-de-trabalho' && params?.status) return collection.filter((item) => item.status === params.status)
-  if (path === '/ordens-de-trabalho' && params?.atrasadas) return collection.filter((item) => item.atrasada)
+  if (path === '/ordens-de-trabalho' && params?.status) collection = collection.filter((item) => item.status === params.status)
+  if (path === '/ordens-de-trabalho' && params?.tipo) collection = collection.filter((item) => item.tipo === params.tipo)
+  if (path === '/chamados' && params?.status) collection = collection.filter((item) => item.status === params.status)
+  if (path === '/chamados' && params?.hospitalId) collection = collection.filter((item) => item.hospitalId === params.hospitalId)
+  if (path === '/users' && params?.role) collection = collection.filter((item) => item.role === params.role)
+  if (path === '/users' && params?.ativo !== undefined) collection = collection.filter((item) => item.ativo === params.ativo)
+  if (path === '/ordens-de-trabalho' && params?.atrasadas) collection = collection.filter((item) => item.atrasada)
   return collection
 }
 

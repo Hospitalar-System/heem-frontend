@@ -59,7 +59,7 @@ export function PreventiveCampaignsPage() {
       {campaigns.data && campaigns.data.length > 0 && <section aria-label="Lista de campanhas" className="overflow-x-auto rounded-lg border border-border bg-surface">
         <table className="w-full min-w-[900px] border-collapse text-left">
           <thead><tr className="table-head h-10 text-[10px] uppercase"><th scope="col" className="px-4">Campanha</th><th scope="col" className="px-4">Hospital</th><th scope="col" className="px-4">Status</th><th scope="col" className="px-4">Recorrência</th><th scope="col" className="px-4">Próxima data</th><th scope="col" className="px-4">Última execução</th></tr></thead>
-          <tbody>{campaigns.data.map((campaign) => <tr key={campaign.id} className="h-14 border-b border-border/70 text-xs last:border-0">
+          <tbody>{campaigns.data.map((campaign) => <tr key={campaign.id} className="h-14 row-divider text-xs">
             <td className="px-4"><Link to={`/preventive-campaigns/${campaign.id}`} className={`font-medium text-primary hover:underline ${linkClass}`}>{campaign.nome}</Link><span className="block text-[10px] text-text-muted">Início {formatPlanDate(campaign.dataInicio)}</span></td>
             <td className="px-4 text-text-secondary">{hospitalById.get(campaign.hospitalId) ?? '—'}</td>
             <td className="px-4"><CampaignStatusBadge status={campaign.status} /></td>

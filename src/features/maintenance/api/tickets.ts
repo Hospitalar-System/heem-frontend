@@ -1,13 +1,32 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
+import { fetchPaged, usePagedQuery } from '@/lib/pagination'
 import type { ChangeTicketStatusInput, CorrectiveWorkOrder, CorrectiveWorkOrderInput, Ticket, TicketHistoryEvent } from '../types'
 
 export const ticketsKey = ['tickets'] as const
 
-export function useTickets() {
+export interface TicketListFilters {
+  status?: string
+  pagina: number
+  tamanho: number
+}
+
+/** Chamados paginados no servidor (`pagina` 0-based, total em X-Total-Count); status também filtra no servidor. */
+export function useTicketsPage(filters: TicketListFilters) {
+  return usePagedQuery<Ticket>([...ticketsKey, 'list'], '/chamados', { ...filters })
+}
+
+/** Quantos chamados críticos/altos aguardam atendimento, independente da página e do filtro da lista. */
+export function useUrgentTicketCount() {
   return useQuery({
-    queryKey: ticketsKey,
-    queryFn: async () => (await apiClient.get<Ticket[]>('/chamados')).data,
+    queryKey: [...ticketsKey, 'urgent'],
+    queryFn: async () => {
+      const [open, waiting] = await Promise.all(['ABERTO', 'AGUARDANDO_PECA'].map((status) => fetchPaged<Ticket>('/chamados', { status, pagina: 0, tamanho: 200 })))
+      const unique = new Map([...open.items, ...waiting.items].map((ticket) => [ticket.id, ticket]))
+      return [...unique.values()].filter((ticket) =>
+        (ticket.severidade === 'CRITICA' || ticket.severidade === 'ALTA')
+        && ['ABERTO', 'AGUARDANDO_PECA'].includes(ticket.status.toLocaleUpperCase('pt-BR').replace('Ç', 'C'))).length
+    },
   })
 }
 
