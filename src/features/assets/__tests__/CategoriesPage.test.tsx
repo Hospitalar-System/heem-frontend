@@ -27,8 +27,8 @@ const checklists = [{ id: 'chk-1', nome: 'Inspeção de bomba', ativo: true }, {
 
 function TestProviders({ children }: PropsWithChildren) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
-  return <QueryClientProvider client={client}><MemoryRouter initialEntries={['/categories']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Routes>
-    <Route path="/categories" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied">{children}</RequireRole>} />
+  return <QueryClientProvider client={client}><MemoryRouter initialEntries={['/settings/categories']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Routes>
+    <Route path="/settings/categories" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied">{children}</RequireRole>} />
     <Route path="/access-denied" element={<h1>Acesso não permitido</h1>} />
   </Routes></MemoryRouter></QueryClientProvider>
 }
@@ -222,6 +222,6 @@ describe('CategoriesPage', () => {
     clearAuthSession()
     setAuthSession('token', { id: 'admin-1', name: 'Clara', roles: ['admin_cliente'], tenantId: 'tenant-1' })
     render(<MemoryRouter><DashboardSidebar /></MemoryRouter>)
-    expect(screen.getByRole('link', { name: 'Categorias' })).toHaveAttribute('href', '/categories')
+    expect(screen.getByRole('link', { name: 'Configurações' })).toHaveAttribute('href', '/settings')
   })
 })

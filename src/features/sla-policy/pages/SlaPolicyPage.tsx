@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
+import { SettingsNav } from '@/features/settings/components/SettingsNav'
 import { useSaveSlaPolicy, useSlaPolicy } from '../api/sla-policy'
 import { slaPolicyFormSchema } from '../types'
 import type { SlaPolicyEntry, SlaPolicyFormValues, SlaPolicyUpdateEntry } from '../types'
@@ -76,7 +77,7 @@ export function SlaPolicyPage() {
     }
   }
 
-  return <AdminPageShell title="Política de SLA" subtitle="Prazos de atendimento e resolução por severidade">
+  return <AdminPageShell tabs={<SettingsNav />} title="Política de SLA" subtitle="Prazos de atendimento e resolução por severidade">
     <div className="mx-auto max-w-5xl space-y-4">
       <section className="rounded-lg border border-border bg-surface p-4 md:p-5">
         <div className="mb-4">

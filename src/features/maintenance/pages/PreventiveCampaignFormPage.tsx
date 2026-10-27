@@ -117,7 +117,7 @@ export function PreventiveCampaignFormPage() {
     try {
       const created = await create.mutateAsync(campaignBody(form.getValues()))
       toast.success('Campanha criada. As OTs estão sendo geradas.')
-      navigate(`/preventive-campaigns/${created.id}`)
+      navigate(`/work-orders/campanhas/${created.id}`)
     } catch (error) {
       applyError(error, 'Não foi possível criar a campanha.', 'confirm')
     } finally {
@@ -127,7 +127,7 @@ export function PreventiveCampaignFormPage() {
 
   return <AdminPageShell title="Nova campanha de preventiva" subtitle="Defina o escopo, confira a prévia e gere as OTs">
     <div className="space-y-4">
-      <Link to="/preventive-campaigns" className={`inline-flex items-center gap-1.5 rounded-md text-xs font-medium text-primary hover:underline ${focusRing}`}><ArrowLeft aria-hidden="true" size={14} />Voltar às campanhas</Link>
+      <Link to="/work-orders/campanhas" className={`inline-flex items-center gap-1.5 rounded-md text-xs font-medium text-primary hover:underline ${focusRing}`}><ArrowLeft aria-hidden="true" size={14} />Voltar às campanhas</Link>
 
       {lookups.isLoading && <div aria-label="Carregando opções" aria-busy="true" className="space-y-3 rounded-lg border border-border bg-surface p-4"><div className="h-9 animate-pulse rounded-md bg-bg" /><div className="h-9 animate-pulse rounded-md bg-bg" /><div className="h-9 animate-pulse rounded-md bg-bg" /></div>}
       {lookups.isError && <p role="alert" className="rounded-lg border border-border bg-surface p-4 text-xs text-danger">Não foi possível carregar hospitais, setores, categorias ou técnicos. Recarregue a página e tente novamente.</p>}

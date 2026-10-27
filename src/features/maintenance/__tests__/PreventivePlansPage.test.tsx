@@ -326,8 +326,8 @@ describe('PreventivePlansPage acesso', () => {
   afterEach(() => clearAuthSession())
 
   it('nega outros papéis e esconde o link do menu', () => {
-    render(<MemoryRouter initialEntries={['/preventive-plans']}><Routes>
-      <Route path="/preventive-plans" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><PreventivePlansPage /></RequireRole>} />
+    render(<MemoryRouter initialEntries={['/work-orders/rotinas']}><Routes>
+      <Route path="/work-orders/rotinas" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><PreventivePlansPage /></RequireRole>} />
       <Route path="/access-denied" element={<h1>Acesso não permitido</h1>} />
     </Routes></MemoryRouter>)
     expect(screen.getByRole('heading', { name: 'Acesso não permitido' })).toBeInTheDocument()

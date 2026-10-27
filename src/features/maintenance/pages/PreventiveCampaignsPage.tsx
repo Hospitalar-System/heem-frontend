@@ -2,6 +2,7 @@ import { CalendarCheck } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
+import { WorkOrdersTabs } from '../components/WorkOrdersTabs'
 import { Select } from '@/components/ui/Select'
 import { PageAction } from '@/components/ui/PageAction'
 import { FilterBar } from '@/components/ui/FilterBar'
@@ -24,7 +25,7 @@ export function PreventiveCampaignsPage() {
   const filtersActive = Boolean(hospitalId || status)
   const forbidden = campaigns.isError && campaignApiError(campaigns.error, '').status === 403
 
-  return <AdminPageShell title="Campanha de preventiva" subtitle="Gere as OTs preventivas do parque de um hospital de uma só vez" action={<PageAction to="/preventive-campaigns/new" collapseLabelOnMobile>Nova campanha</PageAction>}>
+  return <AdminPageShell tabs={<WorkOrdersTabs />} title="Campanha de preventiva" subtitle="Gere as OTs preventivas do parque de um hospital de uma só vez" action={<PageAction to="/work-orders/campanhas/new" collapseLabelOnMobile>Nova campanha</PageAction>}>
     <div className="space-y-4">
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4 md:p-5">
         <div className="flex items-start gap-3">
@@ -52,7 +53,7 @@ export function PreventiveCampaignsPage() {
           <p className="mt-1 text-xs leading-5 text-text-secondary">{filtersActive ? 'Ajuste os filtros para consultar outras campanhas.' : 'Crie uma campanha para gerar as OTs preventivas do parque de um hospital.'}</p>
           {filtersActive
             ? <button type="button" onClick={() => { setHospitalId(''); setStatus('') }} className={`mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg ${linkClass}`}>Limpar filtros</button>
-            : <div className="mt-3 flex justify-center"><PageAction to="/preventive-campaigns/new" fullWidthMobile>Criar primeira campanha</PageAction></div>}
+            : <div className="mt-3 flex justify-center"><PageAction to="/work-orders/campanhas/new" fullWidthMobile>Criar primeira campanha</PageAction></div>}
         </div>
       </section>}
 
@@ -60,7 +61,7 @@ export function PreventiveCampaignsPage() {
         <table className="w-full min-w-[900px] border-collapse text-left">
           <thead><tr className="table-head h-10 text-[10px] uppercase"><th scope="col" className="px-4">Campanha</th><th scope="col" className="px-4">Hospital</th><th scope="col" className="px-4">Status</th><th scope="col" className="px-4">Recorrência</th><th scope="col" className="px-4">Próxima data</th><th scope="col" className="px-4">Última execução</th></tr></thead>
           <tbody>{campaigns.data.map((campaign) => <tr key={campaign.id} className="h-14 border-b border-border/70 text-xs last:border-0">
-            <td className="px-4"><Link to={`/preventive-campaigns/${campaign.id}`} className={`font-medium text-primary hover:underline ${linkClass}`}>{campaign.nome}</Link><span className="block text-[10px] text-text-muted">Início {formatPlanDate(campaign.dataInicio)}</span></td>
+            <td className="px-4"><Link to={`/work-orders/campanhas/${campaign.id}`} className={`font-medium text-primary hover:underline ${linkClass}`}>{campaign.nome}</Link><span className="block text-[10px] text-text-muted">Início {formatPlanDate(campaign.dataInicio)}</span></td>
             <td className="px-4 text-text-secondary">{hospitalById.get(campaign.hospitalId) ?? '—'}</td>
             <td className="px-4"><CampaignStatusBadge status={campaign.status} /></td>
             <td className="px-4 text-text-secondary">{recurrenceLabel(campaign.recorrencia, campaign.intervalo)}</td>

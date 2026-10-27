@@ -2,6 +2,7 @@ import { CalendarClock, ChevronLeft, ChevronRight, Pencil, PowerOff } from 'luci
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
+import { WorkOrdersTabs } from '../components/WorkOrdersTabs'
 import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
 import { PageAction } from '@/components/ui/PageAction'
@@ -47,7 +48,7 @@ export function PreventivePlansPage() {
     }
   }
 
-  return <AdminPageShell title="Planos preventivos" subtitle="Manutenção recorrente e geração programada de OTs" action={<PageAction onClick={() => setFormPlan('new')} collapseLabelOnMobile>Novo plano</PageAction>}>
+  return <AdminPageShell tabs={<WorkOrdersTabs />} title="Planos preventivos" subtitle="Manutenção recorrente e geração programada de OTs" action={<PageAction onClick={() => setFormPlan('new')} collapseLabelOnMobile>Novo plano</PageAction>}>
     <div className="space-y-4">
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4 md:p-5">
         <div className="flex items-start gap-3">

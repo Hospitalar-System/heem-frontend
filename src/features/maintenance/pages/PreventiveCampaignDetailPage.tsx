@@ -49,7 +49,7 @@ export function PreventiveCampaignDetailPage() {
 
   return <AdminPageShell title={data?.nome ?? 'Campanha de preventiva'} subtitle="Progresso da geração de OTs e situação das ordens criadas">
     <div className="space-y-4">
-      <Link to="/preventive-campaigns" className={`inline-flex items-center gap-1.5 rounded-md text-xs font-medium text-primary hover:underline ${focusRing}`}><ArrowLeft aria-hidden="true" size={14} />Voltar às campanhas</Link>
+      <Link to="/work-orders/campanhas" className={`inline-flex items-center gap-1.5 rounded-md text-xs font-medium text-primary hover:underline ${focusRing}`}><ArrowLeft aria-hidden="true" size={14} />Voltar às campanhas</Link>
 
       {campaign.isLoading && <div aria-label="Carregando campanha" aria-busy="true" className="space-y-3 rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando campanha.</span><div className="h-6 w-1/3 animate-pulse rounded-md bg-bg" />{Array.from({ length: 3 }, (_, index) => <div key={index} className="h-16 animate-pulse rounded-md bg-bg" />)}</div>}
 

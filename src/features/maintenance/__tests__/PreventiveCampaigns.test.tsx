@@ -75,11 +75,11 @@ const getCalls = (path: string) => vi.mocked(apiClient.get).mock.calls.filter(([
 const postCalls = (path: string) => vi.mocked(apiClient.post).mock.calls.filter(([url]) => url === path)
 
 function renderList() { return render(<MemoryRouter><PreventiveCampaignsPage /></MemoryRouter>, { wrapper: Providers }) }
-function renderFlow(initial = '/preventive-campaigns/new') {
+function renderFlow(initial = '/work-orders/campanhas/new') {
   return render(<MemoryRouter initialEntries={[initial]}><Routes>
-    <Route path="/preventive-campaigns" element={<PreventiveCampaignsPage />} />
-    <Route path="/preventive-campaigns/new" element={<PreventiveCampaignFormPage />} />
-    <Route path="/preventive-campaigns/:id" element={<PreventiveCampaignDetailPage />} />
+    <Route path="/work-orders/campanhas" element={<PreventiveCampaignsPage />} />
+    <Route path="/work-orders/campanhas/new" element={<PreventiveCampaignFormPage />} />
+    <Route path="/work-orders/campanhas/:id" element={<PreventiveCampaignDetailPage />} />
   </Routes></MemoryRouter>, { wrapper: Providers })
 }
 
@@ -129,7 +129,7 @@ describe('Campanha de preventiva', () => {
     it('mantém a ação principal "Nova campanha" acessível como link para o formulário', async () => {
       renderList()
       await screen.findByRole('link', { name: 'Preventiva semestral' })
-      expect(screen.getByRole('link', { name: 'Nova campanha' })).toHaveAttribute('href', '/preventive-campaigns/new')
+      expect(screen.getByRole('link', { name: 'Nova campanha' })).toHaveAttribute('href', '/work-orders/campanhas/new')
     })
 
     it('filtra por hospital e status enviando os parâmetros do contrato', async () => {
@@ -323,7 +323,7 @@ describe('Campanha de preventiva', () => {
 
   describe('painel', () => {
     it('mostra OTs por situação, pendências por motivo e a próxima execução', async () => {
-      renderFlow('/preventive-campaigns/camp-1')
+      renderFlow('/work-orders/campanhas/camp-1')
       expect(await screen.findByRole('heading', { name: 'Preventiva semestral', level: 2 })).toBeInTheDocument()
       const ots = screen.getByRole('region', { name: 'Situação das OTs' })
       expect(within(ots).getAllByRole('term').map((term) => term.textContent)).toEqual(['Total', 'Agendadas', 'Em execução', 'Concluídas', 'Canceladas', 'Atrasadas'])
@@ -344,7 +344,7 @@ describe('Campanha de preventiva', () => {
       ]
       let call = 0
       mockApi({ '/campanhas-preventivas/camp-1': () => ({ data: steps[Math.min(call++, steps.length - 1)] }) })
-      renderFlow('/preventive-campaigns/camp-1')
+      renderFlow('/work-orders/campanhas/camp-1')
       await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(/Gerando OTs… 3 de 10/))
       expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '30')
       await act(async () => { await vi.advanceTimersByTimeAsync(2100) })
@@ -360,7 +360,7 @@ describe('Campanha de preventiva', () => {
     it('para de consultar ao desmontar', async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true })
       mockApi({ '/campanhas-preventivas/camp-1': () => ({ data: { ...baseCampaign, status: 'processando' } }) })
-      const view = renderFlow('/preventive-campaigns/camp-1')
+      const view = renderFlow('/work-orders/campanhas/camp-1')
       await screen.findByRole('progressbar')
       view.unmount()
       const calls = getCalls('/campanhas-preventivas/camp-1').length
@@ -370,7 +370,7 @@ describe('Campanha de preventiva', () => {
 
     it('cancela com confirmação e aviso de que as OTs geradas são mantidas', async () => {
       const user = userEvent.setup()
-      renderFlow('/preventive-campaigns/camp-1')
+      renderFlow('/work-orders/campanhas/camp-1')
       await user.click(await screen.findByRole('button', { name: 'Cancelar campanha' }))
       const dialog = await screen.findByRole('dialog', { name: 'Cancelar campanha' })
       expect(within(dialog).getByText(/não são canceladas/)).toBeInTheDocument()
@@ -386,7 +386,7 @@ describe('Campanha de preventiva', () => {
     it('mostra erro no diálogo quando o cancelamento falha', async () => {
       const user = userEvent.setup()
       vi.mocked(apiClient.post).mockRejectedValue(httpError(500))
-      renderFlow('/preventive-campaigns/camp-1')
+      renderFlow('/work-orders/campanhas/camp-1')
       await user.click(await screen.findByRole('button', { name: 'Cancelar campanha' }))
       await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancelar campanha' }))
       expect(await screen.findByText('O servidor está indisponível no momento. Tente novamente em instantes.')).toBeInTheDocument()
@@ -395,15 +395,15 @@ describe('Campanha de preventiva', () => {
 
     it('mostra skeleton, 404 e 403', async () => {
       mockApi({ '/campanhas-preventivas/camp-1': () => new Promise(() => undefined) })
-      const { unmount: unmountFirst } = renderFlow('/preventive-campaigns/camp-1')
+      const { unmount: unmountFirst } = renderFlow('/work-orders/campanhas/camp-1')
       expect(await screen.findByLabelText('Carregando campanha')).toHaveAttribute('aria-busy', 'true')
       unmountFirst()
       mockApi({ '/campanhas-preventivas/camp-1': () => { throw httpError(404) } })
-      const { unmount: unmountSecond } = renderFlow('/preventive-campaigns/camp-1')
+      const { unmount: unmountSecond } = renderFlow('/work-orders/campanhas/camp-1')
       expect(await screen.findByText(/Campanha não encontrada/)).toBeInTheDocument()
       unmountSecond()
       mockApi({ '/campanhas-preventivas/camp-1': () => { throw httpError(403) } })
-      renderFlow('/preventive-campaigns/camp-1')
+      renderFlow('/work-orders/campanhas/camp-1')
       expect(await screen.findByText(/Acesso não permitido/)).toBeInTheDocument()
     })
   })
@@ -411,11 +411,11 @@ describe('Campanha de preventiva', () => {
   describe('acesso', () => {
     it('só o admin_cliente vê o item de menu e acessa a rota', () => {
       render(<MemoryRouter><DashboardSidebar /></MemoryRouter>)
-      expect(screen.getByRole('link', { name: 'Campanha de preventiva' })).toHaveAttribute('href', '/preventive-campaigns')
+      expect(screen.getByRole('link', { name: 'Ordens de Trabalho' })).toHaveAttribute('href', '/work-orders')
       clearAuthSession()
       setAuthSession('token', { id: 'technician-1', name: 'Rafael', roles: ['tecnico'], tenantId: 'tenant-1' })
-      render(<MemoryRouter initialEntries={['/preventive-campaigns']}><Routes>
-        <Route path="/preventive-campaigns" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><PreventiveCampaignsPage /></RequireRole>} />
+      render(<MemoryRouter initialEntries={['/work-orders/campanhas']}><Routes>
+        <Route path="/work-orders/campanhas" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><PreventiveCampaignsPage /></RequireRole>} />
         <Route path="/access-denied" element={<h1>Acesso não permitido</h1>} />
       </Routes></MemoryRouter>, { wrapper: Providers })
       expect(screen.getByRole('heading', { name: 'Acesso não permitido' })).toBeInTheDocument()
@@ -425,7 +425,7 @@ describe('Campanha de preventiva', () => {
       clearAuthSession()
       setAuthSession('token', { id: 'technician-1', name: 'Rafael', roles: ['tecnico'], tenantId: 'tenant-1' })
       render(<MemoryRouter><DashboardSidebar /></MemoryRouter>)
-      expect(screen.queryByRole('link', { name: 'Campanha de preventiva' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Campanhas' })).not.toBeInTheDocument()
     })
   })
 })
