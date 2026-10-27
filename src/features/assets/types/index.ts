@@ -120,3 +120,29 @@ export interface EquipmentFilters {
   categoriaId?: string
   semCategoria?: boolean
 }
+
+export type DocumentType = 'MANUAL' | 'CERTIFICADO_CALIBRACAO' | 'LAUDO_SEGURANCA' | 'NOTA_FISCAL' | 'OUTRO'
+
+export interface EquipmentDocument {
+  id: string
+  equipamentoId: string
+  tipoDocumento: DocumentType
+  nomeArquivo: string
+  uploadedEm: string
+  validadeAte: string | null
+  vencido: boolean
+  vencendo: boolean
+}
+
+export interface DocumentUrlResponse {
+  url: string
+  chave: string
+  expiraEm: string | null
+}
+
+export interface UploadEquipmentDocumentInput {
+  file: File
+  tipoDocumento: DocumentType
+  validadeAte: string | null
+  onProgress?: (percent: number) => void
+}
