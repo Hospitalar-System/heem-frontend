@@ -1,14 +1,14 @@
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { TicketSlaBadge } from '@/features/maintenance/components/TicketSlaBadge'
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
 import type { DashboardTicket, TicketSeverity } from '../types'
 
-const severityStyle: Record<TicketSeverity, { label: string; tone: BadgeVariant }> = {
-  critical: { label: 'Crítica', tone: 'danger' },
-  high: { label: 'Alta', tone: 'warning' },
-  medium: { label: 'Média', tone: 'neutral' },
-  low: { label: 'Baixa', tone: 'success' },
+const severityStyle: Record<TicketSeverity, { label: string; tone: StatusTone }> = {
+  critical: { label: 'Crítica', tone: 'danger' as const },
+  high: { label: 'Alta', tone: 'warning' as const },
+  medium: { label: 'Média', tone: 'neutral' as const },
+  low: { label: 'Baixa', tone: 'success' as const },
 }
 
 export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicket[]; query: string }) {
@@ -48,7 +48,7 @@ export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicke
                   </td>
                   <td className="px-4 text-text-primary">{ticket.statusLabel}</td>
                   <td className="px-4">
-                    {severity ? <Badge variant={severity.tone}>{severity.label}</Badge> : <span className="text-text-muted">—</span>}
+                    {severity ? <StatusBadge tone={severity.tone}>{severity.label}</StatusBadge> : <span className="text-text-muted">—</span>}
                   </td>
                   <td className="px-4">{ticket.slaStatus ? <TicketSlaBadge status={ticket.slaStatus} /> : <span className="text-text-muted">—</span>}</td>
                   <td className="whitespace-nowrap px-4 text-text-secondary">{ticket.openedLabel}</td>

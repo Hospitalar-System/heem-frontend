@@ -15,8 +15,9 @@ import { FilterBar, FilterRange } from '@/components/ui/FilterBar'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Checkbox } from '@/components/ui/Checkbox'
-import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Pagination } from '@/components/ui/Pagination'
+import { DataTable, type DataColumn } from '@/components/ui/DataTable'
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
@@ -30,7 +31,7 @@ function formatDate(value: string | null) {
   if (!value || !Number.isFinite(Date.parse(value))) return '—'
   return new Intl.DateTimeFormat('pt-BR').format(new Date(value))
 }
-function statusTone(value: string): BadgeVariant {
+function statusTone(value: string): StatusTone {
   const status = normalized(value)
   if (status === 'AGENDADA') return 'warning'
   if (status === 'EM_EXECUCAO' || status === 'EM_ANDAMENTO') return 'success'
@@ -145,6 +146,15 @@ export function WorkOrdersPage() {
   const filtersActive = Boolean(search || statusFilter || typeFilter || technicianFilter || dateFrom || dateTo || onlyOverdue)
   const dependencyLoading = equipment.isLoading || checklists.isLoading || users.isLoading || sectors.isLoading || hospitalLinks.some((query) => query.isLoading)
 
+  const orderColumns: DataColumn<(typeof visibleOrders)[number]>[] = [
+    { key: 'codigo', header: 'OT', cell: (order) => <><Link to={`/work-orders/${order.id}`} className="font-semibold text-text-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{order.codigo || order.id}</Link>{order.planoPreventivoId && <span className="mt-1 block text-[10px] text-text-muted">Plano preventivo</span>}</> },
+    { key: 'tipo', header: 'Tipo', cell: (order) => <span className="text-text-secondary">{normalized(order.tipo) === 'PREVENTIVA' ? 'Preventiva' : normalized(order.tipo) === 'CORRETIVA' ? 'Corretiva' : order.tipo || '—'}</span> },
+    { key: 'equipamento', header: 'Equipamento', cell: (order) => { const equip = equipmentById.get(order.equipamentoId); return <><span className="block font-medium text-text-primary">{equip?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equip?.codigo ?? ''}</span></> } },
+    { key: 'tecnico', header: 'Técnico', cell: (order) => <span className="text-text-secondary">{users.data?.find((user) => user.id === order.tecnicoId)?.nome ?? '—'}</span> },
+    { key: 'setor', header: 'Setor', cell: (order) => { const equip = equipmentById.get(order.equipamentoId); return <span className="text-text-secondary">{(equip ? sectorById.get(equip.setorId) : undefined)?.nome ?? '—'}</span> } },
+    { key: 'vencimento', header: 'Vencimento', cell: (order) => <span className="text-text-secondary">{formatDate(order.dataAgendada)}</span> },
+    { key: 'status', header: 'Status', cell: (order) => <div className="flex flex-wrap items-center gap-1.5"><StatusBadge tone={statusTone(order.status)}>{statusLabel[normalized(order.status)] ?? order.status.replaceAll('_', ' ')}</StatusBadge>{isOverdue(order) && <StatusBadge tone="danger">Atrasada</StatusBadge>}</div> },
+  ]
   return <AdminPageShell tabs={<WorkOrdersTabs />} title="Ordens de Trabalho" subtitle="Planejamento e acompanhamento da manutenção" action={<PageAction icon={ClipboardPlus} onClick={() => { resetForm(); setIsCreateOpen(true) }} collapseLabelOnMobile>Nova OT</PageAction>}>
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -160,16 +170,23 @@ export function WorkOrdersPage() {
         <FilterRange from={<DatePicker size="sm" aria-label="Data inicial" value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} />} to={<DatePicker size="sm" aria-label="Data final" value={dateTo} min={dateFrom || undefined} onChange={setDateTo} />} />
       </FilterBar>
 
-      {orders.isLoading && <div aria-label="Carregando ordens de trabalho" aria-busy="true" className="overflow-hidden rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando ordens.</span><div className="mb-3 h-9 animate-pulse rounded-md bg-bg" />{Array.from({ length: 6 }, (_, index) => <div key={index} className="my-2 h-12 animate-pulse rounded-md bg-bg" />)}</div>}
-      {orders.isError && <section role="alert" className="rounded-lg border border-border bg-surface p-8 text-center"><p className="text-sm text-text-primary">Não foi possível carregar as ordens de trabalho.</p><button type="button" onClick={() => void orders.refetch()} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Tentar novamente</button></section>}
-      {!orders.isLoading && !orders.isError && visibleOrders.length === 0 && <section className="grid min-h-56 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><h2 className="text-sm font-semibold text-text-primary">{total > 0 || filtersActive ? 'Nenhuma OT encontrada' : 'Nenhuma ordem de trabalho registrada'}</h2><p className="mt-1 text-xs text-text-secondary">{total > 0 || filtersActive ? 'Ajuste os filtros para consultar outras ordens.' : 'As ordens criadas para este tenant aparecerão aqui.'}</p>{filtersActive && <button type="button" onClick={() => { setSearch(''); setTechnicianFilter(''); setDateFrom(''); setDateTo(''); pagination.setFilters({ status: undefined, tipo: undefined, atrasadas: undefined }) }} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button>}</div></section>}
-      {!orders.isLoading && !orders.isError && visibleOrders.length > 0 && <section aria-label="Lista de ordens de trabalho" className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[860px] border-collapse text-left"><thead><tr className="table-head h-10 text-[10px] uppercase"><th scope="col" className="px-4">OT</th><th scope="col" className="px-4">Tipo</th><th scope="col" className="px-4">Equipamento</th><th scope="col" className="px-4">Técnico</th><th scope="col" className="px-4">Setor</th><th scope="col" className="px-4">Vencimento</th><th scope="col" className="px-4">Status</th></tr></thead><tbody>{visibleOrders.map((order) => {
-        const equip = equipmentById.get(order.equipamentoId)
-        const sector = equip ? sectorById.get(equip.setorId) : undefined
-        const technician = users.data?.find((user) => user.id === order.tecnicoId)
-        const openOrder = () => navigate(`/work-orders/${order.id}`)
-        return <tr key={order.id} role="link" tabIndex={0} aria-label={`Abrir ${order.codigo || order.id}`} onClick={(event) => { if (!(event.target as HTMLElement).closest('a,button')) openOrder() }} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openOrder() } }} className="h-12 row-clickable row-divider text-xs"><td className="px-4"><Link to={`/work-orders/${order.id}`} className="font-semibold text-text-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{order.codigo || order.id}</Link>{order.planoPreventivoId && <span className="mt-1 block text-[10px] text-text-muted">Plano preventivo</span>}</td><td className="px-4 text-text-secondary">{normalized(order.tipo) === 'PREVENTIVA' ? 'Preventiva' : normalized(order.tipo) === 'CORRETIVA' ? 'Corretiva' : order.tipo || '—'}</td><td className="px-4"><span className="block font-medium text-text-primary">{equip?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equip?.codigo ?? ''}</span></td><td className="px-4 text-text-secondary">{technician?.nome ?? '—'}</td><td className="px-4 text-text-secondary">{sector?.nome ?? '—'}</td><td className="px-4 text-text-secondary">{formatDate(order.dataAgendada)}</td><td className="px-4"><div className="flex flex-wrap items-center gap-1.5"><Badge variant={statusTone(order.status)}>{statusLabel[normalized(order.status)] ?? order.status.replaceAll('_', ' ')}</Badge>{isOverdue(order) && <Badge variant="danger">Atrasada</Badge>}</div></td></tr>
-      })}</tbody></table></section>}
+      <DataTable
+        label="Lista de ordens de trabalho"
+        columns={orderColumns}
+        rows={visibleOrders}
+        getRowId={(order) => order.id}
+        onRowClick={(order) => navigate(`/work-orders/${order.id}`)}
+        rowProps={(order) => ({ role: 'link', 'aria-label': `Abrir ${order.codigo || order.id}` })}
+        minWidth="860px"
+        isLoading={orders.isLoading}
+        loadingLabel="Carregando ordens de trabalho"
+        error={orders.isError ? { message: 'Não foi possível carregar as ordens de trabalho.', onRetry: () => void orders.refetch() } : null}
+        empty={{
+          title: total > 0 || filtersActive ? 'Nenhuma OT encontrada' : 'Nenhuma ordem de trabalho registrada',
+          description: total > 0 || filtersActive ? 'Ajuste os filtros para consultar outras ordens.' : 'As ordens criadas para este tenant aparecerão aqui.',
+          action: filtersActive ? <button type="button" onClick={() => { setSearch(''); setTechnicianFilter(''); setDateFrom(''); setDateTo(''); pagination.setFilters({ status: undefined, tipo: undefined, atrasadas: undefined }) }} className="rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button> : undefined,
+        }}
+      />
       {!orders.isLoading && !orders.isError && <>
         {(search || technicianFilter || dateFrom || dateTo) && total > 0 && <p className="text-[11px] text-text-muted">Busca, técnico e datas filtram apenas as OTs desta página.</p>}
         <Pagination className="rounded-lg border border-border bg-surface" page={pagination.page} size={pagination.size} total={total} onPageChange={pagination.setPage} onSizeChange={pagination.setSize} />

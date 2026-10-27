@@ -8,10 +8,11 @@ import { PageAction } from '@/components/ui/PageAction'
 import { Field, Modal } from '@/components/ui/Modal'
 import { useCreateTenant, useTenants } from '../api/tenants'
 import { createTenantSchema, normalizeCnpj } from '../schemas/tenant.schema'
-import type { CreateTenantInput } from '../types'
+import type { CreateTenantInput, Tenant } from '../types'
 import { getTenantErrorMessage } from '../utils/tenant-error'
 import { FormSelect } from '@/components/ui/FormSelect'
-import { Badge } from '@/components/ui/Badge'
+import { DataTable, type DataColumn } from '@/components/ui/DataTable'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 
@@ -34,10 +35,22 @@ export function ClientsPage() {
     <div className="mb-3 flex justify-end">
       <label className="relative block w-full sm:w-64"><Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} /><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Pesquisar clientes" placeholder="Pesquisar clientes" className={`${inputClass} pl-9`} /></label>
     </div>
-    {tenants.isLoading && <div aria-label="Carregando clientes" aria-busy="true" className="h-[290px] animate-pulse rounded-lg border border-border bg-surface" />}
-    {tenants.isError && <section role="alert" className="rounded-lg border border-border bg-surface p-6"><p>Não foi possível carregar os clientes.</p><button type="button" className="mt-3 text-sm text-primary underline" onClick={() => void tenants.refetch()}>Tentar novamente</button></section>}
-    {!tenants.isLoading && !tenants.isError && filtered.length === 0 && <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><BriefcaseBusiness className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{search ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}</h2><p className="mt-1 text-sm text-text-secondary">{search ? 'Ajuste a pesquisa e tente novamente.' : 'Cadastre um cliente para provisionar seu tenant.'}</p>{!search && <div className="mt-4 flex justify-center"><PageAction onClick={() => setCreateOpen(true)} fullWidthMobile>Cadastrar cliente</PageAction></div>}</div></section>}
-    {!tenants.isLoading && !tenants.isError && filtered.length > 0 && <div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[680px] border-collapse text-left"><thead><tr className="table-head h-12 text-[11px]"><th scope="col" className="px-5 font-medium">Cliente</th><th scope="col" className="px-5 font-medium">CNPJ</th><th scope="col" className="px-5 font-medium">Hospitais</th><th scope="col" className="px-5 font-medium">Status</th></tr></thead><tbody>{filtered.map((tenant) => <tr key={tenant.id} className="h-12 row-divider"><td className="px-5 text-sm text-text-primary">{tenant.nome}</td><td className="px-5 text-[13px] text-text-secondary">{formatCnpj(tenant.cnpj)}</td><td className="px-5 text-sm text-text-secondary" aria-label="Contagem de hospitais não disponível">—</td><td className="px-5"><Badge variant={tenant.ativo ? 'success' : 'neutral'}>{tenant.ativo ? 'Ativo' : 'Inativo'}</Badge></td></tr>)}</tbody></table></div>}
+    <DataTable
+      label="Clientes"
+      columns={tenantColumns}
+      rows={filtered}
+      getRowId={(tenant) => tenant.id}
+      minWidth="680px"
+      isLoading={tenants.isLoading}
+      loadingLabel="Carregando clientes"
+      error={tenants.isError ? { message: 'Não foi possível carregar os clientes.', onRetry: () => void tenants.refetch() } : null}
+      empty={{
+        icon: <BriefcaseBusiness />,
+        title: search ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado',
+        description: search ? 'Ajuste a pesquisa e tente novamente.' : 'Cadastre um cliente para provisionar seu tenant.',
+        action: search ? undefined : <PageAction onClick={() => setCreateOpen(true)} fullWidthMobile>Cadastrar cliente</PageAction>,
+      }}
+    />
     {createOpen && <CreateTenantModal onClose={() => setCreateOpen(false)} onCreated={() => setCreateOpen(false)} />}
   </AdminPageShell>
 }
@@ -68,5 +81,12 @@ function CreateTenantModal({ onClose, onCreated }: { onClose: () => void; onCrea
     </form>
   </Modal>
 }
+
+const tenantColumns: DataColumn<Tenant>[] = [
+  { key: 'nome', header: 'Cliente', cell: (tenant) => <span className="text-sm text-text-primary">{tenant.nome}</span> },
+  { key: 'cnpj', header: 'CNPJ', cell: (tenant) => <span className="text-[13px] text-text-secondary">{formatCnpj(tenant.cnpj)}</span> },
+  { key: 'hospitais', header: 'Hospitais', cell: () => <span className="text-sm text-text-secondary" aria-label="Contagem de hospitais não disponível">—</span> },
+  { key: 'status', header: 'Status', cell: (tenant) => <StatusBadge tone={tenant.ativo ? 'success' : 'neutral'}>{tenant.ativo ? 'Ativo' : 'Inativo'}</StatusBadge> },
+]
 
 function formatCnpj(value: string) { const digits = value.replace(/\D/g, ''); return digits.length === 14 ? digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5') : value }

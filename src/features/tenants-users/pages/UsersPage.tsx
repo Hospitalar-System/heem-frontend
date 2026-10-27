@@ -14,8 +14,9 @@ import { useAnonymizeUserCpf, useDeactivateUser, useHospitalChoices, useSaveTena
 import { userSchema } from '../schemas/user.schema'
 import type { TenantRole, TenantUser, TenantUserInput } from '../types'
 import { FormSelect } from '@/components/ui/FormSelect'
-import { RowActionsMenu, type RowAction } from '@/components/ui/RowActionsMenu'
-import { Badge } from '@/components/ui/Badge'
+import { type RowAction } from '@/components/ui/RowActionsMenu'
+import { DataTable, type DataColumn } from '@/components/ui/DataTable'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const roles: Record<TenantRole, string> = { admin_cliente: 'Admin do Cliente', tecnico: 'Técnico', interno_hospital: 'Interno do Hospital' }
@@ -70,17 +71,37 @@ export function UsersPage() {
     }
   }
 
+  const userColumns: DataColumn<TenantUser>[] = [
+    { key: 'nome', header: 'Nome', cell: (user) => <><div className="text-sm font-medium text-text-primary">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></> },
+    { key: 'email', header: 'E-mail', cell: (user) => <span className="text-sm text-text-secondary">{user.email}</span> },
+    { key: 'papel', header: 'Papel', cell: (user) => <span className="text-sm text-text-primary">{roles[user.role] ?? user.role}</span> },
+    { key: 'hospitais', header: 'Hospitais', className: 'max-w-[240px]', cell: (user) => {
+      const index = items.findIndex((item) => item.id === user.id)
+      const names = (linkQueries[index]?.data ?? []).map((id) => hospitals.data?.find((hospital) => hospital.id === id)?.nome).filter(Boolean)
+      return <span className="text-sm text-text-secondary">{linkQueries[index]?.isLoading ? 'Carregando…' : names.length ? names.join(', ') : '—'}</span>
+    } },
+    { key: 'status', header: 'Status', cell: (user) => <StatusBadge tone={user.ativo ? 'success' : 'neutral'}>{user.ativo ? 'Ativo' : 'Inativo'}</StatusBadge> },
+  ]
   return <AdminPageShell tabs={<SettingsNav />} title="Usuários & Papéis" subtitle="Acessos do tenant" action={<PageAction onClick={() => setModal('create')} collapseLabelOnMobile>Convidar usuário</PageAction>}>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-text-secondary">{total} usuários</p><label className="relative block w-full sm:w-64"><Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Pesquisar usuários" placeholder="Pesquisar usuários" className={`${inputClass} pl-9`} /></label></div>
-    {users.isLoading ? <div aria-label="Carregando usuários" aria-busy="true" className="h-64 animate-pulse rounded-lg border border-border bg-surface" /> : null}
-    {users.isError ? <section role="alert" className="rounded-lg border border-border bg-surface p-6"><p>Não foi possível carregar os usuários.</p><button type="button" onClick={() => void users.refetch()} className="mt-3 text-sm text-primary underline">Tentar novamente</button></section> : null}
-    {!users.isLoading && !users.isError && filtered.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><UserRound className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{query || total > 0 ? 'Nenhum resultado' : 'Nenhum usuário cadastrado'}</h2><p className="mt-1 text-sm text-text-secondary">{query ? 'Ajuste a pesquisa e tente novamente.' : 'Crie um registro de usuário para configurar o acesso ao tenant.'}</p>{!query && <div className="mt-4 flex justify-center"><PageAction onClick={() => setModal('create')} fullWidthMobile>Convidar usuário</PageAction></div>}</div></section> : null}
-    {!users.isLoading && !users.isError && filtered.length > 0 ? <div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[780px] border-collapse text-left"><thead><tr className="table-head text-[11px] uppercase">{['Nome', 'E-mail', 'Papel', 'Hospitais', 'Status', 'Ações'].map((heading) => <th key={heading} className="px-4 py-3 font-medium">{heading}</th>)}</tr></thead><tbody>{filtered.map((user) => {
-      const index = items.findIndex((item) => item.id === user.id)
-      const ids = linkQueries[index]?.data ?? []
-      const names = ids.map((id) => hospitals.data?.find((hospital) => hospital.id === id)?.nome).filter(Boolean)
-      return <tr key={user.id} className="row-divider"><td className="px-4 py-3"><div className="font-medium text-sm">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm">{roles[user.role] ?? user.role}</td><td className="max-w-[240px] px-4 py-3 text-sm text-text-secondary">{linkQueries[index]?.isLoading ? 'Carregando…' : names.length ? names.join(', ') : '—'}</td><td className="px-4 py-3"><Badge variant={user.ativo ? 'success' : 'neutral'}>{user.ativo ? 'Ativo' : 'Inativo'}</Badge></td><td className="px-4 py-3"><RowActionsMenu label={user.nome} actions={userActions(user)} /></td></tr>
-    })}</tbody></table></div> : null}
+    <DataTable
+      label="Usuários"
+      columns={userColumns}
+      rows={filtered}
+      getRowId={(user) => user.id}
+      rowActions={userActions}
+      rowLabel={(user) => user.nome}
+      minWidth="780px"
+      isLoading={users.isLoading}
+      loadingLabel="Carregando usuários"
+      error={users.isError ? { message: 'Não foi possível carregar os usuários.', onRetry: () => void users.refetch() } : null}
+      empty={{
+        icon: <UserRound />,
+        title: query || total > 0 ? 'Nenhum resultado' : 'Nenhum usuário cadastrado',
+        description: query ? 'Ajuste a pesquisa e tente novamente.' : 'Crie um registro de usuário para configurar o acesso ao tenant.',
+        action: query ? undefined : <PageAction onClick={() => setModal('create')} fullWidthMobile>Convidar usuário</PageAction>,
+      }}
+    />
     {!users.isLoading && !users.isError ? <>
       {query && total > 0 ? <p className="mt-2 text-[11px] text-text-muted">A pesquisa filtra apenas os usuários desta página.</p> : null}
       <Pagination className="mt-3 rounded-lg border border-border bg-surface" page={pagination.page} size={pagination.size} total={total} onPageChange={pagination.setPage} onSizeChange={pagination.setSize} />

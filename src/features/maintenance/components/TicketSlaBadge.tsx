@@ -1,4 +1,4 @@
-import { Badge, type BadgeVariant } from '@/components/ui/Badge'
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
 import type { TicketSlaStatus } from '../types'
 
 const labels: Record<Exclude<TicketSlaStatus, null>, string> = {
@@ -7,7 +7,7 @@ const labels: Record<Exclude<TicketSlaStatus, null>, string> = {
   vencido: 'SLA vencido',
 }
 
-const tones: Record<Exclude<TicketSlaStatus, null>, BadgeVariant> = {
+const tones: Record<Exclude<TicketSlaStatus, null>, StatusTone> = {
   no_prazo: 'success',
   em_risco: 'warning',
   vencido: 'danger',
@@ -15,5 +15,5 @@ const tones: Record<Exclude<TicketSlaStatus, null>, BadgeVariant> = {
 
 export function TicketSlaBadge({ status }: { status?: TicketSlaStatus }) {
   if (!status) return null
-  return <Badge variant={tones[status]}>{labels[status]}</Badge>
+  return <StatusBadge tone={tones[status]}>{labels[status]}</StatusBadge>
 }

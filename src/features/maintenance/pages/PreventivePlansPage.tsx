@@ -8,14 +8,14 @@ import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
 import { PageAction } from '@/components/ui/PageAction'
 import { FilterBar } from '@/components/ui/FilterBar'
-import { Pagination } from '@/components/ui/Pagination'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 import { useDeactivatePreventivePlan, usePlanLookups, usePreventivePlans } from '../api/preventive-plans'
 import { PreventivePlanFormModal } from '../components/PreventivePlanFormModal'
 import type { PreventivePlan } from '../types'
 import { formatPlanDate, planApiError } from '../utils/preventive-plans'
-import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
-import { Badge } from '@/components/ui/Badge'
+import { type RowAction } from '@/components/ui/RowActionsMenu'
+import { DataTable, type DataColumn } from '@/components/ui/DataTable'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 const statusOptions = [{ value: 'true', label: 'Ativos' }, { value: 'false', label: 'Inativos' }, { value: '', label: 'Todos os status' }]
 // Na URL: ausente = ativos (padrão), "false" = inativos, "todos" = sem filtro de status.
@@ -55,6 +55,25 @@ export function PreventivePlansPage() {
     }
   }
 
+  const planLabel = (plan: PreventivePlan) => {
+    const equipment = equipmentById.get(plan.equipamentoId)
+    return `plano de ${equipment ? `${equipment.codigo} · ${equipment.nome}` : 'equipamento'}`
+  }
+  const planActions = (plan: PreventivePlan): RowAction[] => plan.ativo ? [
+    { label: 'Editar plano', icon: <Pencil size={14} />, onSelect: () => setFormPlan(plan) },
+    { label: 'Desativar plano', icon: <PowerOff size={14} />, destructive: true, onSelect: () => { setDeactivateError(''); setToDeactivate(plan) } },
+  ] : []
+  const planColumns: DataColumn<PreventivePlan>[] = [
+    { key: 'equipamento', header: 'Equipamento', cell: (plan) => { const equipment = equipmentById.get(plan.equipamentoId); return <><span className="block font-medium text-text-primary">{equipment?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equipment?.codigo ?? ''}</span></> } },
+    { key: 'checklist', header: 'Checklist', cell: (plan) => <span className="text-text-secondary">{checklistById.get(plan.checklistId)?.nome ?? '—'}</span> },
+    { key: 'periodicidade', header: 'Periodicidade', cell: (plan) => <span className="text-text-secondary">A cada {plan.intervaloDias} {plan.intervaloDias === 1 ? 'dia' : 'dias'}<span className="block text-[10px] text-text-muted">Âncora {formatPlanDate(plan.dataAncora)}</span></span> },
+    { key: 'proxima', header: 'Próxima geração', cell: (plan) => <span className="text-text-secondary">{plan.ativo ? formatPlanDate(plan.proximaData) : '—'}</span> },
+    { key: 'tecnico', header: 'Técnico padrão', cell: (plan) => <span className="text-text-secondary">{userById.get(plan.tecnicoPadraoId)?.nome ?? '—'}</span> },
+    { key: 'status', header: 'Status', cell: (plan) => <div className="flex flex-wrap items-center gap-1.5">
+      <StatusBadge tone={plan.ativo ? 'success' : 'neutral'}>{plan.ativo ? 'Ativo' : 'Inativo'}</StatusBadge>
+      {plan.ativo && plan.pendencia && <span title="O técnico padrão está inativo ou desvinculado do hospital; nenhuma OT foi gerada."><StatusBadge tone="warning">Pendência</StatusBadge></span>}
+    </div> },
+  ]
   return <AdminPageShell tabs={<WorkOrdersTabs />} title="Planos preventivos" subtitle="Manutenção recorrente e geração programada de OTs" action={<PageAction onClick={() => setFormPlan('new')} collapseLabelOnMobile>Novo plano</PageAction>}>
     <div className="space-y-4">
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4 md:p-5">
@@ -69,49 +88,28 @@ export function PreventivePlansPage() {
         <Select size="sm" aria-label="Filtrar por equipamento" value={equipmentFilter} onChange={(next) => pagination.setFilters({ equipamento: next })} options={[{ value: '', label: 'Todos os equipamentos' }, ...lookups.equipment.map((item) => ({ value: item.id, label: `${item.codigo} · ${item.nome}` }))]} />
       </FilterBar>
 
-      {plans.isLoading && <div aria-label="Carregando planos preventivos" aria-busy="true" className="overflow-hidden rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando planos.</span><div className="mb-3 h-9 animate-pulse rounded-md bg-bg" />{Array.from({ length: 5 }, (_, index) => <div key={index} className="my-2 h-12 animate-pulse rounded-md bg-bg" />)}</div>}
-
-      {plans.isError && <section role="alert" className="rounded-lg border border-border bg-surface p-8 text-center">
-        <p className="text-sm text-text-primary">{forbidden ? 'Acesso não permitido. Apenas o administrador do cliente gerencia planos preventivos.' : 'Não foi possível carregar os planos preventivos.'}</p>
-        {!forbidden && <button type="button" onClick={() => void plans.refetch()} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Tentar novamente</button>}
-      </section>}
-
-      {plans.data && plans.data.items.length === 0 && <section className="grid min-h-56 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center">
-        <div className="max-w-md">
-          <span className="mx-auto grid size-10 place-items-center rounded-md bg-bg text-text-secondary"><CalendarClock aria-hidden="true" size={18} /></span>
-          <h2 className="mt-3 text-sm font-semibold text-text-primary">{filtersActive ? 'Nenhum plano encontrado' : 'Nenhum plano preventivo cadastrado'}</h2>
-          <p className="mt-1 text-xs leading-5 text-text-secondary">{filtersActive ? 'Ajuste os filtros para consultar outros planos.' : 'Crie um plano para que as OTs preventivas sejam geradas sozinhas a cada ciclo.'}</p>
-          {filtersActive
-            ? <button type="button" onClick={() => pagination.setFilters({ status: undefined, equipamento: undefined })} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Limpar filtros</button>
-            : <div className="mt-3 flex justify-center"><PageAction onClick={() => setFormPlan('new')} fullWidthMobile>Cadastrar plano</PageAction></div>}
-        </div>
-      </section>}
-
-      {plans.data && plans.data.items.length > 0 && <section aria-label="Lista de planos preventivos" className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <table className="w-full min-w-[900px] border-collapse text-left">
-          <thead><tr className="table-head h-10 text-[10px] uppercase"><th scope="col" className="px-4">Equipamento</th><th scope="col" className="px-4">Checklist</th><th scope="col" className="px-4">Periodicidade</th><th scope="col" className="px-4">Próxima geração</th><th scope="col" className="px-4">Técnico padrão</th><th scope="col" className="px-4">Status</th><th scope="col" className="px-4 text-right">Ações</th></tr></thead>
-          <tbody>{plans.data.items.map((plan) => {
-            const equipment = equipmentById.get(plan.equipamentoId)
-            const label = equipment ? `${equipment.codigo} · ${equipment.nome}` : 'equipamento'
-            return <tr key={plan.id} className="row-divider h-14 text-xs">
-              <td className="px-4"><span className="block font-medium text-text-primary">{equipment?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equipment?.codigo ?? ''}</span></td>
-              <td className="px-4 text-text-secondary">{checklistById.get(plan.checklistId)?.nome ?? '—'}</td>
-              <td className="px-4 text-text-secondary">A cada {plan.intervaloDias} {plan.intervaloDias === 1 ? 'dia' : 'dias'}<span className="block text-[10px] text-text-muted">Âncora {formatPlanDate(plan.dataAncora)}</span></td>
-              <td className="px-4 text-text-secondary">{plan.ativo ? formatPlanDate(plan.proximaData) : '—'}</td>
-              <td className="px-4 text-text-secondary">{userById.get(plan.tecnicoPadraoId)?.nome ?? '—'}</td>
-              <td className="px-4"><div className="flex flex-wrap items-center gap-1.5">
-                <Badge variant={plan.ativo ? 'success' : 'neutral'}>{plan.ativo ? 'Ativo' : 'Inativo'}</Badge>
-                {plan.ativo && plan.pendencia && <Badge variant="warning" title="O técnico padrão está inativo ou desvinculado do hospital; nenhuma OT foi gerada.">Pendência</Badge>}
-              </div></td>
-              <td className="px-4"><div className="flex justify-end">{plan.ativo ? <RowActionsMenu label={`plano de ${label}`} actions={[
-                { label: 'Editar plano', icon: <Pencil size={14} />, onSelect: () => setFormPlan(plan) },
-                { label: 'Desativar plano', icon: <PowerOff size={14} />, destructive: true, onSelect: () => { setDeactivateError(''); setToDeactivate(plan) } },
-              ]} /> : null}</div></td>
-            </tr>
-          })}</tbody>
-        </table>
-        <Pagination className="border-t border-border" page={pagination.page} size={pagination.size} total={total} onPageChange={pagination.setPage} onSizeChange={pagination.setSize} />
-      </section>}
+      <DataTable
+        label="Lista de planos preventivos"
+        columns={planColumns}
+        rows={plans.data?.items ?? []}
+        getRowId={(plan) => plan.id}
+        rowActions={planActions}
+        rowLabel={planLabel}
+        minWidth="900px"
+        rowHeightClass="h-14"
+        isLoading={plans.isLoading}
+        loadingLabel="Carregando planos preventivos"
+        error={plans.isError ? { message: forbidden ? 'Acesso não permitido. Apenas o administrador do cliente gerencia planos preventivos.' : 'Não foi possível carregar os planos preventivos.', onRetry: forbidden ? undefined : () => void plans.refetch() } : null}
+        empty={plans.data ? {
+          icon: <CalendarClock size={22} />,
+          title: filtersActive ? 'Nenhum plano encontrado' : 'Nenhum plano preventivo cadastrado',
+          description: filtersActive ? 'Ajuste os filtros para consultar outros planos.' : 'Crie um plano para que as OTs preventivas sejam geradas sozinhas a cada ciclo.',
+          action: filtersActive
+            ? <button type="button" onClick={() => pagination.setFilters({ status: undefined, equipamento: undefined })} className="rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Limpar filtros</button>
+            : <PageAction onClick={() => setFormPlan('new')} fullWidthMobile>Cadastrar plano</PageAction>,
+        } : undefined}
+        pagination={{ page: pagination.page, size: pagination.size, total, onPageChange: pagination.setPage, onSizeChange: pagination.setSize }}
+      />
     </div>
 
     {formPlan && <PreventivePlanFormModal plan={formPlan === 'new' ? undefined : formPlan} lookups={lookups} onClose={() => setFormPlan(null)} onStale={() => void plans.refetch()} />}

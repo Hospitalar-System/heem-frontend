@@ -9,7 +9,9 @@ import { Field, Modal } from '@/components/ui/Modal'
 import { useDeactivatePlatformUser, usePlatformUser, usePlatformUsers, useSavePlatformUser } from '../api/platform-users'
 import { platformUserSchema } from '../schemas/platform-user.schema'
 import type { PlatformUser, PlatformUserInput } from '../types'
-import { RowActionsMenu, type RowAction } from '@/components/ui/RowActionsMenu'
+import { type RowAction } from '@/components/ui/RowActionsMenu'
+import { DataTable, type DataColumn } from '@/components/ui/DataTable'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 
@@ -21,6 +23,12 @@ function getApiErrorMessage(error: unknown, fallback: string) {
   return fallback
 }
 
+const platformUserColumns: DataColumn<PlatformUser>[] = [
+  { key: 'nome', header: 'Nome', cell: (user) => <><div className="text-sm font-medium text-text-primary">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></> },
+  { key: 'email', header: 'E-mail', cell: (user) => <span className="text-sm text-text-secondary">{user.email}</span> },
+  { key: 'papel', header: 'Papel', cell: (user) => <span className="text-sm text-text-secondary">{user.role}</span> },
+  { key: 'status', header: 'Status', cell: (user) => <StatusBadge tone={user.ativo ? 'success' : 'neutral'}>{user.ativo ? 'Ativo' : 'Inativo'}</StatusBadge> },
+]
 export function PlatformUsersPage() {
   const users = usePlatformUsers()
   const deactivate = useDeactivatePlatformUser()
@@ -45,10 +53,24 @@ export function PlatformUsersPage() {
 
   return <AdminPageShell title="Usuários da Plataforma" subtitle="Super Admin · acessos internos" action={<PageAction onClick={() => setSelected('create')} collapseLabelOnMobile>Novo usuário</PageAction>}>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-text-secondary">{users.data?.length ?? 0} usuários internos</p><label className="relative block w-full sm:w-64"><Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Pesquisar usuários da plataforma" placeholder="Pesquisar usuários" className={`${inputClass} pl-9`} /></label></div>
-    {users.isLoading && <div aria-label="Carregando usuários da plataforma" aria-busy="true" className="h-64 animate-pulse rounded-lg border border-border bg-surface" />}
-    {users.isError && <section role="alert" className="rounded-lg border border-border bg-surface p-6"><p>Não foi possível carregar os usuários da plataforma.</p><button type="button" onClick={() => void users.refetch()} className="mt-3 text-sm text-primary underline">Tentar novamente</button></section>}
-    {!users.isLoading && !users.isError && filtered.length === 0 && <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><UserRoundCog className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{query ? 'Nenhum resultado' : 'Nenhum usuário interno cadastrado'}</h2><p className="mt-1 text-sm text-text-secondary">{query ? 'Ajuste a pesquisa e tente novamente.' : 'Cadastre um usuário para compartilhar a administração da plataforma.'}</p>{!query && <div className="mt-4 flex justify-center"><PageAction onClick={() => setSelected('create')} fullWidthMobile>Novo usuário</PageAction></div>}</div></section>}
-    {!users.isLoading && !users.isError && filtered.length > 0 && <div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[700px] border-collapse text-left"><thead><tr className="table-head text-[11px] uppercase">{['Nome', 'E-mail', 'Papel', 'Status', 'Ações'].map((heading) => <th key={heading} scope="col" className="px-4 py-3 font-medium">{heading}</th>)}</tr></thead><tbody>{filtered.map((user) => <tr key={user.id} className="row-divider"><td className="px-4 py-3"><div className="text-sm font-medium text-text-primary">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm text-text-secondary">{user.role}</td><td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 text-xs ${user.ativo ? 'text-primary' : 'text-text-muted'}`}><span className={`size-1.5 rounded-full ${user.ativo ? 'bg-primary' : 'bg-text-muted'}`} />{user.ativo ? 'Ativo' : 'Inativo'}</span></td><td className="px-4 py-3"><RowActionsMenu label={user.nome} actions={userActions(user)} /></td></tr>)}</tbody></table></div>}
+    <DataTable
+      label="Usuários da plataforma"
+      columns={platformUserColumns}
+      rows={filtered}
+      getRowId={(user) => user.id}
+      rowActions={userActions}
+      rowLabel={(user) => user.nome}
+      minWidth="700px"
+      isLoading={users.isLoading}
+      loadingLabel="Carregando usuários da plataforma"
+      error={users.isError ? { message: 'Não foi possível carregar os usuários da plataforma.', onRetry: () => void users.refetch() } : null}
+      empty={{
+        icon: <UserRoundCog />,
+        title: query ? 'Nenhum resultado' : 'Nenhum usuário interno cadastrado',
+        description: query ? 'Ajuste a pesquisa e tente novamente.' : 'Cadastre um usuário para compartilhar a administração da plataforma.',
+        action: query ? undefined : <PageAction onClick={() => setSelected('create')} fullWidthMobile>Novo usuário</PageAction>,
+      }}
+    />
     {selected && <PlatformUserForm user={selected === 'create' ? undefined : selected} onClose={() => setSelected(null)} onSaved={() => setSelected(null)} />}
   </AdminPageShell>
 }
