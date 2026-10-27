@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
+import { PageAction } from '@/components/ui/PageAction'
 import { Field, Modal } from '@/components/ui/Modal'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { useAnonymizeUserCpf, useDeactivateUser, useHospitalChoices, useSaveTenantUser, useSetUserHospitals, useTenantUser, useTenantUsers, useUserHospitalLinks, useUserHospitals } from '../api/users'
@@ -53,11 +54,11 @@ export function UsersPage() {
     }
   }
 
-  return <AdminPageShell title="Usuários & Papéis" subtitle="Acessos do tenant" action={<button type="button" onClick={() => setModal('create')} className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand"><Plus size={15} /> Convidar usuário</button>}>
+  return <AdminPageShell title="Usuários & Papéis" subtitle="Acessos do tenant" action={<PageAction onClick={() => setModal('create')} collapseLabelOnMobile>Convidar usuário</PageAction>}>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-text-secondary">{users.data?.length ?? 0} usuários</p><label className="relative block w-full sm:w-64"><Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Pesquisar usuários" placeholder="Pesquisar usuários" className={`${inputClass} pl-9`} /></label></div>
     {users.isLoading ? <div aria-label="Carregando usuários" aria-busy="true" className="h-64 animate-pulse rounded-lg border border-border bg-surface" /> : null}
     {users.isError ? <section role="alert" className="rounded-lg border border-border bg-surface p-6"><p>Não foi possível carregar os usuários.</p><button type="button" onClick={() => void users.refetch()} className="mt-3 text-sm text-primary underline">Tentar novamente</button></section> : null}
-    {!users.isLoading && !users.isError && filtered.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><UserRound className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{query ? 'Nenhum resultado' : 'Nenhum usuário cadastrado'}</h2><p className="mt-1 text-sm text-text-secondary">{query ? 'Ajuste a pesquisa e tente novamente.' : 'Crie um registro de usuário para configurar o acesso ao tenant.'}</p>{!query && <button type="button" onClick={() => setModal('create')} className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-bg-brand"><Plus size={14} /> Convidar usuário</button>}</div></section> : null}
+    {!users.isLoading && !users.isError && filtered.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><UserRound className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{query ? 'Nenhum resultado' : 'Nenhum usuário cadastrado'}</h2><p className="mt-1 text-sm text-text-secondary">{query ? 'Ajuste a pesquisa e tente novamente.' : 'Crie um registro de usuário para configurar o acesso ao tenant.'}</p>{!query && <div className="mt-4 flex justify-center"><PageAction onClick={() => setModal('create')} fullWidthMobile>Convidar usuário</PageAction></div>}</div></section> : null}
     {!users.isLoading && !users.isError && filtered.length > 0 ? <div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[780px] border-collapse text-left"><thead><tr className="table-head text-[11px] uppercase">{['Nome', 'E-mail', 'Papel', 'Hospitais', 'Status', 'Ações'].map((heading) => <th key={heading} className="px-4 py-3 font-medium">{heading}</th>)}</tr></thead><tbody>{filtered.map((user) => {
       const index = (users.data ?? []).findIndex((item) => item.id === user.id)
       const ids = linkQueries[index]?.data ?? []

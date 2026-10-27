@@ -1,6 +1,6 @@
 import { useMemo, useState, useSyncExternalStore } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { EquipmentStatusBadge } from '../components/EquipmentStatusBadge'
@@ -9,6 +9,8 @@ import { useEquipments, useHospitals, useSectorsForHospitals } from '../api/asse
 import { useCategories } from '../api/categories'
 import type { EquipmentLifecycle } from '../types'
 import { Select } from '@/components/ui/Select'
+import { PageAction } from '@/components/ui/PageAction'
+import { FilterBar } from '@/components/ui/FilterBar'
 import { addDays, formatBr, isoOf, parseDate, todayCivil } from '@/components/ui/civil-date'
 
 const inputClass = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
@@ -90,44 +92,41 @@ export function AssetsPage() {
 
   const clearFilters = () => { setHospitalId(''); setSectorId(''); setStatus(''); setCategoryFilter(''); changeDocumentsFilter(''); setSearch('') }
 
-  return <AdminPageShell title="Equipamentos" subtitle="Ativos dos hospitais do tenant">
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div className="flex min-w-0 flex-1 flex-wrap gap-2">
-        <label className="min-w-[180px] flex-1 sm:max-w-[230px]">
+  return <AdminPageShell title="Equipamentos" subtitle="Ativos dos hospitais do tenant" action={isAdmin ? <PageAction to="/assets/new" collapseLabelOnMobile>Novo equipamento</PageAction> : undefined}>
+    <FilterBar label="Filtros de equipamentos" className="mb-4">
+        <label className="min-w-0">
           <span className="sr-only">Filtrar por hospital</span>
           <Select size="sm" aria-label="Filtrar por hospital" value={hospitalId} onChange={(next) => { setHospitalId(next); setSectorId('') }} options={[{ value: '', label: 'Todos os hospitais' }, ...(hospitals.data ?? []).map((hospital) => ({ value: hospital.id, label: hospital.nome }))]} />
         </label>
-        <label className="min-w-[160px] flex-1 sm:max-w-[210px]">
+        <label className="min-w-0">
           <span className="sr-only">Filtrar por setor</span>
           <Select size="sm" aria-label="Filtrar por setor" value={sectorId} onChange={setSectorId} options={[{ value: '', label: 'Todos os setores' }, ...(sectors.data ?? []).filter((sector) => !hospitalId || sector.hospitalId === hospitalId).map((sector) => ({ value: sector.id, label: sector.nome }))]} />
         </label>
-        <label className="min-w-[160px] flex-1 sm:max-w-[190px]">
+        <label className="min-w-0">
           <span className="sr-only">Filtrar por status</span>
           <Select size="sm" aria-label="Filtrar por status" value={status} onChange={(next) => setStatus(next as EquipmentLifecycle | '')} options={lifecycleOptions} />
         </label>
-        <label className="min-w-[170px] flex-1 sm:max-w-[220px]">
+        <label className="min-w-0">
           <span className="sr-only">Filtrar por categoria</span>
           <Select size="sm" aria-label="Filtrar por categoria" value={categoryFilter} onChange={setCategoryFilter} options={[{ value: '', label: 'Todas as categorias' }, { value: NO_CATEGORY, label: 'Sem categoria' }, ...(categories.data ?? []).map((category) => ({ value: category.id, label: category.ativa ? category.nome : `${category.nome} (inativa)` }))]} />
         </label>
-        <label className="min-w-[170px] flex-1 sm:max-w-[200px]">
+        <label className="min-w-0">
           <span className="sr-only">Filtrar por documentos</span>
           <Select size="sm" aria-label="Filtrar por documentos" value={documentsFilter} onChange={(next) => changeDocumentsFilter(parseDocumentsFilter(next))} options={documentsOptions} />
         </label>
-        <label className="relative min-w-[200px] flex-1 sm:max-w-[280px]">
+        <label className="relative min-w-0 sm:col-span-2">
           <span className="sr-only">Buscar equipamento</span>
           <Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-          <input aria-label="Buscar equipamento" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, nome, modelo, série ou categoria" className={`${inputClass} pl-8`} />
+          <input aria-label="Buscar equipamento" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, nome, modelo, série…" title="Busca por código, nome, modelo, série ou categoria" className={`${inputClass} truncate pl-8`} />
         </label>
-      </div>
-      {isAdmin && <button type="button" onClick={() => navigate('/assets/new')} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg"><Plus size={14} />Novo equipamento</button>}
-    </div>
+      </FilterBar>
 
     {hospitals.isError ? <ErrorState message="Não foi possível carregar os hospitais para os filtros." onRetry={() => void hospitals.refetch()} /> : null}
     {equipment.isError ? <ErrorState message="Não foi possível carregar os equipamentos." onRetry={() => void equipment.refetch()} /> : null}
     {equipment.isLoading ? <div aria-label="Carregando equipamentos" aria-busy="true" className="space-y-2 rounded-lg border border-border bg-surface p-4">{Array.from({ length: 7 }, (_, index) => <div key={index} className="h-10 animate-pulse rounded bg-bg" />)}</div> : null}
     {!equipment.isLoading && !equipment.isError && visibleEquipment.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center">
       <div><h2 className="text-base font-semibold">{(equipment.data?.length ?? 0) === 0 ? 'Nenhum equipamento cadastrado' : 'Nenhum equipamento encontrado'}</h2><p className="mt-1 max-w-md text-sm text-text-secondary">{(equipment.data?.length ?? 0) === 0 ? 'Cadastre um equipamento para começar a acompanhar os ativos.' : 'Ajuste os filtros ou a busca para ver outros equipamentos.'}</p>
-        {(equipment.data?.length ?? 0) === 0 && isAdmin ? <button type="button" onClick={() => navigate('/assets/new')} className="mt-4 inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand"><Plus size={14} />Cadastrar equipamento</button> : null}
+        {(equipment.data?.length ?? 0) === 0 && isAdmin ? <div className="mt-4 flex justify-center"><PageAction to="/assets/new" fullWidthMobile>Cadastrar equipamento</PageAction></div> : null}
         {(equipment.data?.length ?? 0) > 0 ? <button type="button" onClick={clearFilters} className="mt-4 text-xs font-semibold text-primary underline">Limpar filtros</button> : null}
       </div>
     </section> : null}

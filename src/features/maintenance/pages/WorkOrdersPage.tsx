@@ -9,6 +9,8 @@ import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/a
 import { useChecklists, useCreatePreventiveWorkOrder, useWorkOrders } from '../api/work-orders'
 import { preventiveWorkOrderSchema } from '../schemas/work-orders.schema'
 import { Select } from '@/components/ui/Select'
+import { PageAction } from '@/components/ui/PageAction'
+import { FilterBar, FilterRange } from '@/components/ui/FilterBar'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 
@@ -135,21 +137,20 @@ export function WorkOrdersPage() {
   const filtersActive = Boolean(search || statusFilter || typeFilter || technicianFilter || dateFrom || dateTo || onlyOverdue)
   const dependencyLoading = equipment.isLoading || checklists.isLoading || users.isLoading || sectors.isLoading || hospitalLinks.some((query) => query.isLoading)
 
-  return <AdminPageShell title="Ordens de Trabalho" subtitle="Planejamento e acompanhamento da manutenção">
+  return <AdminPageShell title="Ordens de Trabalho" subtitle="Planejamento e acompanhamento da manutenção" action={<PageAction icon={ClipboardPlus} onClick={() => { resetForm(); setIsCreateOpen(true) }} collapseLabelOnMobile>Nova OT</PageAction>}>
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-text-secondary">{orders.data?.length ?? 0} ordem(ns) carregada(s)</p>
-        <button type="button" onClick={() => { resetForm(); setIsCreateOpen(true) }} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Nova OT</button>
       </div>
 
-      <section aria-label="Filtros de ordens de trabalho" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
-        <label className="relative sm:col-span-2 xl:col-span-2"><span className="sr-only">Buscar ordens</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input type="search" aria-label="Buscar ordens" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, equipamento ou setor" className={`${inputClass} w-full pl-8`} /></label>
+      <FilterBar label="Filtros de ordens de trabalho">
+        <label className="relative min-w-0 sm:col-span-2"><span className="sr-only">Buscar ordens</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input type="search" aria-label="Buscar ordens" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, equipamento ou setor" className={`${inputClass} w-full pl-8`} /></label>
         <Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={setStatusFilter} options={[{ value: '', label: 'Todos os status' }, { value: 'AGENDADA', label: 'Agendada' }, { value: 'EM_EXECUCAO', label: 'Em execução' }, { value: 'CONCLUIDA', label: 'Concluída' }, { value: 'CANCELADA', label: 'Cancelada' }]} />
         <label className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-bg px-3 text-xs text-text-secondary"><input type="checkbox" checked={onlyOverdue} onChange={(event) => setOnlyOverdue(event.target.checked)} className="size-4 accent-warning" />Atrasadas</label>
         <Select size="sm" aria-label="Filtrar por tipo" value={typeFilter} onChange={setTypeFilter} options={[{ value: '', label: 'Todos os tipos' }, { value: 'PREVENTIVA', label: 'Preventiva' }, { value: 'CORRETIVA', label: 'Corretiva' }]} />
         <Select size="sm" aria-label="Filtrar por técnico" value={technicianFilter} onChange={setTechnicianFilter} options={[{ value: '', label: 'Todos os técnicos' }, ...(users.data ?? []).filter((user) => user.role === 'tecnico').map((user) => ({ value: user.id, label: user.nome }))]} />
-        <label className="grid grid-cols-2 gap-2 sm:col-span-2 xl:col-span-6 xl:grid-cols-[auto_180px_auto_180px]"><span className="self-center text-xs text-text-secondary">Período</span><DatePicker size="sm" aria-label="Data inicial" value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} /><span className="self-center text-xs text-text-secondary">até</span><DatePicker size="sm" aria-label="Data final" value={dateTo} min={dateFrom || undefined} onChange={setDateTo} /></label>
-      </section>
+        <FilterRange from={<DatePicker size="sm" aria-label="Data inicial" value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} />} to={<DatePicker size="sm" aria-label="Data final" value={dateTo} min={dateFrom || undefined} onChange={setDateTo} />} />
+      </FilterBar>
 
       {orders.isLoading && <div aria-label="Carregando ordens de trabalho" aria-busy="true" className="overflow-hidden rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando ordens.</span><div className="mb-3 h-9 animate-pulse rounded-md bg-bg" />{Array.from({ length: 6 }, (_, index) => <div key={index} className="my-2 h-12 animate-pulse rounded-md bg-bg" />)}</div>}
       {orders.isError && <section role="alert" className="rounded-lg border border-border bg-surface p-8 text-center"><p className="text-sm text-text-primary">Não foi possível carregar as ordens de trabalho.</p><button type="button" onClick={() => void orders.refetch()} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Tentar novamente</button></section>}

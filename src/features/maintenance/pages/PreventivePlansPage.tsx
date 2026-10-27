@@ -1,9 +1,11 @@
-import { CalendarClock, ChevronLeft, ChevronRight, Pencil, Plus, PowerOff } from 'lucide-react'
+import { CalendarClock, ChevronLeft, ChevronRight, Pencil, PowerOff } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
+import { PageAction } from '@/components/ui/PageAction'
+import { FilterBar } from '@/components/ui/FilterBar'
 import { useDeactivatePreventivePlan, usePlanLookups, usePreventivePlans } from '../api/preventive-plans'
 import { PreventivePlanFormModal } from '../components/PreventivePlanFormModal'
 import type { PreventivePlan } from '../types'
@@ -44,20 +46,19 @@ export function PreventivePlansPage() {
     }
   }
 
-  return <AdminPageShell title="Planos preventivos" subtitle="Manutenção recorrente e geração programada de OTs">
+  return <AdminPageShell title="Planos preventivos" subtitle="Manutenção recorrente e geração programada de OTs" action={<PageAction onClick={() => setFormPlan('new')} collapseLabelOnMobile>Novo plano</PageAction>}>
     <div className="space-y-4">
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4 md:p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary"><CalendarClock aria-hidden="true" size={17} /></span>
           <div><h2 className="text-sm font-semibold text-text-primary">Rotinas recorrentes</h2><p className="mt-1 text-xs text-text-secondary">As ordens de trabalho de cada plano são geradas automaticamente na data prevista.</p></div>
         </div>
-        <button type="button" onClick={() => setFormPlan('new')} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Plus aria-hidden="true" size={14} />Novo plano</button>
       </section>
 
-      <section aria-label="Filtros de planos preventivos" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <FilterBar label="Filtros de planos preventivos">
         <Select size="sm" aria-label="Filtrar por status" value={status} onChange={(next) => { setStatus(next); setPage(0) }} options={statusOptions} />
         <Select size="sm" aria-label="Filtrar por equipamento" value={equipmentFilter} onChange={(next) => { setEquipmentFilter(next); setPage(0) }} options={[{ value: '', label: 'Todos os equipamentos' }, ...lookups.equipment.map((item) => ({ value: item.id, label: `${item.codigo} · ${item.nome}` }))]} />
-      </section>
+      </FilterBar>
 
       {plans.isLoading && <div aria-label="Carregando planos preventivos" aria-busy="true" className="overflow-hidden rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando planos.</span><div className="mb-3 h-9 animate-pulse rounded-md bg-bg" />{Array.from({ length: 5 }, (_, index) => <div key={index} className="my-2 h-12 animate-pulse rounded-md bg-bg" />)}</div>}
 
@@ -73,7 +74,7 @@ export function PreventivePlansPage() {
           <p className="mt-1 text-xs leading-5 text-text-secondary">{filtersActive ? 'Ajuste os filtros para consultar outros planos.' : 'Crie um plano para que as OTs preventivas sejam geradas sozinhas a cada ciclo.'}</p>
           {filtersActive
             ? <button type="button" onClick={() => { setStatus('true'); setEquipmentFilter(''); setPage(0) }} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Limpar filtros</button>
-            : <button type="button" onClick={() => setFormPlan('new')} className="mt-3 inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Plus aria-hidden="true" size={14} />Novo plano</button>}
+            : <div className="mt-3 flex justify-center"><PageAction onClick={() => setFormPlan('new')} fullWidthMobile>Cadastrar plano</PageAction></div>}
         </div>
       </section>}
 

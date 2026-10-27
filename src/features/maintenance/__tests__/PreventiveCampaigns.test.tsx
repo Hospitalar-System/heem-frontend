@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useState, type PropsWithChildren } from 'react'
+import { useState, type PropsWithChildren, type ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -18,7 +18,7 @@ import { PreventiveCampaignsPage } from '../pages/PreventiveCampaignsPage'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
-  AdminPageShell: ({ title, children }: PropsWithChildren<{ title: string }>) => <main><h1>{title}</h1>{children}</main>,
+  AdminPageShell: ({ title, action, children }: PropsWithChildren<{ title: string; action?: ReactNode }>) => <main><h1>{title}</h1>{action}{children}</main>,
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
@@ -124,6 +124,12 @@ describe('Campanha de preventiva', () => {
       expect(within(other).getByText('Falhou')).toBeInTheDocument()
       expect(within(other).getByText('Avulsa')).toBeInTheDocument()
       expect(getCalls('/campanhas-preventivas')[0][1]).toEqual({ params: {} })
+    })
+
+    it('mantém a ação principal "Nova campanha" acessível como link para o formulário', async () => {
+      renderList()
+      await screen.findByRole('link', { name: 'Preventiva semestral' })
+      expect(screen.getByRole('link', { name: 'Nova campanha' })).toHaveAttribute('href', '/preventive-campaigns/new')
     })
 
     it('filtra por hospital e status enviando os parâmetros do contrato', async () => {

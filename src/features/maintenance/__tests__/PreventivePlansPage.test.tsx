@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useState, type PropsWithChildren } from 'react'
+import { useState, type PropsWithChildren, type ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RequireRole } from '@/app/RequireRole'
@@ -14,7 +14,7 @@ import { PreventivePlansPage } from '../pages/PreventivePlansPage'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
-  AdminPageShell: ({ title, children }: PropsWithChildren<{ title: string }>) => <main><h1>{title}</h1>{children}</main>,
+  AdminPageShell: ({ title, action, children }: PropsWithChildren<{ title: string; action?: ReactNode }>) => <main><h1>{title}</h1>{action}{children}</main>,
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
@@ -114,7 +114,7 @@ describe('PreventivePlansPage', () => {
     mockApi(() => ({ data: [], headers: { 'x-total-count': '0' } }))
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Nenhum plano preventivo cadastrado' })).toBeInTheDocument()
-    await user.click(screen.getAllByRole('button', { name: 'Novo plano' })[1])
+    await user.click(screen.getByRole('button', { name: 'Cadastrar plano' }))
     expect(await screen.findByRole('dialog', { name: 'Novo plano preventivo' })).toBeInTheDocument()
   })
 

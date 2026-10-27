@@ -1,10 +1,11 @@
-import { Building2, House, MoreHorizontal, Pencil, Plus, Rows3 } from 'lucide-react'
+import { Building2, House, MoreHorizontal, Pencil, Rows3 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
+import { PageAction } from '@/components/ui/PageAction'
 import { Field, Modal } from '@/components/ui/Modal'
 import { hospitalSchema } from '../schemas/assets.schema'
 import type { Hospital, HospitalInput } from '../types'
@@ -23,13 +24,10 @@ export function HospitalsPage() {
   const startCreate = () => setCreating(true)
   const openEdit = (hospital: Hospital) => { setEditing(hospital); setEditOpen(true) }
 
-  return <AdminPageShell title="Hospitais" subtitle="Hospitais do tenant">
-    <div className="mb-5 flex justify-end">
-      <button type="button" onClick={startCreate} className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover"><Plus size={15} /> Novo hospital</button>
-    </div>
+  return <AdminPageShell title="Hospitais" subtitle="Hospitais do tenant" action={<PageAction onClick={startCreate} collapseLabelOnMobile>Novo hospital</PageAction>}>
     {isLoading ? <div aria-label="Carregando hospitais" aria-busy="true" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{[1, 2, 3].map((n) => <div key={n} className="h-44 animate-pulse rounded-lg border border-border bg-surface" />)}</div> : null}
     {isError ? <section role="alert" className="rounded-lg border border-border bg-surface p-6"><p>Não foi possível carregar os hospitais.</p><button type="button" className="mt-3 text-sm text-primary underline" onClick={() => void refetch()}>Tentar novamente</button></section> : null}
-    {!isLoading && !isError && data.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><Building2 className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">Nenhum hospital cadastrado</h2><p className="mt-1 text-sm text-text-secondary">Cadastre um hospital para organizar seus setores.</p><button type="button" onClick={startCreate} className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-bg-brand"><Plus size={14} /> Cadastrar hospital</button></div></section> : null}
+    {!isLoading && !isError && data.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><Building2 className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">Nenhum hospital cadastrado</h2><p className="mt-1 text-sm text-text-secondary">Cadastre um hospital para organizar seus setores.</p><div className="mt-4 flex justify-center"><PageAction onClick={startCreate} fullWidthMobile>Cadastrar hospital</PageAction></div></div></section> : null}
     {!isLoading && !isError && data.length > 0 ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{data.map((hospital) => <article key={hospital.id} className="min-h-[219px] rounded-lg border border-border bg-surface p-5">
       <div className="flex items-start justify-between gap-3">
         <button type="button" onClick={() => navigate(`/sectors?hospitalId=${encodeURIComponent(hospital.id)}`)} className="grid size-10 place-items-center rounded-md bg-bg text-primary outline-none hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary" aria-label={`Abrir setores de ${hospital.nome}`}><House size={17} /></button>

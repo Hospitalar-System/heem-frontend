@@ -10,6 +10,7 @@ import { useCreateCorrectiveWorkOrder, useTickets } from '../api/tickets'
 import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import type { Ticket, TicketSeverity, TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
+import { FilterBar } from '@/components/ui/FilterBar'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const severityOrder: Record<string, number> = { CRITICA: 0, ALTA: 1, MEDIA: 2, BAIXA: 3 }
@@ -108,14 +109,14 @@ export function TicketsPage() {
         <p className="text-sm font-medium text-text-primary">{urgentOpenCount} chamado{urgentOpenCount === 1 ? '' : 's'} crítico{urgentOpenCount === 1 ? '' : 's'} ou alto{urgentOpenCount === 1 ? '' : 's'} aguardando atendimento</p>
       </section>}
 
-      <section aria-label="Filtros de chamados" className="flex flex-wrap gap-2">
-        <label className="relative min-w-[220px] flex-1 sm:max-w-sm">
+      <FilterBar label="Filtros de chamados">
+        <label className="relative min-w-0 sm:col-span-2">
           <span className="sr-only">Buscar chamados</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input type="search" aria-label="Buscar chamados" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Chamado, equipamento ou hospital" className={`${inputClass} w-full pl-8`} />
         </label>
-        <label><span className="sr-only">Filtrar por status</span><Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={setStatusFilter} options={[{ value: '', label: 'Todos os status' }, { value: 'ABERTO', label: 'Aberto' }, { value: 'EM_ANDAMENTO', label: 'Em andamento' }, { value: 'AGUARDANDO_PECA', label: 'Aguardando peça' }, { value: 'RESOLVIDO', label: 'Resolvido' }, { value: 'CANCELADO', label: 'Cancelado' }]} /></label>
-        <label><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={setSeverityFilter} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
-      </section>
+        <label className="min-w-0"><span className="sr-only">Filtrar por status</span><Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={setStatusFilter} options={[{ value: '', label: 'Todos os status' }, { value: 'ABERTO', label: 'Aberto' }, { value: 'EM_ANDAMENTO', label: 'Em andamento' }, { value: 'AGUARDANDO_PECA', label: 'Aguardando peça' }, { value: 'RESOLVIDO', label: 'Resolvido' }, { value: 'CANCELADO', label: 'Cancelado' }]} /></label>
+        <label className="min-w-0"><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={setSeverityFilter} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
+      </FilterBar>
 
       {tickets.isLoading ? <div aria-label="Carregando chamados" aria-busy="true" className="space-y-2 rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando chamados.</span>{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-24 animate-pulse rounded-md bg-bg" />)}</div> : null}
       {tickets.isError ? <section role="alert" className="rounded-lg border border-border bg-surface p-8 text-center"><p className="text-sm text-text-primary">Não foi possível carregar os chamados.</p><button type="button" onClick={() => void tickets.refetch()} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Tentar novamente</button></section> : null}

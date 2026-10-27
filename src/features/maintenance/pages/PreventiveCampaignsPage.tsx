@@ -1,8 +1,10 @@
-import { CalendarCheck, Plus } from 'lucide-react'
+import { CalendarCheck } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { Select } from '@/components/ui/Select'
+import { PageAction } from '@/components/ui/PageAction'
+import { FilterBar } from '@/components/ui/FilterBar'
 import { useHospitals } from '@/features/assets/api/assets'
 import { useCampaigns } from '../api/preventive-campaigns'
 import { CampaignStatusBadge } from '../components/CampaignParts'
@@ -12,7 +14,6 @@ import { campaignApiError, campaignStatusLabels, recurrenceLabel } from '../util
 
 const statusOptions = [{ value: '', label: 'Todos os status' }, ...(Object.keys(campaignStatusLabels) as CampaignStatus[]).map((value) => ({ value, label: campaignStatusLabels[value] }))]
 const linkClass = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
-const primaryLink = `inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover ${linkClass}`
 
 export function PreventiveCampaignsPage() {
   const [hospitalId, setHospitalId] = useState('')
@@ -23,20 +24,19 @@ export function PreventiveCampaignsPage() {
   const filtersActive = Boolean(hospitalId || status)
   const forbidden = campaigns.isError && campaignApiError(campaigns.error, '').status === 403
 
-  return <AdminPageShell title="Campanha de preventiva" subtitle="Gere as OTs preventivas do parque de um hospital de uma só vez">
+  return <AdminPageShell title="Campanha de preventiva" subtitle="Gere as OTs preventivas do parque de um hospital de uma só vez" action={<PageAction to="/preventive-campaigns/new" collapseLabelOnMobile>Nova campanha</PageAction>}>
     <div className="space-y-4">
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-4 md:p-5">
         <div className="flex items-start gap-3">
           <span className="grid size-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary"><CalendarCheck aria-hidden="true" size={17} /></span>
           <div><h2 className="text-sm font-semibold text-text-primary">Campanhas do parque</h2><p className="mt-1 text-xs text-text-secondary">Escolha hospital, setores e categorias; confira a prévia e gere as OTs com atribuição automática.</p></div>
         </div>
-        <Link to="/preventive-campaigns/new" className={primaryLink}><Plus aria-hidden="true" size={14} />Nova campanha</Link>
       </section>
 
-      <section aria-label="Filtros de campanhas" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <FilterBar label="Filtros de campanhas">
         <Select size="sm" aria-label="Filtrar por hospital" value={hospitalId} onChange={setHospitalId} options={[{ value: '', label: 'Todos os hospitais' }, ...(hospitals.data ?? []).map((item) => ({ value: item.id, label: item.nome }))]} />
         <Select size="sm" aria-label="Filtrar por status" value={status} onChange={setStatus} options={statusOptions} />
-      </section>
+      </FilterBar>
 
       {campaigns.isLoading && <div aria-label="Carregando campanhas" aria-busy="true" className="overflow-hidden rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando campanhas.</span><div className="mb-3 h-9 animate-pulse rounded-md bg-bg" />{Array.from({ length: 4 }, (_, index) => <div key={index} className="my-2 h-12 animate-pulse rounded-md bg-bg" />)}</div>}
 
@@ -52,7 +52,7 @@ export function PreventiveCampaignsPage() {
           <p className="mt-1 text-xs leading-5 text-text-secondary">{filtersActive ? 'Ajuste os filtros para consultar outras campanhas.' : 'Crie uma campanha para gerar as OTs preventivas do parque de um hospital.'}</p>
           {filtersActive
             ? <button type="button" onClick={() => { setHospitalId(''); setStatus('') }} className={`mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg ${linkClass}`}>Limpar filtros</button>
-            : <Link to="/preventive-campaigns/new" className={`mt-3 ${primaryLink}`}><Plus aria-hidden="true" size={14} />Nova campanha</Link>}
+            : <div className="mt-3 flex justify-center"><PageAction to="/preventive-campaigns/new" fullWidthMobile>Criar primeira campanha</PageAction></div>}
         </div>
       </section>}
 
