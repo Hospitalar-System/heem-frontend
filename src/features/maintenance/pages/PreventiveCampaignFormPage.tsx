@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowLeft } from 'lucide-react'
 import { useId, useRef, useState, type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { FormDatePicker } from '@/components/ui/FormDatePicker'
@@ -70,9 +70,13 @@ export function PreventiveCampaignFormPage() {
   const [formError, setFormError] = useState('')
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState('')
+  // Escopo pré-selecionado pela tela de Rotinas (`?hospitalId=...&setorId=...`).
+  const [searchParams] = useSearchParams()
+  const presetHospitalId = searchParams.get('hospitalId') ?? ''
+  const presetSectorId = presetHospitalId ? searchParams.get('setorId') : null
   const form = useForm<CampaignFormValues>({
     resolver: zodResolver(campaignFormSchema),
-    defaultValues: { hospitalId: '', nome: '', setorIds: [], categoriaIds: [], dataInicio: '', dataFim: '', recorrencia: 'avulsa', intervalo: '', modoAtribuicao: 'equilibrado', tecnicoId: '' },
+    defaultValues: { hospitalId: presetHospitalId, nome: '', setorIds: presetSectorId ? [presetSectorId] : [], categoriaIds: [], dataInicio: '', dataFim: '', recorrencia: 'avulsa', intervalo: '', modoAtribuicao: 'equilibrado', tecnicoId: '' },
   })
   const { errors } = form.formState
   const values = form.watch()

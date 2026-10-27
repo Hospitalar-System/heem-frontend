@@ -13,7 +13,7 @@ vi.mock('@/features/tenants-users/pages/UsersPage', () => ({ UsersPage: () => <p
 vi.mock('@/features/platform-users/pages/PlatformUsersPage', () => ({ PlatformUsersPage: () => <p>pagina-usuarios-plataforma</p> }))
 vi.mock('@/features/maintenance/pages/WorkOrdersPage', () => ({ WorkOrdersPage: () => <p>pagina-ots</p> }))
 vi.mock('@/features/maintenance/pages/WorkOrderDetailPage', () => ({ WorkOrderDetailPage: () => <p>pagina-detalhe-ot</p> }))
-vi.mock('@/features/maintenance/pages/PreventivePlansPage', () => ({ PreventivePlansPage: () => <p>pagina-rotinas</p> }))
+vi.mock('@/features/maintenance/pages/PreventiveRoutinesPage', () => ({ PreventiveRoutinesPage: () => <p>pagina-rotinas</p> }))
 vi.mock('@/features/maintenance/pages/PreventiveCampaignsPage', () => ({ PreventiveCampaignsPage: () => <p>pagina-campanhas</p> }))
 vi.mock('@/features/maintenance/pages/PreventiveCampaignFormPage', () => ({ PreventiveCampaignFormPage: () => <p>pagina-nova-campanha</p> }))
 vi.mock('@/features/maintenance/pages/PreventiveCampaignDetailPage', () => ({ PreventiveCampaignDetailPage: () => <p>pagina-campanha</p> }))
