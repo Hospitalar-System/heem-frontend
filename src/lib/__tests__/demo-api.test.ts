@@ -83,4 +83,21 @@ describe('modo de demonstração', () => {
     const inactive = await apiClient.get('/planos-preventivos', { params: { ativo: false } })
     expect(inactive.data.map((plan: { id: string }) => plan.id)).toContain(created.data.id)
   })
+
+  it('simula a importação em lote com progresso em consultas sucessivas e erros por linha', async () => {
+    const form = new FormData()
+    form.append('tipo', 'equipamentos')
+    form.append('arquivo', new File(['codigo;nome'], 'modelo.csv', { type: 'text/csv' }))
+    const started = (await apiClient.post('/importacoes', form)).data as { id: string; status: string; processadas: number }
+    expect(started).toEqual(expect.objectContaining({ tipo: 'equipamentos', status: 'pendente', processadas: 0 }))
+
+    const first = (await apiClient.get(`/importacoes/${started.id}`)).data as { status: string; processadas: number; total: number }
+    expect(first.status).toBe('processando')
+    expect(first.processadas).toBeLessThan(first.total)
+    await apiClient.get(`/importacoes/${started.id}`)
+    const last = (await apiClient.get(`/importacoes/${started.id}`)).data as { status: string; processadas: number; total: number; comErro: number; erros: Array<{ code: string }> }
+    expect(last).toEqual(expect.objectContaining({ status: 'concluido', processadas: last.total }))
+    expect(last.comErro).toBe(last.erros.length)
+    expect(last.erros.map((error) => error.code)).toContain('CATEGORIA_NAO_ENCONTRADA')
+  })
 })
