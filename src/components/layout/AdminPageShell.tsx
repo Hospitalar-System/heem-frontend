@@ -5,7 +5,7 @@ import { DashboardSidebar } from '@/features/dashboard/components/DashboardSideb
 import { NotificationsPopover } from '@/features/dashboard/components/NotificationsPopover'
 import { isDemoMode } from '@/lib/demo-mode'
 
-export function AdminPageShell({ title, subtitle, action, children }: PropsWithChildren<{ title: string; subtitle?: string; action?: ReactNode }>) {
+export function AdminPageShell({ title, subtitle, action, tabs, children }: PropsWithChildren<{ title: string; subtitle?: string; action?: ReactNode; tabs?: ReactNode }>) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   return (
@@ -29,7 +29,7 @@ export function AdminPageShell({ title, subtitle, action, children }: PropsWithC
             <NotificationsPopover /><ThemeSwitcher />{action}
           </div>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6 xl:px-8 xl:py-7">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6 xl:px-8 xl:py-7">{tabs}{children}</div>
       </section>
     </main>
   )

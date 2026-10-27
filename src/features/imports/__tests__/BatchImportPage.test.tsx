@@ -14,8 +14,8 @@ vi.mock('@/components/layout/AdminPageShell', () => ({
 }))
 
 function renderPage() {
-  return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter initialEntries={['/imports']}><Routes>
-    <Route path="/imports" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><BatchImportPage /></RequireRole>} />
+  return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter initialEntries={['/settings/imports']}><Routes>
+    <Route path="/settings/imports" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><BatchImportPage /></RequireRole>} />
     <Route path="/access-denied" element={<h1>Acesso não permitido</h1>} />
   </Routes></MemoryRouter></QueryClientProvider>)
 }

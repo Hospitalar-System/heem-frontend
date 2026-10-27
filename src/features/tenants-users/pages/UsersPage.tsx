@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Pagination } from '@/components/ui/Pagination'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
+import { SettingsNav } from '@/features/settings/components/SettingsNav'
 import { PageAction } from '@/components/ui/PageAction'
 import { Field, Modal } from '@/components/ui/Modal'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
@@ -68,7 +69,7 @@ export function UsersPage() {
     }
   }
 
-  return <AdminPageShell title="Usuários & Papéis" subtitle="Acessos do tenant" action={<PageAction onClick={() => setModal('create')} collapseLabelOnMobile>Convidar usuário</PageAction>}>
+  return <AdminPageShell tabs={<SettingsNav />} title="Usuários & Papéis" subtitle="Acessos do tenant" action={<PageAction onClick={() => setModal('create')} collapseLabelOnMobile>Convidar usuário</PageAction>}>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-text-secondary">{total} usuários</p><label className="relative block w-full sm:w-64"><Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Pesquisar usuários" placeholder="Pesquisar usuários" className={`${inputClass} pl-9`} /></label></div>
     {users.isLoading ? <div aria-label="Carregando usuários" aria-busy="true" className="h-64 animate-pulse rounded-lg border border-border bg-surface" /> : null}
     {users.isError ? <section role="alert" className="rounded-lg border border-border bg-surface p-6"><p>Não foi possível carregar os usuários.</p><button type="button" onClick={() => void users.refetch()} className="mt-3 text-sm text-primary underline">Tentar novamente</button></section> : null}

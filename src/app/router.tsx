@@ -1,10 +1,11 @@
 import { lazy, Suspense, useSyncExternalStore, type PropsWithChildren } from 'react'
-import { createBrowserRouter, Link, Navigate, RouterProvider, useLocation } from 'react-router-dom'
+import { createBrowserRouter, generatePath, Link, Navigate, RouterProvider, useLocation, useParams } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RequireRole } from './RequireRole'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { SessionRestoring } from '@/features/auth/components/SessionRestoring'
 import { useAuthRestoring } from '@/features/auth/hooks/useAuthRestoring'
+import { SettingsIndexRedirect } from '@/features/settings/components/SettingsIndexRedirect'
 
 const LandingPage = lazy(() => import('@/features/landing/pages/LandingPage').then((module) => ({ default: module.LandingPage })))
 const PoliticaPrivacidadePage = lazy(() => import('@/features/landing/pages/PaginasLegais').then((module) => ({ default: module.PoliticaPrivacidadePage })))
@@ -33,7 +34,8 @@ const PreventiveCampaignsPage = lazy(() => import('@/features/maintenance/pages/
 const PreventiveCampaignFormPage = lazy(() => import('@/features/maintenance/pages/PreventiveCampaignFormPage').then((module) => ({ default: module.PreventiveCampaignFormPage })))
 const PreventiveCampaignDetailPage = lazy(() => import('@/features/maintenance/pages/PreventiveCampaignDetailPage').then((module) => ({ default: module.PreventiveCampaignDetailPage })))
 
-const router = createBrowserRouter([
+// eslint-disable-next-line react-refresh/only-export-components -- exportado para os testes de rotas
+export const routes = [
   {
     path: '/',
     element: <Suspense fallback={<DashboardRouteLoading />}><LandingPage /></Suspense>,
@@ -45,26 +47,38 @@ const router = createBrowserRouter([
   { path: '/platform/users', element: <RequireRole role="super_admin"><Suspense fallback={<DashboardRouteLoading />}><PlatformUsersPage /></Suspense></RequireRole> },
   { path: '/hospitals', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><HospitalsPage /></Suspense></RequireRole> },
   { path: '/sectors', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><SectorsPage /></Suspense></RequireRole> },
-  { path: '/categories', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><CategoriesPage /></Suspense></RequireRole> },
   { path: '/assets', element: <RequireRole><RequireEquipmentRole><Suspense fallback={<DashboardRouteLoading />}><AssetsPage /></Suspense></RequireEquipmentRole></RequireRole> },
   { path: '/assets/new', element: <RequireRole><RequireEquipmentRole editorOnly><Suspense fallback={<DashboardRouteLoading />}><EquipmentFormPage /></Suspense></RequireEquipmentRole></RequireRole> },
   { path: '/assets/:id/edit', element: <RequireRole><RequireEquipmentRole editorOnly><Suspense fallback={<DashboardRouteLoading />}><EquipmentFormPage /></Suspense></RequireEquipmentRole></RequireRole> },
   { path: '/assets/:id', element: <RequireRole><RequireEquipmentRole><Suspense fallback={<DashboardRouteLoading />}><EquipmentDetailPage /></Suspense></RequireEquipmentRole></RequireRole> },
-  { path: '/users', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><UsersPage /></Suspense></RequireRole> },
   { path: '/reports', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><ReportsPage /></Suspense></RequireRole> },
+  { path: '/settings', element: <SettingsIndexRedirect /> },
+  { path: '/settings/categories', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><CategoriesPage /></Suspense></RequireRole> },
+  { path: '/settings/sla-policy', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><SlaPolicyPage /></Suspense></RequireRole> },
+  { path: '/settings/imports', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><BatchImportPage /></Suspense></RequireRole> },
+  { path: '/settings/users', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><UsersPage /></Suspense></RequireRole> },
+  // Rotas antigas: mantidas só como redirecionamento (preservam query string e hash).
+  { path: '/categories', element: <LegacyRedirect to="/settings/categories" /> },
+  { path: '/settings/sla', element: <LegacyRedirect to="/settings/sla-policy" /> },
+  { path: '/sla-policy', element: <LegacyRedirect to="/settings/sla-policy" /> },
+  { path: '/imports', element: <LegacyRedirect to="/settings/imports" /> },
+  { path: '/users', element: <LegacyRedirect to="/settings/users" /> },
+  { path: '/platform-users', element: <LegacyRedirect to="/platform/users" /> },
+  { path: '/preventive-plans', element: <LegacyRedirect to="/work-orders/rotinas" /> },
+  { path: '/preventive-campaigns', element: <LegacyRedirect to="/work-orders/campanhas" /> },
+  { path: '/preventive-campaigns/new', element: <LegacyRedirect to="/work-orders/campanhas/new" /> },
+  { path: '/preventive-campaigns/:id', element: <LegacyRedirect to="/work-orders/campanhas/:id" /> },
   { path: '/access-denied', element: <AccessDeniedRoute /> },
   { path: '/tickets', element: <RequireTicketListAccess><Suspense fallback={<DashboardRouteLoading />}><TicketsPage /></Suspense></RequireTicketListAccess> },
   { path: '/tickets/:id', element: <RequireTicketAccess><Suspense fallback={<DashboardRouteLoading />}><TicketDetailPage /></Suspense></RequireTicketAccess> },
   { path: '/work-orders', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrdersPage /></Suspense></RequireRole> },
   { path: '/work-orders/new', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrdersPage /></Suspense></RequireRole> },
+  { path: '/work-orders/rotinas', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventivePlansPage /></Suspense></RequireRole> },
+  { path: '/work-orders/campanhas', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignsPage /></Suspense></RequireRole> },
+  { path: '/work-orders/campanhas/new', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignFormPage /></Suspense></RequireRole> },
+  { path: '/work-orders/campanhas/:id', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignDetailPage /></Suspense></RequireRole> },
   { path: '/work-orders/:id', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrderDetailPage /></Suspense></RequireRole> },
   { path: '/checklists', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><ChecklistsPage /></Suspense></RequireRole> },
-  { path: '/settings/sla', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><SlaPolicyPage /></Suspense></RequireRole> },
-  { path: '/imports', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><BatchImportPage /></Suspense></RequireRole> },
-  { path: '/preventive-plans', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventivePlansPage /></Suspense></RequireRole> },
-  { path: '/preventive-campaigns', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignsPage /></Suspense></RequireRole> },
-  { path: '/preventive-campaigns/new', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignFormPage /></Suspense></RequireRole> },
-  { path: '/preventive-campaigns/:id', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignDetailPage /></Suspense></RequireRole> },
   {
     path: '/dashboard',
     element: (
@@ -78,7 +92,15 @@ const router = createBrowserRouter([
   { path: '/field', element: <PendingDashboard audience="equipe técnica" /> },
   { path: '/hospital/requests', element: <PendingDashboard audience="solicitações hospitalares" /> },
   { path: '*', element: <UnimplementedRoute /> },
-])
+]
+
+const router = createBrowserRouter(routes)
+
+function LegacyRedirect({ to }: { to: string }) {
+  const { search, hash } = useLocation()
+  const params = useParams()
+  return <Navigate to={{ pathname: generatePath(to, params), search, hash }} replace />
+}
 
 function PendingDashboard({ audience }: { audience: string }) {
   return (
