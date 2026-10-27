@@ -29,8 +29,8 @@ function TestProviders({ children }: PropsWithChildren) {
 }
 
 function renderSlaRoute() {
-  return render(<TestProviders><MemoryRouter initialEntries={['/settings/sla']}><Routes>
-    <Route path="/settings/sla" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><SlaPolicyPage /></RequireRole>} />
+  return render(<TestProviders><MemoryRouter initialEntries={['/settings/sla-policy']}><Routes>
+    <Route path="/settings/sla-policy" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><SlaPolicyPage /></RequireRole>} />
     <Route path="/access-denied" element={<h1>Acesso não permitido</h1>} />
   </Routes></MemoryRouter></TestProviders>)
 }
@@ -60,7 +60,7 @@ describe('SlaPolicyPage', () => {
     expect(screen.getByRole('spinbutton', { name: 'Prazo de atendimento, Crítica' })).toHaveValue(15)
     expect(screen.getByRole('combobox', { name: 'Unidade da resolução, Crítica' })).toHaveTextContent('horas')
     render(<MemoryRouter><DashboardSidebar /></MemoryRouter>)
-    expect(screen.getByRole('link', { name: 'Política de SLA' })).toHaveAttribute('href', '/settings/sla')
+    expect(screen.getByRole('link', { name: 'Configurações' })).toHaveAttribute('href', '/settings')
   })
 
   it('accepts hour units, converts to minutes, saves all severities and explains future-only effect', async () => {

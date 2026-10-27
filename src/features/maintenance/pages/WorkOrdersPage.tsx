@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
+import { WorkOrdersTabs } from '../components/WorkOrdersTabs'
 import { Modal } from '@/components/ui/Modal'
 import { useEquipments, useHospitals, useSectorsForHospitals } from '@/features/assets/api/assets'
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
@@ -138,7 +139,7 @@ export function WorkOrdersPage() {
   const filtersActive = Boolean(search || statusFilter || typeFilter || technicianFilter || dateFrom || dateTo || onlyOverdue)
   const dependencyLoading = equipment.isLoading || checklists.isLoading || users.isLoading || sectors.isLoading || hospitalLinks.some((query) => query.isLoading)
 
-  return <AdminPageShell title="Ordens de Trabalho" subtitle="Planejamento e acompanhamento da manutenção" action={<PageAction icon={ClipboardPlus} onClick={() => { resetForm(); setIsCreateOpen(true) }} collapseLabelOnMobile>Nova OT</PageAction>}>
+  return <AdminPageShell tabs={<WorkOrdersTabs />} title="Ordens de Trabalho" subtitle="Planejamento e acompanhamento da manutenção" action={<PageAction icon={ClipboardPlus} onClick={() => { resetForm(); setIsCreateOpen(true) }} collapseLabelOnMobile>Nova OT</PageAction>}>
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-text-secondary">{orders.data?.length ?? 0} ordem(ns) carregada(s)</p>

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
+import { SettingsNav } from '@/features/settings/components/SettingsNav'
 import { PageAction } from '@/components/ui/PageAction'
 import { FilterBar, filterInputClass } from '@/components/ui/FilterBar'
 import { Field, Modal } from '@/components/ui/Modal'
@@ -52,7 +53,7 @@ export function CategoriesPage() {
 
   const clearFilters = () => { setStatus(''); setOnlyReview(false); setSearch('') }
 
-  return <AdminPageShell title="Categorias de equipamento" subtitle="Tipos de equipamento e checklist padrão" action={<PageAction onClick={() => setCreating(true)} collapseLabelOnMobile>Nova categoria</PageAction>}>
+  return <AdminPageShell tabs={<SettingsNav />} title="Categorias de equipamento" subtitle="Tipos de equipamento e checklist padrão" action={<PageAction onClick={() => setCreating(true)} collapseLabelOnMobile>Nova categoria</PageAction>}>
     <FilterBar label="Filtros de categorias" className="mb-4">
       <label className="min-w-0"><span className="sr-only">Filtrar por situação</span><Select size="sm" aria-label="Filtrar por situação" value={status} onChange={setStatus} options={statusOptions} /></label>
       <Checkbox label="A revisar" checked={onlyReview} onCheckedChange={setOnlyReview} containerClassName="h-9 justify-center rounded-md border border-border bg-bg px-3 text-xs text-text-primary" />

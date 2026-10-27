@@ -27,7 +27,7 @@ describe('F2.1 access control', () => {
 
     render(<MemoryRouter><DashboardSidebar /></MemoryRouter>)
     expect(screen.getByRole('link', { name: 'Clientes' })).toHaveAttribute('href', '/platform/clients')
-    expect(screen.queryByRole('link', { name: 'Usuários & Papéis' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Configurações' })).toHaveAttribute('href', '/settings')
   })
 
   it('redirects tenant admins away from the route and hides the Clients navigation item', () => {
@@ -36,6 +36,6 @@ describe('F2.1 access control', () => {
 
     render(<MemoryRouter><DashboardSidebar /></MemoryRouter>)
     expect(screen.queryByRole('link', { name: 'Clientes' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Usuários & Papéis' })).toHaveAttribute('href', '/users')
+    expect(screen.getByRole('link', { name: 'Configurações' })).toHaveAttribute('href', '/settings')
   })
 })

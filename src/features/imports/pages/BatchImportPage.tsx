@@ -1,6 +1,7 @@
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Loader2, RefreshCw, Upload, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
+import { SettingsNav } from '@/features/settings/components/SettingsNav'
 import { getImportRequestErrorMessage, isImportInProgress, useImportStatus, useSubmitImport, type ImportResult } from '../api/imports'
 import { ImportErrorsTable } from '../components/ImportErrorsTable'
 import { batchImportErrorMessages, batchImportTypes, createBatchImportTemplate, formatFileSize, validateImportFile, type BatchImportType } from '../types'
@@ -69,7 +70,7 @@ export function BatchImportPage() {
     if (inputRef.current) inputRef.current.value = ''
   }
 
-  return <AdminPageShell title="Importação em lote" subtitle="Prepare arquivos CSV para cadastro de dados">
+  return <AdminPageShell tabs={<SettingsNav />} title="Importação em lote" subtitle="Prepare arquivos CSV para cadastro de dados">
     <div className="mx-auto max-w-4xl space-y-4">
       <section className="rounded-lg border border-border bg-surface p-4 md:p-5">
         <div className="mb-4 flex items-start gap-3">
