@@ -24,7 +24,10 @@ export interface Equipment {
   modelo: string | null
   numeroSerie: string | null
   marca: string | null
+  /** Legado (deprecated): use a API de foto (`fotoVersao`). */
   fotoUrl: string | null
+  /** Instante da última troca da foto principal; null/ausente = sem foto na API nova. */
+  fotoVersao?: string | null
   categoriaId: string | null
   categoriaNome: string | null
   dadosGerais: Record<string, unknown> | null
@@ -37,6 +40,10 @@ export interface Equipment {
   dataInstalacao: string | null
   dataGarantiaFim: string | null
   nivelRisco: 'ALTO' | 'MEDIO' | 'BAIXO'
+  /** Só na lista (GET /equipamentos); ausente/nulo na ficha, POST e PUT. */
+  documentosVencidos?: number | null
+  documentosVencendo?: number | null
+  proximaValidade?: string | null
 }
 
 export interface EquipmentEditableFields {
@@ -119,6 +126,9 @@ export interface EquipmentFilters {
   setorId?: string
   categoriaId?: string
   semCategoria?: boolean
+  /** Data ISO yyyy-MM-dd (inclusive): ao menos um documento vigente com validade até ela. */
+  vencendoEm?: string
+  documentoVencido?: boolean
 }
 
 export type DocumentType = 'MANUAL' | 'CERTIFICADO_CALIBRACAO' | 'LAUDO_SEGURANCA' | 'NOTA_FISCAL' | 'OUTRO'

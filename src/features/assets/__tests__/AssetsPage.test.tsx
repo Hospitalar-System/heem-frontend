@@ -51,7 +51,7 @@ describe('AssetsPage', () => {
     const row = await screen.findByRole('link', { name: 'Abrir EQ-0471, Ventilador VentPro' })
     expect(within(row).getByText('UTI Adulto')).toBeInTheDocument()
     expect(within(row).getByText('Ativo')).toBeInTheDocument()
-    expect(within(row).getByText('—')).toBeInTheDocument()
+    expect(within(row).getAllByText('—')).toHaveLength(2)
     await user.click(row)
     expect(await screen.findByTestId('current-route')).toHaveTextContent('/assets/equipment-1')
   })
@@ -64,5 +64,22 @@ describe('AssetsPage', () => {
     await chooseOption(userEvent.setup(), 'Filtrar por status', 'Ativo')
     await userEvent.setup().click(screen.getByRole('button', { name: 'Limpar filtros' }))
     expect(await screen.findByText('Ventilador VentPro')).toBeInTheDocument()
+  })
+
+  it('loads the list thumbnail lazily, only for equipment with a photo and only once the row is visible', async () => {
+    const observers: Array<(entries: Array<{ isIntersecting: boolean }>) => void> = []
+    vi.stubGlobal('IntersectionObserver', class { constructor(callback: (entries: Array<{ isIntersecting: boolean }>) => void) { observers.push(callback) } observe() {} disconnect() {} })
+    vi.mocked(apiClient.get).mockImplementation(async (url) => {
+      if (url === '/equipamentos') return { data: [{ ...equipment, fotoVersao: '2026-10-01T10:00:00Z' }, { ...equipment, id: 'equipment-2', codigo: 'EQ-2', nome: 'Monitor', fotoVersao: null }] } as never
+      if (url === '/equipamentos/equipment-1/foto/miniatura') return { data: { url: 'https://img/mini.jpg' } } as never
+      return { data: [] } as never
+    })
+    render(<AssetsPage />, { wrapper: TestProviders })
+    await screen.findByText('Ventilador VentPro')
+    expect(apiClient.get).not.toHaveBeenCalledWith('/equipamentos/equipment-1/foto/miniatura')
+    observers.forEach((callback) => callback([{ isIntersecting: true }]))
+    expect(await screen.findByAltText('Miniatura de Ventilador VentPro')).toHaveAttribute('src', 'https://img/mini.jpg')
+    expect(apiClient.get).not.toHaveBeenCalledWith('/equipamentos/equipment-2/foto/miniatura')
+    vi.unstubAllGlobals()
   })
 })

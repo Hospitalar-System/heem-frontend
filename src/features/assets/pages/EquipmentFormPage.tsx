@@ -8,7 +8,10 @@ import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { Field } from '@/components/ui/Modal'
 import { equipmentSchema, toEquipmentInput, type EquipmentFormValues } from '../schemas/assets.schema'
 import { getCategoryErrorMessage, getErrorCode, useCategories } from '../api/categories'
-import { useEquipment, useHospitals, useSaveEquipment, useSector, useSectors, useUploadEquipmentPhoto } from '../api/assets'
+import { useEquipment, useHospitals, useSaveEquipment, useSector, useSectors } from '../api/assets'
+import { useSetEquipmentPhoto } from '../api/equipment-photo'
+import { photoAcceptAttr, validateImageFile } from '@/lib/image-resize'
+import { getPhotoErrorMessage } from '@/lib/photo-upload'
 import type { CreateEquipmentInput } from '../types'
 import { Select } from '@/components/ui/Select'
 import { FormSelect } from '@/components/ui/FormSelect'
@@ -34,10 +37,12 @@ export function EquipmentFormPage() {
   const sectors = useSectors(hospitalId)
   const categories = useCategories()
   const save = useSaveEquipment()
-  const uploadPhoto = useUploadEquipmentPhoto()
+  const uploadPhoto = useSetEquipmentPhoto()
+  const [photoError, setPhotoError] = useState('')
   const form = useForm<EquipmentFormValues>({ resolver: zodResolver(equipmentSchema), defaultValues: emptyValues })
   const rows = useFieldArray({ control: form.control, name: 'dadosGerais' })
-  const originalPhoto = equipment.data?.fotoUrl
+  const legacyPhoto = equipment.data?.fotoUrl ?? null
+  const hasPhoto = Boolean(equipment.data?.fotoVersao) || Boolean(legacyPhoto)
   useEffect(() => {
     if (currentSector.data?.hospitalId) setHospitalId(currentSector.data.hospitalId)
   }, [currentSector.data?.hospitalId])
@@ -67,15 +72,23 @@ export function EquipmentFormPage() {
   const currentCategoryId = equipment.data?.categoriaId
   const categoryOptions = (categories.data ?? []).filter((category) => category.ativa || category.id === currentCategoryId).map((category) => ({ value: category.id, label: category.ativa ? category.nome : `${category.nome} (inativa)` }))
   const busy = save.isPending || uploadPhoto.isPending
+  function selectPhoto(file: File | undefined) {
+    setPhotoError('')
+    if (!file) { setPhoto(null); return }
+    try { validateImageFile(file); setPhoto(file) } catch (failure) { setPhoto(null); setPhotoError(getPhotoErrorMessage(failure)) }
+  }
   const submit = form.handleSubmit(async (values) => {
     setSubmitError('')
     try {
-      const photoKey = photo ? await uploadPhoto.mutateAsync(photo) : originalPhoto ?? null
-      const payload = toEquipmentInput(values, photoKey)
+      const payload = toEquipmentInput(values, legacyPhoto)
       const result = editing
         ? await save.mutateAsync({ id, data: removeCreateOnlyFields(payload) })
         : await save.mutateAsync({ data: payload })
       toast.success(editing ? 'Equipamento atualizado.' : 'Equipamento cadastrado.')
+      if (photo) {
+        // A foto é enviada depois de salvar (na criação o id só existe agora). Falha aqui não desfaz o cadastro.
+        try { await uploadPhoto.mutateAsync({ equipmentId: result.id, file: photo }) } catch (failure) { toast.error(`Equipamento salvo, mas a foto não foi enviada. ${getPhotoErrorMessage(failure)}`) }
+      }
       navigate(`/assets/${result.id}`, { replace: true })
     } catch (error) {
       const message = getEquipmentError(error)
@@ -130,8 +143,9 @@ export function EquipmentFormPage() {
 
         <section className="rounded-lg border border-border bg-surface p-5">
           <h2 className="text-sm font-semibold">Foto do equipamento</h2>
-          <p className="mt-1 text-xs text-text-secondary">A imagem será enviada diretamente ao armazenamento usando URL assinada.</p>
-          <label className="mt-4 flex min-h-20 cursor-pointer items-center gap-3 rounded-md border border-dashed border-border px-4 py-3 text-xs text-text-secondary hover:bg-bg"><Upload size={16} /><span>{photo?.name ?? (originalPhoto ? 'Selecionar uma nova foto para substituir a atual' : 'Selecionar foto')}</span><input type="file" accept="image/*" className="sr-only" onChange={(event) => setPhoto(event.target.files?.[0] ?? null)} /></label>
+          <p className="mt-1 text-xs text-text-secondary">JPEG, PNG ou WebP. A imagem é reduzida e os metadados (como localização) são removidos antes do envio; ela é enviada após salvar o equipamento.</p>
+          <label className="mt-4 flex min-h-20 cursor-pointer items-center gap-3 rounded-md border border-dashed border-border px-4 py-3 text-xs text-text-secondary hover:bg-bg"><Upload size={16} /><span>{photo?.name ?? (hasPhoto ? 'Selecionar uma nova foto para substituir a atual' : 'Selecionar foto')}</span><input type="file" accept={photoAcceptAttr} aria-label="Foto do equipamento" className="sr-only" onChange={(event) => selectPhoto(event.target.files?.[0])} /></label>
+          {photoError ? <p role="alert" className="mt-2 text-xs text-danger">{photoError}</p> : null}
         </section>
 
         {submitError ? <p role="alert" className="rounded-md border border-danger/40 bg-surface p-3 text-xs text-danger">{submitError}</p> : null}

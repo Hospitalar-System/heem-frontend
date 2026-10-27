@@ -173,6 +173,7 @@ export interface WorkOrderDetail {
   dataAgendada: string | null
   iniciadaEm: string | null
   concluidaEm: string | null
+  fotosCount?: number
 }
 
 export interface WorkOrderChecklistItem {

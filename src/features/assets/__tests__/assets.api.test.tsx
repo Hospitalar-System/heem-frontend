@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PropsWithChildren } from 'react'
 import { apiClient } from '@/lib/axios'
 import { useCategories, useDeactivateCategory, useMarkCategoryReviewed, useMergeCategory, useSaveCategory } from '../api/categories'
-import { useEquipments, useHospitals, useSaveEquipment, useSectors, useUploadEquipmentPhoto } from '../api/assets'
+import { useEquipments, useHospitals, useSaveEquipment, useSectors } from '../api/assets'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } }))
 vi.mock('@/lib/demo-mode', () => ({ isDemoMode: false }))
@@ -47,18 +47,6 @@ describe('asset queries', () => {
     expect(apiClient.post).toHaveBeenCalledWith('/equipamentos', payload)
   })
 
-  it('uploads photos directly to the signed storage URL', async () => {
-    const put = vi.fn().mockResolvedValue({ ok: true })
-    vi.stubGlobal('fetch', put)
-    vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { url: 'https://storage.invalid/signed', chave: 'tenant/foto.png', expiraEm: '2026-01-01T00:00:00Z' } } as never)
-    const { result } = renderHook(() => useUploadEquipmentPhoto(), { wrapper })
-    const file = new File(['foto'], 'foto.png', { type: 'image/png' })
-    await result.current.mutateAsync(file)
-    expect(apiClient.post).toHaveBeenCalledWith('/equipamentos/foto-upload-url', { nomeArquivo: 'foto.png' })
-    expect(put).toHaveBeenCalledWith('https://storage.invalid/signed', { method: 'PUT', body: file })
-    expect(apiClient.post).toHaveBeenCalledTimes(1)
-    vi.unstubAllGlobals()
-  })
 })
 
 describe('category queries', () => {

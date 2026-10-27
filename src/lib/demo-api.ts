@@ -59,6 +59,22 @@ function documentView(item: RecordValue) {
   const days = validade ? Math.round((Date.parse(validade) - Date.parse(dayIso(0))) / 86400000) : null
   return { ...item, vencido: days !== null && days < 0, vencendo: days !== null && days >= 0 && days <= 30 }
 }
+/** Lista de equipamentos: contagens de documentos vigentes (vencidos / vencendo em 30 dias) e filtros vencendoEm/documentoVencido. */
+function withDocumentStats(collection: RecordValue[], params?: Record<string, unknown>) {
+  const today = dayIso(0)
+  const withStats = collection.map((item) => {
+    const dated = documents.filter((doc) => doc.equipamentoId === item.id && doc.validadeAte).map((doc) => doc.validadeAte as string)
+    const expired = dated.filter((date) => date < today).length
+    const expiring = dated.filter((date) => date >= today && date <= dayIso(30)).length
+    return { ...item, documentosVencidos: expired, documentosVencendo: expiring, proximaValidade: dated.length ? [...dated].sort()[0] : null }
+  })
+  const until = typeof params?.vencendoEm === 'string' ? params.vencendoEm : null
+  return withStats.filter((item) => {
+    if (params?.documentoVencido && item.documentosVencidos === 0) return false
+    if (until && !(item.proximaValidade && item.proximaValidade <= until)) return false
+    return true
+  })
+}
 const history: Record<string, RecordValue[]> = {
   [tickets[0].id as string]: [{ acao: 'Chamado aberto', atorId: 'user-demo-1', ocorridoEm: now }],
   [tickets[1].id as string]: [{ acao: 'Chamado atribuído à equipe técnica', atorId: 'user-demo-1', ocorridoEm: now }],
@@ -169,7 +185,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   }
   if (path === '/tenants' || path === '/hospitais' || path === '/equipamentos' || path === '/ordens-de-trabalho' || path === '/checklists' || path === '/chamados' || path === '/users' || path === '/platform-users') {
     const collection = routeCollection(path)
-    if (method === 'get') return filterCollection(collection, path, params)
+    if (method === 'get') return path === '/equipamentos' ? withDocumentStats(filterCollection(collection, path, params), params) : filterCollection(collection, path, params)
     if (method === 'post') {
       const created = { id: makeId('demo'), ativo: true, ...body }
       collection.push(created)
@@ -241,6 +257,8 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path === '/equipamentos/foto-upload-url' && method === 'post') {
     return { url: 'https://example.test/upload', chave: `demo/${body.nomeArquivo ?? 'foto'}`, expiraEm: now }
   }
+  const photoResult = handlePhotos(method, path, body)
+  if (photoResult !== undefined) return photoResult
   if (path === '/ordens-de-trabalho/preventivas' || path === '/ordens-de-trabalho/corretivas') {
     if (method === 'post') return createRecord(workOrders, { tipo: path.endsWith('preventivas') ? 'PREVENTIVA' : 'CORRETIVA', status: 'AGENDADA', local: null, iniciadaEm: null, concluidaEm: null, ...body })
   }
@@ -288,6 +306,54 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (method === 'post') return { id: makeId('demo'), ...body }
   if (method === 'put') return body
   return null
+}
+
+// Fotos (Stories 13.1/13.2): sem storage real no demo; o PUT para demo:// é pulado e as imagens são SVGs locais.
+const demoPhotoColors = ['#3ED597', '#F5A623', '#5B8DEF', '#B66DFF', '#FF7A59']
+function demoPhotoUrl(seed: string, size: number) {
+  const hash = [...seed].reduce((total, char) => total + char.charCodeAt(0), 0)
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100"><rect width="100" height="100" fill="${demoPhotoColors[hash % demoPhotoColors.length]}"/><circle cx="50" cy="45" r="18" fill="#ffffff" fill-opacity="0.8"/><rect x="25" y="68" width="50" height="10" rx="5" fill="#ffffff" fill-opacity="0.8"/></svg>`
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+}
+const orderPhotos = new Map<string, RecordValue[]>()
+function demoUploadUrls(prefix: string, body: RecordValue) {
+  const target = (type: unknown, kind: string) => ({ url: `demo://${prefix}/${kind}`, chave: `demo/${prefix}/${kind}-${makeId('foto')}`, expiraEm: now, contentType: (type as string) ?? 'image/jpeg' })
+  return { original: target(body.tipoOriginal, 'original'), miniatura: target(body.tipoMiniatura ?? body.tipoOriginal, 'miniatura') }
+}
+
+function handlePhotos(method: string, path: string, body: RecordValue): unknown {
+  const equipmentPhoto = path.match(/^\/equipamentos\/([^/]+)\/foto(\/upload-url|\/miniatura)?$/)
+  if (equipmentPhoto) {
+    const record = equipment.find((item) => item.id === equipmentPhoto[1])
+    if (!record) return undefined
+    if (equipmentPhoto[2] === '/upload-url' && method === 'post') return demoUploadUrls(`equipamentos/${record.id}`, body)
+    if (method === 'put' && !equipmentPhoto[2]) { record.fotoVersao = new Date().toISOString(); return { fotoVersao: record.fotoVersao } }
+    if (method === 'delete' && !equipmentPhoto[2]) { record.fotoVersao = null; return null }
+    if (method === 'get') return { url: demoPhotoUrl(`${record.id}${record.fotoVersao ?? ''}`, equipmentPhoto[2] ? 160 : 640) }
+  }
+  const orderPhoto = path.match(/^\/ordens-de-trabalho\/([^/]+)\/fotos(\/upload-url|\/[^/]+)?$/)
+  if (orderPhoto) {
+    const record = workOrders.find((item) => item.id === orderPhoto[1])
+    if (!record) return undefined
+    const list = orderPhotos.get(record.id as string) ?? []
+    orderPhotos.set(record.id as string, list)
+    const sync = () => { record.fotosCount = list.length }
+    if (orderPhoto[2] === '/upload-url' && method === 'post') return demoUploadUrls(`ordens/${record.id}`, body)
+    if (!orderPhoto[2] && method === 'get') return list.map((item) => ({ ...item, urlOriginal: demoPhotoUrl(item.id as string, 640), urlMiniatura: demoPhotoUrl(item.id as string, 160) }))
+    if (!orderPhoto[2] && method === 'post') {
+      const created = { id: makeId('foto'), criadoEm: new Date().toISOString() }
+      list.push(created)
+      sync()
+      return created
+    }
+    if (orderPhoto[2] && method === 'delete') {
+      const index = list.findIndex((item) => item.id === orderPhoto[2].slice(1))
+      if (index >= 0) list.splice(index, 1)
+      sync()
+      return null
+    }
+  }
+  return undefined
 }
 
 function categoryName(id: unknown) { return (categories.find((item) => item.id === id)?.nome as string | undefined) ?? null }

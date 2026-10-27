@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { AlertTriangle, Clock3, FileClock } from 'lucide-react'
 import type { DashboardSummary, TicketSeverity } from '../types'
 
@@ -17,9 +18,9 @@ const severityTones: Record<TicketSeverity, string> = {
 
 export function DashboardAttention({ data }: { data: DashboardSummary }) {
   const alerts = [
-    { label: 'SLAs vencidos', count: data.overdueSla, Icon: AlertTriangle },
-    { label: 'Preventivas atrasadas', count: data.overduePreventiveWorkOrders, Icon: Clock3 },
-    { label: `Documentos vencendo em ${data.expiringDocumentsWithinDays} dias`, count: data.expiringDocuments, Icon: FileClock },
+    { label: 'SLAs vencidos', count: data.overdueSla, Icon: AlertTriangle, to: undefined },
+    { label: 'Preventivas atrasadas', count: data.overduePreventiveWorkOrders, Icon: Clock3, to: undefined },
+    { label: `Documentos vencendo em ${data.expiringDocumentsWithinDays} dias`, count: data.expiringDocuments, Icon: FileClock, to: '/assets?documentos=vencendo' },
   ]
 
   return (
@@ -37,8 +38,10 @@ export function DashboardAttention({ data }: { data: DashboardSummary }) {
       </article>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        {alerts.map(({ label, count, Icon }, index) => (
-          <article key={label} className="flex min-h-[82px] items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+        {alerts.map(({ label, count, Icon, to }, index) => {
+          const cardClass = 'flex min-h-[82px] items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3'
+          const content = (
+            <>
             <span className={`grid size-8 shrink-0 place-items-center rounded-md ${index === 2 ? 'bg-warning/10 text-warning' : 'bg-danger/10 text-danger'}`}>
               <Icon aria-hidden="true" size={15} />
             </span>
@@ -46,8 +49,12 @@ export function DashboardAttention({ data }: { data: DashboardSummary }) {
               <p className="truncate text-[10px] text-text-secondary">{label}</p>
               <p className="mt-0.5 text-lg font-semibold leading-5 tabular-nums text-text-primary">{count.toLocaleString('pt-BR')}</p>
             </div>
-          </article>
-        ))}
+            </>
+          )
+          return to
+            ? <Link key={label} to={to} className={`${cardClass} outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary`}>{content}</Link>
+            : <article key={label} className={cardClass}>{content}</article>
+        })}
       </div>
     </section>
   )
