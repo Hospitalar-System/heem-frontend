@@ -19,6 +19,7 @@
     --primary-hover: #38b38c;
     --danger: #ff4e4e;
     --warning: #f5a623;
+    --info: #5aa9ff;
   }
 
   .light,
@@ -37,6 +38,7 @@
     --primary-hover: #249666;
     --danger: #dc2626;
     --warning: #d97706;
+    --info: #2563eb;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -55,6 +57,7 @@
       --primary-hover: #38b38c;
       --danger: #ff4e4e;
       --warning: #f5a623;
+      --info: #5aa9ff;
     }
   }
 
@@ -102,6 +105,33 @@
   .row-selected {
     @apply border-primary;
     background-color: color-mix(in srgb, var(--primary) 5%, transparent);
+  }
+}
+
+/*
+ * Selos de condição (F6.7): fundo suave na cor do aviso, texto misturado ao texto principal do tema
+ * (clareia no escuro, escurece no claro) para manter contraste AA, sem borda.
+ */
+@layer components {
+  .badge-neutral {
+    background-color: color-mix(in srgb, var(--text-muted) 18%, transparent);
+    color: var(--text-secondary);
+  }
+  .badge-success {
+    background-color: color-mix(in srgb, var(--primary) 16%, transparent);
+    color: color-mix(in srgb, var(--primary) 50%, var(--text-primary));
+  }
+  .badge-warning {
+    background-color: color-mix(in srgb, var(--warning) 16%, transparent);
+    color: color-mix(in srgb, var(--warning) 55%, var(--text-primary));
+  }
+  .badge-danger {
+    background-color: color-mix(in srgb, var(--danger) 16%, transparent);
+    color: color-mix(in srgb, var(--danger) 60%, var(--text-primary));
+  }
+  .badge-info {
+    background-color: color-mix(in srgb, var(--info) 16%, transparent);
+    color: color-mix(in srgb, var(--info) 55%, var(--text-primary));
   }
 }
 

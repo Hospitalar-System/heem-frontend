@@ -16,6 +16,7 @@ import { categorySchema, type CategoryFormValues } from '../schemas/assets.schem
 import type { EquipmentCategory } from '../types'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
+import { Badge } from '@/components/ui/Badge'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const statusOptions = [
@@ -69,11 +70,11 @@ export function CategoriesPage() {
         <tbody>{visible.map((category) => {
           const needsReview = category.origem === 'carga' && !category.revisada
           return <tr key={category.id} className="row-idle h-12 border-b border-border/70 text-xs last:border-0">
-            <td className="px-4 text-sm font-medium text-text-primary"><span className="inline-flex items-center gap-2">{category.nome}{needsReview ? <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold text-warning">Revisar</span> : null}</span></td>
+            <td className="px-4 text-sm font-medium text-text-primary"><span className="inline-flex items-center gap-2">{category.nome}{needsReview ? <Badge variant="warning">Revisar</Badge> : null}</span></td>
             <td className="px-4 text-text-secondary">{category.checklistPadraoId ? checklistName.get(category.checklistPadraoId) ?? 'Checklist indisponível' : '—'}</td>
             <td className="px-4 text-text-secondary">{category.origem === 'carga' ? 'Carga inicial' : 'Manual'}</td>
             <td className="px-4 tabular-nums text-text-secondary">{category.quantidadeEquipamentos ?? '—'}</td>
-            <td className="px-4"><span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${category.ativa ? 'bg-primary/10 text-primary' : 'bg-bg text-text-muted'}`}>{category.ativa ? 'Ativa' : 'Inativa'}</span></td>
+            <td className="px-4"><Badge variant={category.ativa ? 'success' : 'neutral'}>{category.ativa ? 'Ativa' : 'Inativa'}</Badge></td>
             <td className="px-4"><div className="flex justify-end"><RowActionsMenu label={category.nome} actions={[
               ...(needsReview ? [{ label: 'Marcar como revisada', icon: <CheckCheck size={14} />, disabled: reviewed.isPending, onSelect: () => markReviewed(category) }] : []),
               { label: 'Editar', icon: <Pencil size={14} />, onSelect: () => setEditing(category) },

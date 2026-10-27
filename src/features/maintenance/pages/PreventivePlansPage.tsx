@@ -12,6 +12,7 @@ import { PreventivePlanFormModal } from '../components/PreventivePlanFormModal'
 import type { PreventivePlan } from '../types'
 import { formatPlanDate, planApiError } from '../utils/preventive-plans'
 import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
+import { Badge } from '@/components/ui/Badge'
 
 const PAGE_SIZE = 20
 const statusOptions = [{ value: 'true', label: 'Ativos' }, { value: 'false', label: 'Inativos' }, { value: '', label: 'Todos os status' }]
@@ -93,8 +94,8 @@ export function PreventivePlansPage() {
               <td className="px-4 text-text-secondary">{plan.ativo ? formatPlanDate(plan.proximaData) : '—'}</td>
               <td className="px-4 text-text-secondary">{userById.get(plan.tecnicoPadraoId)?.nome ?? '—'}</td>
               <td className="px-4"><div className="flex flex-wrap items-center gap-1.5">
-                <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-medium ${plan.ativo ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-bg text-text-muted'}`}>{plan.ativo ? 'Ativo' : 'Inativo'}</span>
-                {plan.ativo && plan.pendencia && <span title="O técnico padrão está inativo ou desvinculado do hospital; nenhuma OT foi gerada." className="inline-flex rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-[10px] font-medium text-warning">Pendência</span>}
+                <Badge variant={plan.ativo ? 'success' : 'neutral'}>{plan.ativo ? 'Ativo' : 'Inativo'}</Badge>
+                {plan.ativo && plan.pendencia && <Badge variant="warning" title="O técnico padrão está inativo ou desvinculado do hospital; nenhuma OT foi gerada.">Pendência</Badge>}
               </div></td>
               <td className="px-4"><div className="flex justify-end">{plan.ativo ? <RowActionsMenu label={`plano de ${label}`} actions={[
                 { label: 'Editar plano', icon: <Pencil size={14} />, onSelect: () => setFormPlan(plan) },

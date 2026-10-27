@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react'
 
+export const reportGlossary = [
+  { term: 'MTTA', text: 'Tempo médio de atendimento: da abertura do chamado até a primeira resposta.' },
+  { term: 'MTTR', text: 'Tempo médio de resolução: da abertura do chamado até o chamado ser resolvido.' },
+  { term: 'MTBF', text: 'Tempo médio entre falhas: intervalo médio entre aberturas de chamados do mesmo equipamento.' },
+  { term: 'Triagem', text: 'Da abertura até o chamado entrar em andamento.' },
+  { term: 'Espera de peça', text: 'Tempo médio em "aguardando peça", entre os chamados que passaram por esse estado.' },
+]
+
 export function formatMetric(value: number | null | undefined, suffix = '') {
   return value == null ? '—' : `${value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}${suffix}`
 }

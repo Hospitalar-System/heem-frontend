@@ -15,6 +15,7 @@ import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import { formatSlaDeadline } from '../utils/sla'
 import { ticketCauseCategories, ticketCauseLabels, type TicketCauseCategory, type TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
+import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 
 const fieldClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const severityLabel: Record<string, string> = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }
@@ -29,18 +30,18 @@ function normalizeStatus(status: TicketStatus) {
   return status.toLocaleUpperCase('pt-BR').replace('Ç', 'C')
 }
 
-function severityStyle(value: string) {
-  if (value === 'CRITICA') return 'border-danger/30 bg-danger/10 text-danger'
-  if (value === 'ALTA') return 'border-warning/30 bg-warning/10 text-warning'
-  if (value === 'BAIXA') return 'border-primary/30 bg-primary/10 text-primary'
-  return 'border-border bg-bg text-text-secondary'
+function severityTone(value: string): BadgeVariant {
+  if (value === 'CRITICA') return 'danger'
+  if (value === 'ALTA') return 'warning'
+  if (value === 'BAIXA') return 'success'
+  return 'neutral'
 }
 
-function statusStyle(status: string) {
-  if (status === 'RESOLVIDO') return 'border-primary/30 bg-primary/10 text-primary'
-  if (status === 'ABERTO' || status === 'AGUARDANDO_PECA') return 'border-warning/30 bg-warning/10 text-warning'
-  if (status === 'EM_ANDAMENTO') return 'border-border bg-bg text-text-secondary'
-  return 'border-border bg-bg text-text-secondary'
+function statusTone(status: string): BadgeVariant {
+  if (status === 'RESOLVIDO') return 'success'
+  if (status === 'ABERTO' || status === 'AGUARDANDO_PECA') return 'warning'
+  if (status === 'EM_ANDAMENTO') return 'neutral'
+  return 'neutral'
 }
 
 export function TicketDetailPage() {
@@ -203,7 +204,7 @@ export function TicketDetailPage() {
       <section className="rounded-lg border border-border bg-surface p-5 xl:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2"><p className="text-xs font-medium text-text-muted">Chamado {ticket.data.id}</p><span className={`rounded-md border px-2 py-1 text-[10px] font-semibold ${severityStyle(ticket.data.severidade)}`}>{severityLabel[ticket.data.severidade] ?? 'Severidade não informada'}</span><span className={`rounded-md border px-2 py-1 text-[10px] font-medium ${statusStyle(normalizedStatus)}`}>{statusLabel[normalizedStatus] ?? ticket.data.status}</span></div>
+            <div className="flex flex-wrap items-center gap-2"><p className="text-xs font-medium text-text-muted">Chamado {ticket.data.id}</p><Badge variant={severityTone(ticket.data.severidade)}>{severityLabel[ticket.data.severidade] ?? 'Severidade não informada'}</Badge><Badge variant={statusTone(normalizedStatus)}>{statusLabel[normalizedStatus] ?? ticket.data.status}</Badge></div>
             <h2 className="mt-3 text-xl font-semibold text-text-primary">{equipment.data?.nome ?? 'Chamado de emergência'}</h2>
             <p className="mt-1 text-sm text-text-secondary">{equipment.data?.codigo ?? ticket.data.equipamentoId}</p>
           </div>

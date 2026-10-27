@@ -15,6 +15,7 @@ import { FilterBar, FilterRange } from '@/components/ui/FilterBar'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Checkbox } from '@/components/ui/Checkbox'
+import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const statusLabel: Record<string, string> = {
@@ -27,12 +28,12 @@ function formatDate(value: string | null) {
   if (!value || !Number.isFinite(Date.parse(value))) return '—'
   return new Intl.DateTimeFormat('pt-BR').format(new Date(value))
 }
-function statusClass(value: string) {
+function statusTone(value: string): BadgeVariant {
   const status = normalized(value)
-  if (status === 'AGENDADA') return 'border-warning/30 bg-warning/10 text-warning'
-  if (status === 'EM_EXECUCAO' || status === 'EM_ANDAMENTO') return 'border-primary/30 bg-primary/10 text-primary'
-  if (status === 'CANCELADA' || status === 'CANCELADO') return 'border-danger/30 bg-danger/10 text-danger'
-  return 'border-border bg-bg text-text-secondary'
+  if (status === 'AGENDADA') return 'warning'
+  if (status === 'EM_EXECUCAO' || status === 'EM_ANDAMENTO') return 'success'
+  if (status === 'CANCELADA' || status === 'CANCELADO') return 'danger'
+  return 'neutral'
 }
 function isOverdue(order: { status: string; dataAgendada: string | null; atrasada?: boolean }) {
   if (typeof order.atrasada === 'boolean') return order.atrasada
@@ -162,7 +163,7 @@ export function WorkOrdersPage() {
         const sector = equip ? sectorById.get(equip.setorId) : undefined
         const technician = users.data?.find((user) => user.id === order.tecnicoId)
         const openOrder = () => navigate(`/work-orders/${order.id}`)
-        return <tr key={order.id} role="link" tabIndex={0} aria-label={`Abrir ${order.codigo || order.id}`} onClick={(event) => { if (!(event.target as HTMLElement).closest('a,button')) openOrder() }} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openOrder() } }} className="h-12 row-clickable border-b border-border/70 text-xs last:border-0"><td className="px-4"><Link to={`/work-orders/${order.id}`} className="font-semibold text-text-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{order.codigo || order.id}</Link>{order.planoPreventivoId && <span className="mt-1 block text-[10px] text-text-muted">Plano preventivo</span>}</td><td className="px-4 text-text-secondary">{normalized(order.tipo) === 'PREVENTIVA' ? 'Preventiva' : normalized(order.tipo) === 'CORRETIVA' ? 'Corretiva' : order.tipo || '—'}</td><td className="px-4"><span className="block font-medium text-text-primary">{equip?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equip?.codigo ?? ''}</span></td><td className="px-4 text-text-secondary">{technician?.nome ?? '—'}</td><td className="px-4 text-text-secondary">{sector?.nome ?? '—'}</td><td className="px-4 text-text-secondary">{formatDate(order.dataAgendada)}</td><td className="px-4"><div className="flex flex-wrap items-center gap-1.5"><span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-medium ${statusClass(order.status)}`}>{statusLabel[normalized(order.status)] ?? order.status.replaceAll('_', ' ')}</span>{isOverdue(order) && <span className="inline-flex rounded-md border border-danger/30 bg-danger/10 px-2 py-1 text-[10px] font-medium text-danger">Atrasada</span>}</div></td></tr>
+        return <tr key={order.id} role="link" tabIndex={0} aria-label={`Abrir ${order.codigo || order.id}`} onClick={(event) => { if (!(event.target as HTMLElement).closest('a,button')) openOrder() }} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openOrder() } }} className="h-12 row-clickable border-b border-border/70 text-xs last:border-0"><td className="px-4"><Link to={`/work-orders/${order.id}`} className="font-semibold text-text-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{order.codigo || order.id}</Link>{order.planoPreventivoId && <span className="mt-1 block text-[10px] text-text-muted">Plano preventivo</span>}</td><td className="px-4 text-text-secondary">{normalized(order.tipo) === 'PREVENTIVA' ? 'Preventiva' : normalized(order.tipo) === 'CORRETIVA' ? 'Corretiva' : order.tipo || '—'}</td><td className="px-4"><span className="block font-medium text-text-primary">{equip?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equip?.codigo ?? ''}</span></td><td className="px-4 text-text-secondary">{technician?.nome ?? '—'}</td><td className="px-4 text-text-secondary">{sector?.nome ?? '—'}</td><td className="px-4 text-text-secondary">{formatDate(order.dataAgendada)}</td><td className="px-4"><div className="flex flex-wrap items-center gap-1.5"><Badge variant={statusTone(order.status)}>{statusLabel[normalized(order.status)] ?? order.status.replaceAll('_', ' ')}</Badge>{isOverdue(order) && <Badge variant="danger">Atrasada</Badge>}</div></td></tr>
       })}</tbody></table></section>}
     </div>
 

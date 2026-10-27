@@ -11,6 +11,7 @@ import { documentFormSchema, validateDocumentFile, type DocumentFormValues } fro
 import { fetchDocumentDownloadUrl, useDeleteEquipmentDocument, useEquipmentDocuments, useUpdateDocumentValidity, useUploadEquipmentDocument } from '../api/equipment-documents'
 import type { DocumentType, EquipmentDocument } from '../types'
 import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
+import { Badge } from '@/components/ui/Badge'
 
 const documentTypeNames: Record<DocumentType, string> = {
   MANUAL: 'Manual', CERTIFICADO_CALIBRACAO: 'Certificado de calibração', LAUDO_SEGURANCA: 'Laudo de segurança', NOTA_FISCAL: 'Nota fiscal', OUTRO: 'Outro',
@@ -147,10 +148,10 @@ function ValidityModal({ equipmentId, document, onClose }: { equipmentId: string
 
 /** Selo com texto (não só cor): Vencido, Vencendo (até 30 dias), Válido ou Sem validade. */
 export function ValidityBadge({ document }: { document: Pick<EquipmentDocument, 'validadeAte' | 'vencido' | 'vencendo'> }) {
-  if (document.vencido) return <span className="rounded-full bg-danger/10 px-2.5 py-1 text-[11px] font-medium text-danger">Vencido</span>
-  if (document.vencendo) return <span className="rounded-full bg-warning/10 px-2.5 py-1 text-[11px] font-medium text-warning">Vencendo</span>
-  if (document.validadeAte) return <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">Válido</span>
-  return <span className="rounded-full bg-bg px-2.5 py-1 text-[11px] font-medium text-text-secondary">Sem validade</span>
+  if (document.vencido) return <Badge variant="danger">Vencido</Badge>
+  if (document.vencendo) return <Badge variant="warning">Vencendo</Badge>
+  if (document.validadeAte) return <Badge variant="success">Válido</Badge>
+  return <Badge>Sem validade</Badge>
 }
 
 function formatCivilDate(value: string | null) {
