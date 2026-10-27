@@ -59,6 +59,22 @@ function documentView(item: RecordValue) {
   const days = validade ? Math.round((Date.parse(validade) - Date.parse(dayIso(0))) / 86400000) : null
   return { ...item, vencido: days !== null && days < 0, vencendo: days !== null && days >= 0 && days <= 30 }
 }
+/** Lista de equipamentos: contagens de documentos vigentes (vencidos / vencendo em 30 dias) e filtros vencendoEm/documentoVencido. */
+function withDocumentStats(collection: RecordValue[], params?: Record<string, unknown>) {
+  const today = dayIso(0)
+  const withStats = collection.map((item) => {
+    const dated = documents.filter((doc) => doc.equipamentoId === item.id && doc.validadeAte).map((doc) => doc.validadeAte as string)
+    const expired = dated.filter((date) => date < today).length
+    const expiring = dated.filter((date) => date >= today && date <= dayIso(30)).length
+    return { ...item, documentosVencidos: expired, documentosVencendo: expiring, proximaValidade: dated.length ? [...dated].sort()[0] : null }
+  })
+  const until = typeof params?.vencendoEm === 'string' ? params.vencendoEm : null
+  return withStats.filter((item) => {
+    if (params?.documentoVencido && item.documentosVencidos === 0) return false
+    if (until && !(item.proximaValidade && item.proximaValidade <= until)) return false
+    return true
+  })
+}
 const history: Record<string, RecordValue[]> = {
   [tickets[0].id as string]: [{ acao: 'Chamado aberto', atorId: 'user-demo-1', ocorridoEm: now }],
   [tickets[1].id as string]: [{ acao: 'Chamado atribuído à equipe técnica', atorId: 'user-demo-1', ocorridoEm: now }],
@@ -168,7 +184,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   }
   if (path === '/tenants' || path === '/hospitais' || path === '/equipamentos' || path === '/ordens-de-trabalho' || path === '/checklists' || path === '/chamados' || path === '/users' || path === '/platform-users') {
     const collection = routeCollection(path)
-    if (method === 'get') return filterCollection(collection, path, params)
+    if (method === 'get') return path === '/equipamentos' ? withDocumentStats(filterCollection(collection, path, params), params) : filterCollection(collection, path, params)
     if (method === 'post') {
       const created = { id: makeId('demo'), ativo: true, ...body }
       collection.push(created)
