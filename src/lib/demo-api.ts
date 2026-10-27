@@ -44,6 +44,17 @@ const users: RecordValue[] = [
 const platformUsers: RecordValue[] = [{ id: 'platform-user-demo-1', codigo: 'SUP-001', nome: 'Alex Santos', email: 'alex.santos@example.test', role: 'super_admin', ativo: true }]
 const tenants: RecordValue[] = [{ id: 'tenant-demo-1', cnpj: '00000000000191', nome: 'Rede Hospitalar Exemplo', ativo: true, createdAt: now }]
 const labels: RecordValue[] = []
+const dayIso = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10)
+const documents: RecordValue[] = [
+  { id: 'doc-demo-1', equipamentoId: 'equipment-demo-1', tipoDocumento: 'CERTIFICADO_CALIBRACAO', nomeArquivo: 'calibracao-mx500.pdf', uploadedEm: now, validadeAte: dayIso(-5) },
+  { id: 'doc-demo-2', equipamentoId: 'equipment-demo-1', tipoDocumento: 'LAUDO_SEGURANCA', nomeArquivo: 'laudo-60601.pdf', uploadedEm: now, validadeAte: dayIso(12) },
+  { id: 'doc-demo-3', equipamentoId: 'equipment-demo-1', tipoDocumento: 'MANUAL', nomeArquivo: 'manual-mx500.pdf', uploadedEm: now, validadeAte: null },
+]
+function documentView(item: RecordValue) {
+  const validade = item.validadeAte as string | null
+  const days = validade ? Math.round((Date.parse(validade) - Date.parse(dayIso(0))) / 86400000) : null
+  return { ...item, vencido: days !== null && days < 0, vencendo: days !== null && days >= 0 && days <= 30 }
+}
 const history: Record<string, RecordValue[]> = {
   [tickets[0].id as string]: [{ acao: 'Chamado aberto', atorId: 'user-demo-1', ocorridoEm: now }],
   [tickets[1].id as string]: [{ acao: 'Chamado atribuído à equipe técnica', atorId: 'user-demo-1', ocorridoEm: now }],
@@ -147,6 +158,20 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   }
   if (path === '/hospitais' && method === 'post') return createRecord(hospitals, body)
 
+  const equipmentDocuments = path.match(/^\/equipamentos\/([^/]+)\/documentos(?:\/([^/]+))?(?:\/(download-url|validade))?$/)
+  if (equipmentDocuments) {
+    const [, equipmentId, documentId, action] = equipmentDocuments
+    if (!documentId && method === 'get') return documents.filter((item) => item.equipamentoId === equipmentId).map(documentView)
+    if (documentId === 'upload-url' && method === 'post') return { url: 'demo://upload', chave: `demo/documentos/${body.nomeArquivo ?? 'documento'}`, expiraEm: now }
+    if (!documentId && method === 'post') return documentView(createRecord(documents, { equipamentoId: equipmentId, tipoDocumento: body.tipoDocumento, nomeArquivo: body.nomeArquivo, uploadedEm: new Date().toISOString(), validadeAte: body.validadeAte ?? null }))
+    if (action === 'download-url' && method === 'get') return { url: 'https://example.test/demo-document.pdf', chave: 'demo', expiraEm: now }
+    if (action === 'validade' && method === 'patch') {
+      const record = documents.find((item) => item.id === documentId)
+      if (record) record.validadeAte = body.validadeAte ?? null
+      return record ? documentView(record) : null
+    }
+    if (documentId && !action && method === 'delete') { removeRecord(documents, documentId); return null }
+  }
   const equipmentLabels = path.match(/^\/equipamentos\/([^/]+)\/etiquetas(?:\/([^/]+))?$/)
   if (equipmentLabels) {
     if (method === 'get') return labels.filter((item) => item.equipamentoId === equipmentLabels[1])

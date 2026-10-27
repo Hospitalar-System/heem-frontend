@@ -77,3 +77,20 @@ export function toEquipmentInput(values: EquipmentFormValues, fotoUrl: string | 
     dataGarantiaFim: values.dataGarantiaFim || null,
   }
 }
+
+export const documentTypes = ['MANUAL', 'CERTIFICADO_CALIBRACAO', 'LAUDO_SEGURANCA', 'NOTA_FISCAL', 'OUTRO'] as const
+// O backend não limita tamanho/tipo do documento; este teto é só uma proteção do cliente.
+export const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024
+
+export const documentFormSchema = z.object({
+  tipoDocumento: z.enum(documentTypes, { message: 'Escolha o tipo do documento.' }),
+  validadeAte: z.string().optional(),
+})
+export type DocumentFormValues = z.infer<typeof documentFormSchema>
+
+export function validateDocumentFile(file: File | null | undefined) {
+  if (!file) return 'Selecione um arquivo.'
+  if (file.size === 0) return 'O arquivo está vazio.'
+  if (file.size > MAX_DOCUMENT_BYTES) return 'O arquivo excede o limite de 20 MB.'
+  return null
+}
