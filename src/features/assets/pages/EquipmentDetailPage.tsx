@@ -6,6 +6,7 @@ import { getAuthState } from '@/features/auth/session'
 import { EquipmentStatusBadge } from '../components/EquipmentStatusBadge'
 import { EquipmentDocumentsSection } from '../components/EquipmentDocumentsSection'
 import { EquipmentPhotoSection } from '../components/EquipmentPhotoSection'
+import { EquipmentChecklistSection } from '../components/EquipmentChecklistSection'
 import { EquipmentLabelsSection } from '../components/EquipmentLabelsSection'
 import { useEquipment, useEquipmentWorkOrders, useHospital, useSector } from '../api/assets'
 import type { Equipment } from '../types'
@@ -57,7 +58,7 @@ export function EquipmentDetailPage() {
       <section id="equipment-tab-panel" role="tabpanel" aria-labelledby={`equipment-tab-${activeTab}`} className="mt-4 outline-none">
         {activeTab === 'dados' ? <EquipmentData equipment={equipment.data} canWritePhoto={canReadDocuments} order={nextPreventive} ordersLoading={orders.isLoading} isAdmin={isAdmin} /> : null}
         {activeTab === 'medicoes' ? <UnavailablePanel title="Histórico de medições indisponível" detail="A API ainda não fornece uma rota de consulta de medições por equipamento." /> : null}
-        {activeTab === 'checklists' ? <UnavailablePanel title="Checklists vinculados indisponíveis" detail="A API ainda não fornece uma consulta dos checklists associados a este equipamento." /> : null}
+        {activeTab === 'checklists' ? <EquipmentChecklistSection equipment={equipment.data} orders={orders.data ?? []} ordersLoading={orders.isLoading} ordersError={orders.isError} isAdmin={isAdmin} /> : null}
         {activeTab === 'ots' ? <WorkOrdersPanel orders={orders.data ?? []} loading={orders.isLoading} error={orders.isError} retry={() => void orders.refetch()} /> : null}
         {activeTab === 'documentos' && canReadDocuments ? <EquipmentDocumentsSection equipmentId={id} canWrite={canReadDocuments} canManage={isAdmin} /> : null}
         {activeTab === 'etiquetas' && isAdmin ? <EquipmentLabelsSection equipmentId={id} /> : null}
