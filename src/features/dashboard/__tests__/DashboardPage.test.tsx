@@ -95,6 +95,16 @@ describe('DashboardPage', () => {
     expect(screen.getByText('7')).toBeInTheDocument()
   })
 
+  it('torna o cartão de documentos vencendo um atalho para a lista filtrada', async () => {
+    setAuthSession('access-token', adminUser)
+    renderDashboard()
+    const link = await screen.findByRole('link', { name: /Documentos vencendo em 30 dias/ })
+    expect(link).toHaveAttribute('href', '/assets?documentos=vencendo')
+    link.focus()
+    expect(link).toHaveFocus()
+    expect(screen.queryByRole('link', { name: /SLAs vencidos/ })).not.toBeInTheDocument()
+  })
+
   it('apresenta o empty state para um agregado sem atividade', async () => {
     const empty = { agendadas: 0, emExecucao: 0, concluidas: 0, canceladas: 0, equipamentosAtivos: 0, chamadosAbertosPorSeveridade: {}, chamadosSlaVencido: 0, disponibilidadePercentual: null, otsPreventivasAtrasadas: 0, documentosVencendo30d: 0, chamadosRecentes: [] }
     get.mockResolvedValueOnce({ data: empty })
