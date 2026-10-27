@@ -153,7 +153,7 @@ export function WorkOrdersPage() {
     { key: 'tecnico', header: 'Técnico', cell: (order) => <span className="text-text-secondary">{users.data?.find((user) => user.id === order.tecnicoId)?.nome ?? '—'}</span> },
     { key: 'setor', header: 'Setor', cell: (order) => { const equip = equipmentById.get(order.equipamentoId); return <span className="text-text-secondary">{(equip ? sectorById.get(equip.setorId) : undefined)?.nome ?? '—'}</span> } },
     { key: 'vencimento', header: 'Vencimento', cell: (order) => <span className="text-text-secondary">{formatDate(order.dataAgendada)}</span> },
-    { key: 'status', header: 'Status', cell: (order) => <div className="flex flex-wrap items-center gap-1.5"><StatusBadge tone={statusTone(order.status)} size="sm">{statusLabel[normalized(order.status)] ?? order.status.replaceAll('_', ' ')}</StatusBadge>{isOverdue(order) && <StatusBadge tone="danger" size="sm">Atrasada</StatusBadge>}</div> },
+    { key: 'status', header: 'Status', cell: (order) => <div className="flex flex-wrap items-center gap-1.5"><StatusBadge tone={statusTone(order.status)}>{statusLabel[normalized(order.status)] ?? order.status.replaceAll('_', ' ')}</StatusBadge>{isOverdue(order) && <StatusBadge tone="danger">Atrasada</StatusBadge>}</div> },
   ]
   return <AdminPageShell tabs={<WorkOrdersTabs />} title="Ordens de Trabalho" subtitle="Planejamento e acompanhamento da manutenção" action={<PageAction icon={ClipboardPlus} onClick={() => { resetForm(); setIsCreateOpen(true) }} collapseLabelOnMobile>Nova OT</PageAction>}>
     <div className="space-y-4">

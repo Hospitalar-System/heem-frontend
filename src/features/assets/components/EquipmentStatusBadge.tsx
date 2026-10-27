@@ -1,3 +1,4 @@
+import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import type { EquipmentLifecycle } from '../types'
 
 const labels: Record<EquipmentLifecycle, string> = {
@@ -9,11 +10,7 @@ const labels: Record<EquipmentLifecycle, string> = {
 }
 
 export function EquipmentStatusBadge({ status }: { status: EquipmentLifecycle }) {
-  const tone = status === 'ATIVO'
-    ? 'bg-primary/10 text-primary'
-    : status === 'EM_MANUTENCAO'
-      ? 'bg-warning/10 text-warning'
-      : 'bg-bg text-text-secondary'
+  const tone: BadgeVariant = status === 'ATIVO' ? 'success' : status === 'EM_MANUTENCAO' ? 'warning' : 'neutral'
 
-  return <span className={`inline-flex min-h-6 items-center rounded-full px-2.5 text-[11px] font-medium ${tone}`}>{labels[status]}</span>
+  return <Badge variant={tone}>{labels[status]}</Badge>
 }

@@ -10,17 +10,18 @@ import { useReassignWorkOrderTechnician, useWorkOrder, useWorkOrderChecklistItem
 import { Select } from '@/components/ui/Select'
 import { getAuthState } from '@/features/auth/session'
 import { WorkOrderPhotosSection } from '../components/WorkOrderPhotosSection'
+import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 
 const statusLabels: Record<string, string> = { AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída', CANCELADA: 'Cancelada', CANCELADO: 'Cancelada' }
 
 function canonical(value: string) { return value.toLocaleUpperCase('pt-BR').replaceAll('Ç', 'C').replaceAll('Ã', 'A') }
-function statusStyle(value: string) {
+function statusTone(value: string): BadgeVariant {
   const status = canonical(value)
-  if (status === 'AGENDADA') return 'border-warning/30 bg-warning/10 text-warning'
-  if (status === 'EM_EXECUCAO' || status === 'EM_ANDAMENTO') return 'border-primary/30 bg-primary/10 text-primary'
-  if (status === 'CANCELADA' || status === 'CANCELADO') return 'border-border bg-bg text-text-muted'
-  if (status === 'CONCLUIDA' || status === 'CONCLUIDO') return 'border-primary/30 bg-primary/10 text-primary'
-  return 'border-border bg-bg text-text-secondary'
+  if (status === 'AGENDADA') return 'warning'
+  if (status === 'EM_EXECUCAO' || status === 'EM_ANDAMENTO') return 'success'
+  if (status === 'CANCELADA' || status === 'CANCELADO') return 'neutral'
+  if (status === 'CONCLUIDA' || status === 'CONCLUIDO') return 'success'
+  return 'neutral'
 }
 function formatDate(value: string | null) {
   if (!value || !Number.isFinite(Date.parse(value))) return '—'
@@ -83,7 +84,7 @@ export function WorkOrderDetailPage() {
       <section className="rounded-lg border border-border bg-surface p-5 xl:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2"><p className="text-xs text-text-muted">Ordem de Trabalho</p><span className={`rounded-md border px-2 py-1 text-[10px] font-semibold ${statusStyle(order.data.status)}`}>{statusLabels[canonical(order.data.status)] ?? order.data.status.replaceAll('_', ' ')}</span><span className="rounded-md border border-border bg-bg px-2 py-1 text-[10px] text-text-secondary">{canonical(order.data.tipo) === 'PREVENTIVA' ? 'Preventiva' : canonical(order.data.tipo) === 'CORRETIVA' ? 'Corretiva' : order.data.tipo}</span></div>
+            <div className="flex flex-wrap items-center gap-2"><p className="text-xs text-text-muted">Ordem de Trabalho</p><Badge variant={statusTone(order.data.status)}>{statusLabels[canonical(order.data.status)] ?? order.data.status.replaceAll('_', ' ')}</Badge><Badge>{canonical(order.data.tipo) === 'PREVENTIVA' ? 'Preventiva' : canonical(order.data.tipo) === 'CORRETIVA' ? 'Corretiva' : order.data.tipo}</Badge></div>
             <h2 className="mt-3 text-xl font-semibold text-text-primary">{order.data.codigo}</h2>
             <p className="mt-1 text-xs text-text-muted">ID {order.data.id}</p>
           </div>

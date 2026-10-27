@@ -20,6 +20,7 @@ export default {
         },
         danger: 'var(--danger)',
         warning: 'var(--warning)',
+        info: 'var(--info)',
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],

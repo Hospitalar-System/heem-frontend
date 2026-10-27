@@ -6,7 +6,7 @@ Tokens extraídos da lista de Categorias (`/settings/categories`). O formato é 
 - **Cabeçalho:** classe `.table-head` (fundo `surface`, `text-text-secondary`, `font-medium`), `h-12`, `text-[11px]`, caixa normal (sem uppercase), `px-4`, `th scope="col"`.
 - **Linhas:** `.row-idle` + `.row-divider` (borda inferior suave, `color-mix` 45% do token), `h-12` (`rowHeightClass` para `h-14`/`h-16` com 2 linhas), `text-xs`, `px-4`. Clicável: `.row-clickable` (hover `surface-hi`, anel de foco `primary`, `tabIndex=0`, Enter/Espaço). Selecionada: `.row-selected` + `aria-current`.
 - **Célula:** nome principal `text-sm font-medium text-text-primary`; secundárias `text-text-secondary`; subtexto `text-[10px]/[11px] text-text-muted`; números `tabular-nums`.
-- **Selos (`StatusBadge` sobre `Badge`):** `md` = `px-2.5 py-1 text-[11px] font-medium` (situação); `sm` = `px-2 py-0.5 text-[10px] font-semibold` (auxiliar, ex. "Revisar"). Tons: neutral (cinza), success (primary), warning, danger, info; fundo suave, sem borda, texto sempre visível.
+- **Selos (`StatusBadge` sobre `Badge`):** tamanho e raio únicos do `Badge`. Tons: neutral (cinza), success (primary), warning, danger, info; fundo suave, sem borda, texto sempre visível.
 - **Menu de três pontos:** `RowActionsMenu` na última coluna, alinhado à direita (`rowActions`, `rowLabel` gera "Ações de <nome>"); linha sem ações = sem botão.
 - **Vazio:** `min-h-64`, borda tracejada, ícone `text-text-muted`, título `font-semibold`, descrição `text-sm text-text-secondary`, ação opcional centralizada.
 - **Carregando:** mesma tabela com linhas-esqueleto (`animate-pulse rounded bg-bg`), uma célula por coluna; `aria-busy` e `loadingLabel`.
@@ -27,4 +27,4 @@ const columns: DataColumn<Hospital>[] = [
   empty={{ icon: <Building2 />, title: 'Nenhum hospital', action: <PageAction onClick={create}>Novo hospital</PageAction> }} />
 ```
 
-`Badge` (`src/components/ui/Badge.tsx`) é PROVISÓRIO; o canônico é do Roberto (#101/#103) e substitui o arquivo mantendo a assinatura.
+`StatusBadge` é só a casca que mapeia o status para a variante do `Badge` compartilhado (`src/components/ui/Badge.tsx`).

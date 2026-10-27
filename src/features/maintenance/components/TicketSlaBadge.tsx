@@ -15,5 +15,5 @@ const tones: Record<Exclude<TicketSlaStatus, null>, StatusTone> = {
 
 export function TicketSlaBadge({ status }: { status?: TicketSlaStatus }) {
   if (!status) return null
-  return <StatusBadge tone={tones[status]} size="sm">{labels[status]}</StatusBadge>
+  return <StatusBadge tone={tones[status]}>{labels[status]}</StatusBadge>
 }

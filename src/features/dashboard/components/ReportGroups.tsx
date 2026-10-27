@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { chartTooltipProps } from '@/components/charts/ChartTooltip'
 import type { IndicatorGroup, ReportGrouping } from '../api/reports'
 import { formatCount, formatHours, formatPercent, useSortedRows } from './report-format'
 import { SectionEmpty, SortableHeader } from './report-ui'
@@ -46,7 +47,7 @@ export function ReportGroups({ groups, grouping }: { groups: IndicatorGroup[]; g
                 <CartesianGrid vertical={false} stroke="var(--border)" />
                 <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} interval={0} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} unit=" h" width={48} />
-                <Tooltip cursor={{ fill: 'var(--bg)' }} contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 12 }} formatter={(value) => `${Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} h`} />
+                <Tooltip {...chartTooltipProps} formatter={(value) => `${Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} h`} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="MTTA" fill="var(--warning)" radius={[4, 4, 0, 0]} maxBarSize={36} />
                 <Bar dataKey="MTTR" fill="var(--primary)" radius={[4, 4, 0, 0]} maxBarSize={36} />

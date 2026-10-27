@@ -1,4 +1,5 @@
 import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
+import { chartTooltipProps } from '@/components/charts/ChartTooltip'
 import type { DashboardSummary, WorkOrderStatus } from '../types'
 
 const statusColors: Record<WorkOrderStatus, string> = {
@@ -19,11 +20,7 @@ export function WorkOrdersChart({ data }: { data: DashboardSummary['workOrdersBy
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 20, right: 2, left: 2, bottom: 0 }}>
             <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} interval={0} />
-            <Tooltip
-              cursor={{ fill: 'var(--bg)' }}
-              contentStyle={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 12 }}
-              formatter={(value) => [value, 'Ordens']}
-            />
+            <Tooltip {...chartTooltipProps} formatter={(value) => [value, 'Ordens']} />
             <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={108}>
               <LabelList dataKey="count" position="top" fill="var(--text-primary)" fontSize={10} fontWeight={600} />
               {data.map((entry) => <Cell key={entry.status} fill={statusColors[entry.status]} />)}

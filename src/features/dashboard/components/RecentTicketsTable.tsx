@@ -48,7 +48,7 @@ export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicke
                   </td>
                   <td className="px-4 text-text-primary">{ticket.statusLabel}</td>
                   <td className="px-4">
-                    {severity ? <StatusBadge tone={severity.tone} size="sm">{severity.label}</StatusBadge> : <span className="text-text-muted">—</span>}
+                    {severity ? <StatusBadge tone={severity.tone}>{severity.label}</StatusBadge> : <span className="text-text-muted">—</span>}
                   </td>
                   <td className="px-4">{ticket.slaStatus ? <TicketSlaBadge status={ticket.slaStatus} /> : <span className="text-text-muted">—</span>}</td>
                   <td className="whitespace-nowrap px-4 text-text-secondary">{ticket.openedLabel}</td>

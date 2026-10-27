@@ -71,7 +71,7 @@ export function PreventivePlansPage() {
     { key: 'tecnico', header: 'Técnico padrão', cell: (plan) => <span className="text-text-secondary">{userById.get(plan.tecnicoPadraoId)?.nome ?? '—'}</span> },
     { key: 'status', header: 'Status', cell: (plan) => <div className="flex flex-wrap items-center gap-1.5">
       <StatusBadge tone={plan.ativo ? 'success' : 'neutral'}>{plan.ativo ? 'Ativo' : 'Inativo'}</StatusBadge>
-      {plan.ativo && plan.pendencia && <span title="O técnico padrão está inativo ou desvinculado do hospital; nenhuma OT foi gerada."><StatusBadge tone="warning" size="sm">Pendência</StatusBadge></span>}
+      {plan.ativo && plan.pendencia && <span title="O técnico padrão está inativo ou desvinculado do hospital; nenhuma OT foi gerada."><StatusBadge tone="warning">Pendência</StatusBadge></span>}
     </div> },
   ]
   return <AdminPageShell tabs={<WorkOrdersTabs />} title="Planos preventivos" subtitle="Manutenção recorrente e geração programada de OTs" action={<PageAction onClick={() => setFormPlan('new')} collapseLabelOnMobile>Novo plano</PageAction>}>

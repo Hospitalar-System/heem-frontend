@@ -112,8 +112,8 @@ export function TicketsPage() {
       <Link to={`/tickets/${ticket.id}`} aria-label={`Abrir chamado ${ticket.id}`} className="text-sm font-semibold text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">Chamado {ticket.id.slice(0, 8)}</Link>
       <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-secondary">{ticket.descricao || 'Sem descrição'}</p>
     </> },
-    { key: 'severidade', header: 'Severidade', cell: (ticket) => <StatusBadge tone={severityTone(ticket.severidade)} size="sm">{severityText[ticket.severidade] ?? 'Severidade não informada'}</StatusBadge> },
-    { key: 'status', header: 'Status', cell: (ticket) => { const status = canonicalStatus(ticket.status); return <StatusBadge tone="neutral" size="sm">{statusText[status] ?? ticket.status}</StatusBadge> } },
+    { key: 'severidade', header: 'Severidade', cell: (ticket) => <StatusBadge tone={severityTone(ticket.severidade)}>{severityText[ticket.severidade] ?? 'Severidade não informada'}</StatusBadge> },
+    { key: 'status', header: 'Status', cell: (ticket) => { const status = canonicalStatus(ticket.status); return <StatusBadge tone="neutral">{statusText[status] ?? ticket.status}</StatusBadge> } },
     { key: 'sla', header: 'SLA', cell: (ticket) => <TicketSlaBadge status={ticket.slaStatus} /> },
     { key: 'equipamento', header: 'Equipamento', cell: (ticket) => { const equip = equipmentById.get(ticket.equipamentoId); return <span className="text-sm font-medium text-text-primary">{equip ? `${equip.codigo} · ${equip.nome}` : 'Equipamento —'}</span> } },
     { key: 'local', header: 'Local', cell: (ticket) => { const hospital = hospitalById.get(ticket.hospitalId); const sector = sectorById.get(ticket.setorId); return <span className="text-[11px] text-text-muted">{hospital?.nome ?? 'Hospital —'}{sector?.nome ? ` · ${sector.nome}` : ''}</span> } },

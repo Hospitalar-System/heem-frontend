@@ -2,19 +2,27 @@ import type { HTMLAttributes, ReactNode } from 'react'
 
 export type BadgeVariant = 'neutral' | 'success' | 'warning' | 'danger' | 'info'
 
-// PROVISÓRIO (F6.5b): o Badge canônico é do Roberto (#101/#103) e substitui este arquivo mantendo a assinatura.
-const tokens: Record<BadgeVariant, { color: string; mix: string }> = {
-  neutral: { color: 'var(--text-muted)', mix: 'var(--text-muted)' },
-  success: { color: 'var(--primary)', mix: 'var(--primary)' },
-  warning: { color: 'var(--warning)', mix: 'var(--warning)' },
-  danger: { color: 'var(--danger)', mix: 'var(--danger)' },
-  info: { color: 'var(--text-primary)', mix: 'var(--text-secondary)' },
+const variantClass: Record<BadgeVariant, string> = {
+  neutral: 'badge-neutral',
+  success: 'badge-success',
+  warning: 'badge-warning',
+  danger: 'badge-danger',
+  info: 'badge-info',
 }
 
-export type BadgeProps = HTMLAttributes<HTMLSpanElement> & { variant?: BadgeVariant; icon?: ReactNode }
+interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+  /** neutro, sucesso, atenção (warning), perigo (danger) ou info. */
+  variant?: BadgeVariant
+  /** Ícone opcional antes do texto (decorativo). */
+  icon?: ReactNode
+}
 
-/** Selo com fundo suave (color-mix sobre o token), sem borda; o texto é sempre visível. */
-export function Badge({ variant = 'neutral', icon, children, className = '', style, ...rest }: BadgeProps) {
-  const { color, mix } = tokens[variant]
-  return <span data-variant={variant} {...rest} style={{ color, backgroundColor: `color-mix(in srgb, ${mix} 14%, transparent)`, ...style }} className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full ${className}`}>{icon ? <span aria-hidden="true" className="grid place-items-center">{icon}</span> : null}{children}</span>
+/** Selo de condição: fundo suave na cor semântica, sem borda; tamanho e raio únicos (F6.7). */
+export function Badge({ variant = 'neutral', icon, className = '', children, ...props }: BadgeProps) {
+  return (
+    <span {...props} className={`inline-flex min-h-6 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[11px] font-medium leading-4 ${variantClass[variant]} ${className}`.trim()}>
+      {icon ? <span aria-hidden="true" className="inline-flex shrink-0">{icon}</span> : null}
+      {children}
+    </span>
+  )
 }
