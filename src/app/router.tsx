@@ -28,7 +28,7 @@ const WorkOrderDetailPage = lazy(() => import('@/features/maintenance/pages/Work
 const ChecklistsPage = lazy(() => import('@/features/maintenance/pages/ChecklistsPage').then((module) => ({ default: module.ChecklistsPage })))
 const SlaPolicyPage = lazy(() => import('@/features/sla-policy/pages/SlaPolicyPage').then((module) => ({ default: module.SlaPolicyPage })))
 const BatchImportPage = lazy(() => import('@/features/imports/pages/BatchImportPage').then((module) => ({ default: module.BatchImportPage })))
-const PreventivePlansPage = lazy(() => import('@/features/maintenance/pages/PreventivePlansPage').then((module) => ({ default: module.PreventivePlansPage })))
+const PreventiveRoutinesPage = lazy(() => import('@/features/maintenance/pages/PreventiveRoutinesPage').then((module) => ({ default: module.PreventiveRoutinesPage })))
 
 const PreventiveCampaignsPage = lazy(() => import('@/features/maintenance/pages/PreventiveCampaignsPage').then((module) => ({ default: module.PreventiveCampaignsPage })))
 const PreventiveCampaignFormPage = lazy(() => import('@/features/maintenance/pages/PreventiveCampaignFormPage').then((module) => ({ default: module.PreventiveCampaignFormPage })))
@@ -73,7 +73,7 @@ export const routes = [
   { path: '/tickets/:id', element: <RequireTicketAccess><Suspense fallback={<DashboardRouteLoading />}><TicketDetailPage /></Suspense></RequireTicketAccess> },
   { path: '/work-orders', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrdersPage /></Suspense></RequireRole> },
   { path: '/work-orders/new', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrdersPage /></Suspense></RequireRole> },
-  { path: '/work-orders/rotinas', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventivePlansPage /></Suspense></RequireRole> },
+  { path: '/work-orders/rotinas', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveRoutinesPage /></Suspense></RequireRole> },
   { path: '/work-orders/campanhas', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignsPage /></Suspense></RequireRole> },
   { path: '/work-orders/campanhas/new', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignFormPage /></Suspense></RequireRole> },
   { path: '/work-orders/campanhas/:id', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignDetailPage /></Suspense></RequireRole> },

@@ -18,7 +18,7 @@ describe('modo de demonstração', () => {
     expect(hospitals.data).toHaveLength(2)
     expect(dashboardSummaryResponseSchema.safeParse(dashboard.data).success).toBe(true)
     expect(dashboard.data.chamadosRecentes).toHaveLength(2)
-    expect(orders.data).toHaveLength(2)
+    expect(orders.data).toHaveLength(4)
   })
 
   it('serve categorias, equipamentos com categoria e o fluxo de mesclar', async () => {
@@ -144,5 +144,30 @@ describe('modo de demonstração: paginação', () => {
     expect(none.headers['x-total-count']).toBe('0')
     const techs = await apiClient.get('/users', { params: { role: 'tecnico', pagina: 0, tamanho: 10 } })
     expect((techs.data as Array<{ role: string }>).every((user) => user.role === 'tecnico')).toBe(true)
+  })
+})
+
+describe('modo de demonstração: rotinas preventivas dentro das OTs (Story F7.2)', () => {
+  type Order = { id: string; tecnicoId: string | null; hospitalId: string | null; hospitalNome: string | null; setorId: string | null; setorNome: string | null; planoPreventivoId: string | null; campanhaPreventivaId: string | null }
+
+  it('a lista de OTs traz hospital, setor e rotina de origem, inclusive OT sem responsável', async () => {
+    const orders = (await apiClient.get('/ordens-de-trabalho')).data as Order[]
+    expect(orders.every((order) => 'hospitalNome' in order && 'planoPreventivoId' in order && 'campanhaPreventivaId' in order)).toBe(true)
+    expect(orders.find((order) => order.id === 'order-demo-1')).toMatchObject({ hospitalNome: 'Hospital São Lucas', setorNome: 'UTI Adulto', planoPreventivoId: 'plan-demo-1' })
+    expect(orders.some((order) => order.tecnicoId === null)).toBe(true)
+  })
+
+  it('filtra OTs por hospital, setor, plano e campanha no servidor', async () => {
+    const ids = async (params: Record<string, string>) => ((await apiClient.get('/ordens-de-trabalho', { params })).data as Order[]).map((order) => order.id)
+    expect(await ids({ hospitalId: 'hospital-demo-2' })).toEqual([])
+    expect((await ids({ hospitalId: 'hospital-demo-1', setorId: 'sector-demo-2' }))).toEqual(['order-demo-2'])
+    expect(await ids({ planoPreventivoId: 'plan-demo-1' })).toEqual(['order-demo-1', 'order-demo-3'])
+    expect(await ids({ campanhaPreventivaId: 'campaign-demo-1' })).toEqual(['order-demo-4'])
+  })
+
+  it('os planos trazem OTs geradas, concluídas e próxima execução', async () => {
+    const plans = (await apiClient.get('/planos-preventivos')).data as Array<{ id: string; otsGeradas: number; otsConcluidas: number; proximaExecucao: string }>
+    expect(plans.find((plan) => plan.id === 'plan-demo-1')).toMatchObject({ otsGeradas: 2, otsConcluidas: 1, proximaExecucao: expect.any(String) })
+    expect(plans.find((plan) => plan.id === 'plan-demo-2')).toMatchObject({ otsGeradas: 0, otsConcluidas: 0 })
   })
 })

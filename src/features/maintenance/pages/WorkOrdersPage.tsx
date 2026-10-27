@@ -1,13 +1,15 @@
-import { ClipboardPlus, Search } from 'lucide-react'
+import { ClipboardPlus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { WorkOrdersTabs } from '../components/WorkOrdersTabs'
 import { Modal } from '@/components/ui/Modal'
-import { useEquipments, useHospitals, useSectorsForHospitals } from '@/features/assets/api/assets'
+import { useEquipments, useHospitals, useSectors, useSectorsForHospitals } from '@/features/assets/api/assets'
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
 import { useChecklists, useCreatePreventiveWorkOrder, useWorkOrdersPage } from '../api/work-orders'
+import { useCampaign } from '../api/preventive-campaigns'
+import { usePreventivePlan } from '../api/preventive-plans'
 import { preventiveWorkOrderSchema } from '../schemas/work-orders.schema'
 import { Select } from '@/components/ui/Select'
 import { PageAction } from '@/components/ui/PageAction'
@@ -62,9 +64,21 @@ export function WorkOrdersPage() {
   const statusFilter = searchParams.get('status') ?? ''
   const typeFilter = searchParams.get('tipo') ?? ''
   const onlyOverdue = searchParams.get('atrasadas') === '1'
-  const orders = useWorkOrdersPage({ ...pagination.apiParams, status: statusFilter || undefined, tipo: typeFilter || undefined, atrasadas: onlyOverdue })
+  // Hospital, setor e rotina (plano/campanha) também vão para o servidor e para a URL (os dois últimos vêm do "Ver OTs" das Rotinas).
+  const hospitalFilter = searchParams.get('hospitalId') ?? ''
+  const sectorFilter = hospitalFilter ? (searchParams.get('setorId') ?? '') : ''
+  const planFilter = searchParams.get('planoPreventivoId') ?? ''
+  const campaignFilter = searchParams.get('campanhaPreventivaId') ?? ''
+  const orders = useWorkOrdersPage({
+    ...pagination.apiParams, status: statusFilter || undefined, tipo: typeFilter || undefined, atrasadas: onlyOverdue,
+    hospitalId: hospitalFilter || undefined, setorId: sectorFilter || undefined,
+    planoPreventivoId: planFilter || undefined, campanhaPreventivaId: campaignFilter || undefined,
+  })
   const equipment = useEquipments()
   const hospitals = useHospitals()
+  const filterSectors = useSectors(hospitalFilter)
+  const routinePlan = usePreventivePlan(planFilter)
+  const routineCampaign = useCampaign(campaignFilter)
   const sectors = useSectorsForHospitals(hospitals.data?.map(({ id }) => id) ?? [])
   const users = useTenantUsers()
   const hospitalLinks = useUserHospitalLinks(users.data ?? [])
@@ -107,7 +121,7 @@ export function WorkOrdersPage() {
     return (orders.data?.items ?? []).filter((order) => {
       const equip = equipmentById.get(order.equipamentoId)
       const sector = equip ? sectorById.get(equip.setorId) : undefined
-      const fields = [order.codigo, equip?.codigo, equip?.nome, sector?.nome]
+      const fields = [order.codigo, equip?.codigo, equip?.nome, sector?.nome, order.hospitalNome, order.setorNome]
       const when = order.dataAgendada ? Date.parse(order.dataAgendada) : NaN
       return (!term || fields.some((value) => value?.toLocaleLowerCase('pt-BR').includes(term)))
         && (!technicianFilter || order.tecnicoId === technicianFilter)
@@ -143,15 +157,23 @@ export function WorkOrdersPage() {
     }
   }
 
-  const filtersActive = Boolean(search || statusFilter || typeFilter || technicianFilter || dateFrom || dateTo || onlyOverdue)
+  const filtersActive = Boolean(search || statusFilter || typeFilter || technicianFilter || dateFrom || dateTo || onlyOverdue || hospitalFilter || sectorFilter || planFilter || campaignFilter)
+  const routineEquipment = routinePlan.data ? equipmentById.get(routinePlan.data.equipamentoId) : undefined
+  const routineLabel = campaignFilter
+    ? (routineCampaign.data?.nome ?? 'campanha')
+    : routineEquipment ? `plano de ${routineEquipment.codigo} · ${routineEquipment.nome}` : 'plano preventivo'
   const dependencyLoading = equipment.isLoading || checklists.isLoading || users.isLoading || sectors.isLoading || hospitalLinks.some((query) => query.isLoading)
 
   const orderColumns: DataColumn<(typeof visibleOrders)[number]>[] = [
-    { key: 'codigo', header: 'OT', cell: (order) => <><Link to={`/work-orders/${order.id}`} className="font-semibold text-text-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{order.codigo || order.id}</Link>{order.planoPreventivoId && <span className="mt-1 block text-[10px] text-text-muted">Plano preventivo</span>}</> },
+    { key: 'codigo', header: 'OT', cell: (order) => <><Link to={`/work-orders/${order.id}`} className="font-semibold text-text-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{order.codigo || order.id}</Link>{order.planoPreventivoId && <span className="mt-1 block text-[10px] text-text-muted">Plano preventivo</span>}{order.campanhaPreventivaId && <span className="mt-1 block text-[10px] text-text-muted">Campanha</span>}</> },
     { key: 'tipo', header: 'Tipo', cell: (order) => <span className="text-text-secondary">{normalized(order.tipo) === 'PREVENTIVA' ? 'Preventiva' : normalized(order.tipo) === 'CORRETIVA' ? 'Corretiva' : order.tipo || '—'}</span> },
     { key: 'equipamento', header: 'Equipamento', cell: (order) => { const equip = equipmentById.get(order.equipamentoId); return <><span className="block font-medium text-text-primary">{equip?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equip?.codigo ?? ''}</span></> } },
-    { key: 'tecnico', header: 'Técnico', cell: (order) => <span className="text-text-secondary">{users.data?.find((user) => user.id === order.tecnicoId)?.nome ?? '—'}</span> },
-    { key: 'setor', header: 'Setor', cell: (order) => { const equip = equipmentById.get(order.equipamentoId); return <span className="text-text-secondary">{(equip ? sectorById.get(equip.setorId) : undefined)?.nome ?? '—'}</span> } },
+    { key: 'tecnico', header: 'Técnico', cell: (order) => <span className="text-text-secondary">{order.tecnicoId ? (users.data?.find((user) => user.id === order.tecnicoId)?.nome ?? '—') : 'Sem responsável'}</span> },
+    { key: 'setor', header: 'Hospital / Setor', cell: (order) => {
+      const equip = equipmentById.get(order.equipamentoId)
+      const sectorName = order.setorNome ?? (equip ? sectorById.get(equip.setorId) : undefined)?.nome ?? '—'
+      return <><span className="block text-text-secondary">{sectorName}</span>{order.hospitalNome && <span className="text-[10px] text-text-muted">{order.hospitalNome}</span>}</>
+    } },
     { key: 'vencimento', header: 'Vencimento', cell: (order) => <span className="text-text-secondary">{formatDate(order.dataAgendada)}</span> },
     { key: 'status', header: 'Status', cell: (order) => <div className="flex flex-wrap items-center gap-1.5"><StatusBadge tone={statusTone(order.status)}>{statusLabel[normalized(order.status)] ?? order.status.replaceAll('_', ' ')}</StatusBadge>{isOverdue(order) && <StatusBadge tone="danger">Atrasada</StatusBadge>}</div> },
   ]
@@ -167,8 +189,17 @@ export function WorkOrdersPage() {
         <Checkbox label="Atrasadas" checked={onlyOverdue} onCheckedChange={(next) => pagination.setFilters({ atrasadas: next ? '1' : undefined })} containerClassName="h-9 justify-center rounded-md border border-border bg-bg px-3 text-xs text-text-secondary" />
         <Select size="sm" aria-label="Filtrar por tipo" value={typeFilter} onChange={(next) => pagination.setFilters({ tipo: next })} options={[{ value: '', label: 'Todos os tipos' }, { value: 'PREVENTIVA', label: 'Preventiva' }, { value: 'CORRETIVA', label: 'Corretiva' }]} />
         <Select size="sm" aria-label="Filtrar por técnico" value={technicianFilter} onChange={setTechnicianFilter} options={[{ value: '', label: 'Todos os técnicos' }, ...(users.data ?? []).filter((user) => user.role === 'tecnico').map((user) => ({ value: user.id, label: user.nome }))]} />
+        <Select size="sm" aria-label="Filtrar por hospital" value={hospitalFilter} onChange={(next) => pagination.setFilters({ hospitalId: next, setorId: undefined })} options={[{ value: '', label: 'Todos os hospitais' }, ...(hospitals.data ?? []).map((item) => ({ value: item.id, label: item.nome }))]} />
+        <Select size="sm" aria-label="Filtrar por setor" disabled={!hospitalFilter} value={sectorFilter} onChange={(next) => pagination.setFilters({ setorId: next })} options={[{ value: '', label: hospitalFilter ? 'Todos os setores' : 'Escolha um hospital' }, ...(filterSectors.data ?? []).map((item) => ({ value: item.id, label: item.nome }))]} />
         <FilterRange from={<DatePicker size="sm" aria-label="Data inicial" value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} />} to={<DatePicker size="sm" aria-label="Data final" value={dateTo} min={dateFrom || undefined} onChange={setDateTo} />} />
       </FilterBar>
+
+      {(planFilter || campaignFilter) && <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-border bg-surface pl-3 pr-1 text-xs text-text-primary">
+          Rotina: {routineLabel}
+          <button type="button" aria-label="Remover filtro de rotina" onClick={() => pagination.setFilters({ planoPreventivoId: undefined, campanhaPreventivaId: undefined })} className="grid size-6 place-items-center rounded text-text-secondary hover:bg-bg hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><X aria-hidden="true" size={13} /></button>
+        </span>
+      </div>}
 
       <DataTable
         label="Lista de ordens de trabalho"
@@ -184,7 +215,7 @@ export function WorkOrdersPage() {
         empty={{
           title: total > 0 || filtersActive ? 'Nenhuma OT encontrada' : 'Nenhuma ordem de trabalho registrada',
           description: total > 0 || filtersActive ? 'Ajuste os filtros para consultar outras ordens.' : 'As ordens criadas para este tenant aparecerão aqui.',
-          action: filtersActive ? <button type="button" onClick={() => { setSearch(''); setTechnicianFilter(''); setDateFrom(''); setDateTo(''); pagination.setFilters({ status: undefined, tipo: undefined, atrasadas: undefined }) }} className="rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button> : undefined,
+          action: filtersActive ? <button type="button" onClick={() => { setSearch(''); setTechnicianFilter(''); setDateFrom(''); setDateTo(''); pagination.setFilters({ status: undefined, tipo: undefined, atrasadas: undefined, hospitalId: undefined, setorId: undefined, planoPreventivoId: undefined, campanhaPreventivaId: undefined }) }} className="rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button> : undefined,
         }}
       />
       {!orders.isLoading && !orders.isError && <>

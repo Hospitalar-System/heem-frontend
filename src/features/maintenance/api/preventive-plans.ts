@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { useEquipments, useHospitals, useSectorsForHospitals } from '@/features/assets/api/assets'
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
@@ -9,9 +9,18 @@ import { useChecklists } from './work-orders'
 
 export const preventivePlansKey = ['preventive-plans'] as const
 
-export function usePreventivePlans(filters: PreventivePlanFilters) {
+export function usePreventivePlans(filters: PreventivePlanFilters, enabled = true) {
   // O total vem em X-Total-Count; sem o header, cai para o tamanho da página recebida (ver lib/pagination).
-  return usePagedQuery<PreventivePlan>(preventivePlansKey, '/planos-preventivos', { ...filters })
+  return usePagedQuery<PreventivePlan>(preventivePlansKey, '/planos-preventivos', { ...filters }, enabled)
+}
+
+/** Um plano (nome da rotina no chip da lista de OTs). */
+export function usePreventivePlan(id: string) {
+  return useQuery({
+    queryKey: [...preventivePlansKey, 'detail', id],
+    queryFn: async () => (await apiClient.get<PreventivePlan>(`/planos-preventivos/${id}`)).data,
+    enabled: Boolean(id),
+  })
 }
 
 export function useCreatePreventivePlan() {

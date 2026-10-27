@@ -27,8 +27,11 @@ const tickets: RecordValue[] = [
   { id: 'ticket-demo-2', hospitalId: hospitals[0].id, setorId: sectors[1].id, equipamentoId: equipment[1].id, abertoPor: 'user-demo-2', descricao: 'Alarme de pressão recorrente durante o autoteste.', severidade: 'MEDIA', status: 'EM_ANDAMENTO', abertoEm: now, slaStatus: 'no_prazo', codigo: 'CH-0002', tecnicoResponsavelId: 'user-demo-2', primeiraRespostaEm: now, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: true },
 ]
 const workOrders: RecordValue[] = [
-  { id: 'order-demo-1', codigo: 'OT-2026-001', tipo: 'PREVENTIVA', status: 'AGENDADA', equipamentoId: equipment[0].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', local: 'UTI Adulto', dataAgendada: now, iniciadaEm: null, concluidaEm: null, atrasada: false },
-  { id: 'order-demo-2', codigo: 'OT-2026-002', tipo: 'CORRETIVA', status: 'EM_EXECUCAO', equipamentoId: equipment[1].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', chamadoId: tickets[1].id, local: 'Centro Cirúrgico', dataAgendada: now, iniciadaEm: now, concluidaEm: null, atrasada: false },
+  { id: 'order-demo-1', codigo: 'OT-2026-001', tipo: 'PREVENTIVA', status: 'AGENDADA', equipamentoId: equipment[0].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', local: 'UTI Adulto', dataAgendada: now, iniciadaEm: null, concluidaEm: null, atrasada: false, planoPreventivoId: 'plan-demo-1', campanhaPreventivaId: null },
+  { id: 'order-demo-2', codigo: 'OT-2026-002', tipo: 'CORRETIVA', status: 'EM_EXECUCAO', equipamentoId: equipment[1].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', chamadoId: tickets[1].id, local: 'Centro Cirúrgico', dataAgendada: now, iniciadaEm: now, concluidaEm: null, atrasada: false, planoPreventivoId: null, campanhaPreventivaId: null },
+  { id: 'order-demo-3', codigo: 'OT-2026-003', tipo: 'PREVENTIVA', status: 'CONCLUIDA', equipamentoId: equipment[0].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', local: 'UTI Adulto', dataAgendada: now, iniciadaEm: now, concluidaEm: now, atrasada: false, planoPreventivoId: 'plan-demo-1', campanhaPreventivaId: null },
+  // Campanha no modo "sem responsável": a OT não tem técnico.
+  { id: 'order-demo-4', codigo: 'OT-2026-004', tipo: 'PREVENTIVA', status: 'AGENDADA', equipamentoId: equipment[0].id, checklistId: 'checklist-demo-1', tecnicoId: null, local: 'UTI Adulto', dataAgendada: now, iniciadaEm: null, concluidaEm: null, atrasada: false, planoPreventivoId: null, campanhaPreventivaId: 'campaign-demo-1' },
 ]
 const checklists: RecordValue[] = [{ id: 'checklist-demo-1', codigo: 'CHK-ROT-01', nome: 'Inspeção funcional', descricao: 'Verificação operacional de rotina', ativo: true, quantidadeItens: 3 }]
 const preventivePlans: RecordValue[] = [
@@ -156,7 +159,7 @@ const demoTopEquipment = [
 function handleRequest(method: string, path: string, body: RecordValue, params?: Record<string, unknown>): unknown {
   if (path.startsWith('/campanhas-preventivas')) return handleCampaigns(method, path, body, params)
   if (path === '/planos-preventivos' && method === 'get') {
-    return preventivePlans.filter((plan) => (!params?.equipamentoId || plan.equipamentoId === params.equipamentoId) && (params?.ativo === undefined || plan.ativo === params.ativo))
+    return preventivePlans.filter((plan) => (!params?.equipamentoId || plan.equipamentoId === params.equipamentoId) && (params?.ativo === undefined || plan.ativo === params.ativo)).map(planView)
   }
   if (path === '/planos-preventivos' && method === 'post') {
     const plan = { id: makeId('plan-demo'), ...body, proximaData: nextPlanDate(body.dataAncora as string, Number(body.intervaloDias)), ativo: true, pendencia: false, createdAt: now, updatedAt: now }
@@ -169,7 +172,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     if (!plan) return null
     if (planRoute[2] && method === 'post') Object.assign(plan, { ativo: false, updatedAt: now })
     else if (method === 'put') Object.assign(plan, body, { proximaData: nextPlanDate(body.dataAncora as string, Number(body.intervaloDias)), updatedAt: now })
-    return plan
+    return planView(plan)
   }
   if (path === '/relatorios/dashboard') return dashboard
   if (path === '/relatorios/indicadores') return demoIndicators(params?.agrupar)
@@ -199,6 +202,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   }
   if (path === '/tenants' || path === '/hospitais' || path === '/equipamentos' || path === '/ordens-de-trabalho' || path === '/checklists' || path === '/chamados' || path === '/users' || path === '/platform-users') {
     const collection = routeCollection(path)
+    if (method === 'get' && path === '/ordens-de-trabalho') return filterCollection(collection, path, params).map(workOrderListView)
     if (method === 'get') return path === '/equipamentos' ? withDocumentStats(filterCollection(collection, path, params), params) : filterCollection(collection, path, params)
     if (method === 'post') {
       const created = { id: makeId('demo'), ativo: true, ...body }
@@ -431,7 +435,29 @@ function filterCollection(collection: RecordValue[], path: string, params?: Reco
   if (path === '/users' && params?.role) collection = collection.filter((item) => item.role === params.role)
   if (path === '/users' && params?.ativo !== undefined) collection = collection.filter((item) => item.ativo === params.ativo)
   if (path === '/ordens-de-trabalho' && params?.atrasadas) collection = collection.filter((item) => item.atrasada)
+  if (path === '/ordens-de-trabalho') {
+    if (params?.hospitalId) collection = collection.filter((item) => orderLocation(item).hospitalId === params.hospitalId)
+    if (params?.setorId) collection = collection.filter((item) => orderLocation(item).setorId === params.setorId)
+    if (params?.planoPreventivoId) collection = collection.filter((item) => item.planoPreventivoId === params.planoPreventivoId)
+    if (params?.campanhaPreventivaId) collection = collection.filter((item) => item.campanhaPreventivaId === params.campanhaPreventivaId)
+  }
   return collection
+}
+
+/** Hospital e setor da OT, resolvidos pelo equipamento (só a lista os devolve, como no backend 18.2). */
+function orderLocation(order: RecordValue) {
+  const sector = sectors.find((item) => item.id === equipment.find((entry) => entry.id === order.equipamentoId)?.setorId)
+  const hospital = hospitals.find((item) => item.id === sector?.hospitalId)
+  return { hospitalId: hospital?.id ?? null, hospitalNome: hospital?.nome ?? null, setorId: sector?.id ?? null, setorNome: sector?.nome ?? null }
+}
+function workOrderListView(order: RecordValue): RecordValue {
+  return { planoPreventivoId: null, campanhaPreventivaId: null, ...order, ...orderLocation(order) }
+}
+
+/** Plano com o progresso agregado das OTs (otsGeradas/otsConcluidas/proximaExecucao), como no backend 18.2. */
+function planView(plan: RecordValue): RecordValue {
+  const generated = workOrders.filter((order) => order.planoPreventivoId === plan.id)
+  return { ...plan, otsGeradas: generated.length, otsConcluidas: generated.filter((order) => order.status === 'CONCLUIDA').length, proximaExecucao: plan.proximaData }
 }
 
 function routeCollection(path: string) {
