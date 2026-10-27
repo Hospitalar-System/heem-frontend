@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
@@ -63,7 +63,7 @@ describe('TicketsPage com paginação', () => {
     renderPage(<TicketsPage />, '/tickets')
     expect(await screen.findByText('Mostrando 1–25 de 120')).toBeInTheDocument()
     expect(lastParams('/chamados')).toEqual({ pagina: 0, tamanho: 25 })
-    expect(screen.getAllByRole('article')).toHaveLength(25)
+    expect(within(screen.getByRole('table', { name: 'Lista de chamados' })).getAllByRole('row')).toHaveLength(26) // cabeçalho + 25 chamados
     await user.click(screen.getByRole('button', { name: 'Próxima página' }))
     expect(await screen.findByText('Mostrando 26–50 de 120')).toBeInTheDocument()
     expect(lastParams('/chamados')).toEqual({ pagina: 1, tamanho: 25 })

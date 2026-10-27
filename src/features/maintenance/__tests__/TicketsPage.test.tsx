@@ -83,7 +83,7 @@ describe('TicketsPage', () => {
     await screen.findByText('Falha crítica de pressão')
     await chooseOption(userEvent.setup(), 'Filtrar por status', 'Resolvido')
     expect(await screen.findByText('Falha resolvida')).toBeInTheDocument()
-    const card = screen.getByRole('article')
+    const card = screen.getAllByRole('row')[1]
     expect(within(card).queryByRole('button', { name: 'Gerar OT corretiva' })).not.toBeInTheDocument()
     expect(screen.queryByText('Falha crítica de pressão')).not.toBeInTheDocument()
   })

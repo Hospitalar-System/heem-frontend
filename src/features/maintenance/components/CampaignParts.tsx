@@ -1,9 +1,9 @@
 import { AlertTriangle } from 'lucide-react'
-import { Badge, type BadgeVariant } from '@/components/ui/Badge'
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
 import type { CampaignPendingItem, CampaignPendingReason, CampaignStatus } from '../types/campaigns'
 import { campaignStatusLabels, pendingReasonInfo, pendingReasons } from '../utils/preventive-campaigns'
 
-const statusTone: Record<CampaignStatus, BadgeVariant> = {
+const statusTone: Record<CampaignStatus, StatusTone> = {
   pendente: 'neutral',
   processando: 'warning',
   concluida: 'success',
@@ -12,7 +12,7 @@ const statusTone: Record<CampaignStatus, BadgeVariant> = {
 }
 
 export function CampaignStatusBadge({ status }: { status: CampaignStatus }) {
-  return <Badge variant={statusTone[status]}>{campaignStatusLabels[status]}</Badge>
+  return <StatusBadge tone={statusTone[status]}>{campaignStatusLabels[status]}</StatusBadge>
 }
 
 /**

@@ -1,3 +1,4 @@
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -7,7 +8,6 @@ import { useSaveSlaPolicy, useSlaPolicy } from '../api/sla-policy'
 import { slaPolicyFormSchema } from '../types'
 import type { SlaPolicyEntry, SlaPolicyFormValues, SlaPolicyUpdateEntry } from '../types'
 import { FormSelect } from '@/components/ui/FormSelect'
-import { Badge } from '@/components/ui/Badge'
 
 const severityLabels: Record<SlaPolicyEntry['severidade'], string> = {
   CRITICA: 'Crítica',
@@ -122,7 +122,7 @@ export function SlaPolicyPage() {
                       {rowError?.resolucao?.valor?.message && <p role="alert" className="max-w-36 text-[10px] text-danger">{rowError.resolucao.valor.message}</p>}
                     </div>
                   </td>
-                  <td className="px-3 py-3"><Badge variant={item.padrao ? 'neutral' : 'success'}>{item.padrao ? 'Padrão do sistema' : 'Personalizado'}</Badge></td>
+                  <td className="px-3 py-3"><StatusBadge tone={item.padrao ? 'neutral' : 'success'}>{item.padrao ? 'Padrão do sistema' : 'Personalizado'}</StatusBadge></td>
                 </tr>
               })}</tbody>
             </table>
