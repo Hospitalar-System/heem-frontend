@@ -19,4 +19,10 @@ describe('DashboardSidebar — estrutura', () => {
     expect(aside.lastElementChild?.className).toMatch(/shrink-0/)
     expect(menu.contains(screen.getByRole('navigation'))).toBe(true)
   })
+
+  it('não lista Setores: ficam dentro do hospital', () => {
+    render(<MemoryRouter><DashboardSidebar /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: 'Hospitais' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Setores' })).not.toBeInTheDocument()
+  })
 })

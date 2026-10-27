@@ -5,6 +5,7 @@ import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import type { UserRole } from '@/features/auth/types'
 import { routes } from '../router'
 
+vi.mock('@/features/assets/pages/HospitalsPage', () => ({ HospitalsPage: () => <p>pagina-hospitais</p> }))
 vi.mock('@/features/assets/pages/CategoriesPage', () => ({ CategoriesPage: () => <p>pagina-categorias</p> }))
 vi.mock('@/features/sla-policy/pages/SlaPolicyPage', () => ({ SlaPolicyPage: () => <p>pagina-sla</p> }))
 vi.mock('@/features/imports/pages/BatchImportPage', () => ({ BatchImportPage: () => <p>pagina-importacao</p> }))
@@ -35,6 +36,7 @@ afterEach(() => clearAuthSession())
 
 describe('redirecionamento das rotas antigas', () => {
   it.each([
+    ['/sectors?hospitalId=h1', '/hospitals?hospitalId=h1', 'pagina-hospitais'],
     ['/categories?q=raio#topo', '/settings/categories?q=raio#topo', 'pagina-categorias'],
     ['/settings/sla?x=1', '/settings/sla-policy?x=1', 'pagina-sla'],
     ['/sla-policy', '/settings/sla-policy', 'pagina-sla'],
