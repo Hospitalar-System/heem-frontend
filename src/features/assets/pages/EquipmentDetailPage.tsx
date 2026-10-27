@@ -1,14 +1,15 @@
 import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowLeft, CalendarClock, ClipboardList, Edit3, Gauge, History, ListChecks, Tag } from 'lucide-react'
+import { ArrowLeft, CalendarClock, ClipboardList, Edit3, FileText, Gauge, History, ListChecks, Tag } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { getAuthState } from '@/features/auth/session'
 import { EquipmentStatusBadge } from '../components/EquipmentStatusBadge'
+import { EquipmentDocumentsSection } from '../components/EquipmentDocumentsSection'
 import { EquipmentLabelsSection } from '../components/EquipmentLabelsSection'
 import { useEquipment, useEquipmentPhoto, useEquipmentWorkOrders, useHospital, useSector } from '../api/assets'
 import type { Equipment } from '../types'
 
-type EquipmentTab = 'dados' | 'medicoes' | 'checklists' | 'ots' | 'etiquetas'
+type EquipmentTab = 'dados' | 'medicoes' | 'checklists' | 'ots' | 'documentos' | 'etiquetas'
 const tabs: Array<{ id: EquipmentTab; label: string; Icon: typeof Gauge }> = [
   { id: 'dados', label: 'Dados', Icon: Gauge },
   { id: 'medicoes', label: 'Histórico de medições', Icon: History },
@@ -25,8 +26,11 @@ export function EquipmentDetailPage() {
   const hospital = useHospital(sector.data?.hospitalId ?? '')
   const photo = useEquipmentPhoto(id, Boolean(equipment.data?.fotoUrl))
   const orders = useEquipmentWorkOrders(id)
-  const isAdmin = getAuthState().user?.roles.includes('admin_cliente') ?? false
-  const visibleTabs = isAdmin ? [...tabs, { id: 'etiquetas' as const, label: 'Etiquetas', Icon: Tag }] : tabs
+  const roles = getAuthState().user?.roles ?? []
+  const isAdmin = roles.includes('admin_cliente')
+  // Backend: documentos só para admin_cliente e tecnico; alterar validade/excluir só admin_cliente.
+  const canReadDocuments = isAdmin || roles.includes('tecnico')
+  const visibleTabs = [...tabs, ...(canReadDocuments ? [{ id: 'documentos' as const, label: 'Documentos', Icon: FileText }] : []), ...(isAdmin ? [{ id: 'etiquetas' as const, label: 'Etiquetas', Icon: Tag }] : [])]
   const nextPreventive = useMemo(() => (orders.data ?? [])
     .filter((order) => order.tipo === 'PREVENTIVA' && order.status === 'AGENDADA' && order.dataAgendada)
     .sort((left, right) => Date.parse(left.dataAgendada ?? '') - Date.parse(right.dataAgendada ?? ''))[0], [orders.data])
@@ -54,6 +58,7 @@ export function EquipmentDetailPage() {
         {activeTab === 'medicoes' ? <UnavailablePanel title="Histórico de medições indisponível" detail="A API ainda não fornece uma rota de consulta de medições por equipamento." /> : null}
         {activeTab === 'checklists' ? <UnavailablePanel title="Checklists vinculados indisponíveis" detail="A API ainda não fornece uma consulta dos checklists associados a este equipamento." /> : null}
         {activeTab === 'ots' ? <WorkOrdersPanel orders={orders.data ?? []} loading={orders.isLoading} error={orders.isError} retry={() => void orders.refetch()} /> : null}
+        {activeTab === 'documentos' && canReadDocuments ? <EquipmentDocumentsSection equipmentId={id} canWrite={canReadDocuments} canManage={isAdmin} /> : null}
         {activeTab === 'etiquetas' && isAdmin ? <EquipmentLabelsSection equipmentId={id} /> : null}
       </section>
     </div>
