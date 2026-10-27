@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Select } from './Select'
+import { pageItems } from './pagination-items'
 
 export const PAGINATION_SIZES = [10, 25, 50] as const
 
@@ -13,16 +14,6 @@ export type PaginationProps = {
   onPageChange: (page: number) => void
   onSizeChange: (size: number) => void
   className?: string
-}
-
-type PageItem = number | 'gap-start' | 'gap-end'
-
-/** Até 7 posições: primeira, última, a atual e suas vizinhas, com reticências no meio. */
-export function pageItems(page: number, totalPages: number): PageItem[] {
-  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1)
-  if (page <= 4) return [1, 2, 3, 4, 5, 'gap-end', totalPages]
-  if (page >= totalPages - 3) return [1, 'gap-start', ...Array.from({ length: 5 }, (_, index) => totalPages - 4 + index)]
-  return [1, 'gap-start', page - 1, page, page + 1, 'gap-end', totalPages]
 }
 
 const controlClass = 'inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-disabled:cursor-not-allowed aria-disabled:opacity-40'
