@@ -2,6 +2,7 @@ import { Menu, Plus, Search, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ThemeSwitcher } from '@/app/ThemeSwitcher'
+import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock'
 import { useDashboardSummary } from '../api/dashboard'
 import { DashboardAttention } from '../components/DashboardAttention'
 import { DashboardKpis } from '../components/DashboardKpis'
@@ -15,13 +16,14 @@ import { DashboardContractError, isDashboardSummaryEmpty } from '../types'
 export function DashboardPage() {
   const [search, setSearch] = useState('')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  useBodyScrollLock(mobileNavOpen)
   const dashboard = useDashboardSummary()
   const summary = dashboard.data
   const isEmpty = summary ? isDashboardSummaryEmpty(summary) : false
 
   return (
-    <main className="flex h-[100dvh] min-h-[600px] w-full overflow-hidden border border-border bg-bg text-text-primary md:rounded-2xl">
-      <div className="hidden h-full lg:flex">
+    <main className="flex min-h-screen w-full bg-bg text-text-primary">
+      <div className="sticky top-0 hidden h-screen h-dvh self-start lg:flex">
         <DashboardSidebar />
       </div>
 
@@ -36,7 +38,7 @@ export function DashboardPage() {
       )}
 
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[68px] shrink-0 items-center justify-between gap-3 border-b border-border bg-bg px-4 md:px-6">
+        <header className="sticky top-0 z-30 flex h-[68px] shrink-0 items-center justify-between gap-3 border-b border-border bg-bg px-4 md:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button type="button" aria-label="Abrir navegação" onClick={() => setMobileNavOpen(true)} className="grid size-8 shrink-0 place-items-center rounded-md text-text-secondary outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-primary lg:hidden">
               <Menu aria-hidden="true" size={17} />
@@ -69,7 +71,7 @@ export function DashboardPage() {
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6 xl:px-8 xl:py-7">
+        <div className="min-w-0 flex-1 p-4 md:p-6 xl:px-8 xl:py-7">
           {dashboard.isPending ? <DashboardLoadingState /> : null}
           {dashboard.isError ? <DashboardErrorState kind={dashboard.error instanceof DashboardContractError ? 'contract' : 'network'} onRetry={() => void dashboard.refetch()} /> : null}
           {!dashboard.isPending && !dashboard.isError && isEmpty ? <DashboardEmptyState /> : null}

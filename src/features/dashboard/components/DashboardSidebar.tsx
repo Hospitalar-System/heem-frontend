@@ -57,12 +57,13 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   return (
-    <aside aria-label="Navegação principal" className="flex h-full w-[248px] shrink-0 flex-col border-r border-border bg-bg-brand">
-      <div className="flex h-[68px] items-center gap-3 px-[22px]">
+    <aside aria-label="Navegação principal" className="flex h-full max-h-dvh w-[248px] shrink-0 flex-col overflow-hidden border-r border-border bg-bg-brand">
+      <div className="flex h-[68px] shrink-0 items-center gap-3 px-[22px]">
         <span aria-hidden="true" className="grid size-[34px] place-items-center rounded-[9px] bg-primary text-[17px] font-bold text-bg-brand">H</span>
         <span className="text-[19px] font-bold tracking-tight text-text-primary">HEMM</span>
       </div>
 
+      <div data-testid="sidebar-menu" className="min-h-0 flex-1 overflow-y-auto pb-3">
       {isSuperAdmin && <div className="mb-3 mt-3 space-y-1 px-3"><p className="mb-2 px-[14px] text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">Administração</p><NavLink to="/platform/clients" onClick={onNavigate} className={({ isActive }) => `flex min-h-[39px] items-center gap-3 rounded-md px-3 text-[14px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive ? 'bg-primary/15 text-primary' : 'text-text-secondary hover:bg-surface hover:text-text-primary'}`}><BriefcaseBusiness aria-hidden="true" className="size-[14px] shrink-0" strokeWidth={1.8} /><span>Clientes</span></NavLink><NavLink to="/platform/users" onClick={onNavigate} className={({ isActive }) => `flex min-h-[39px] items-center gap-3 rounded-md px-3 text-[14px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive ? 'bg-primary/15 text-primary' : 'text-text-secondary hover:bg-surface hover:text-text-primary'}`}><UsersRound aria-hidden="true" className="size-[14px] shrink-0" strokeWidth={1.8} /><span>Usuários da Plataforma</span></NavLink></div>}
       <p className="mb-2 mt-3 px-[26px] text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">Operação</p>
       <nav className="space-y-1 px-3">
@@ -78,8 +79,9 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
           </NavLink>
         ))}
       </nav>
+      </div>
 
-      <div className="mt-auto flex min-h-[60px] items-center gap-2 border-t border-border px-3">
+      <div className="flex min-h-[60px] shrink-0 items-center gap-2 border-t border-border px-3">
         <span aria-hidden="true" className="grid size-[34px] shrink-0 place-items-center rounded-full bg-primary text-[10px] font-semibold text-bg-brand">{getInitials(displayName)}</span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[10px] font-semibold text-text-primary">{displayName}</span>
