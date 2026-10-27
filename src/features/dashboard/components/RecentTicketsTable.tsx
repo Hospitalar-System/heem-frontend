@@ -1,13 +1,14 @@
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { TicketSlaBadge } from '@/features/maintenance/components/TicketSlaBadge'
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
 import type { DashboardTicket, TicketSeverity } from '../types'
 
-const severityStyle: Record<TicketSeverity, { label: string; className: string }> = {
-  critical: { label: 'Crítica', className: 'border-danger/25 bg-danger/10 text-danger' },
-  high: { label: 'Alta', className: 'border-warning/25 bg-warning/10 text-warning' },
-  medium: { label: 'Média', className: 'border-border bg-bg text-text-secondary' },
-  low: { label: 'Baixa', className: 'border-primary/25 bg-primary/10 text-primary' },
+const severityStyle: Record<TicketSeverity, { label: string; tone: StatusTone }> = {
+  critical: { label: 'Crítica', tone: 'danger' as const },
+  high: { label: 'Alta', tone: 'warning' as const },
+  medium: { label: 'Média', tone: 'neutral' as const },
+  low: { label: 'Baixa', tone: 'success' as const },
 }
 
 export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicket[]; query: string }) {
@@ -47,7 +48,7 @@ export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicke
                   </td>
                   <td className="px-4 text-text-primary">{ticket.statusLabel}</td>
                   <td className="px-4">
-                    {severity ? <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-medium ${severity.className}`}>{severity.label}</span> : <span className="text-text-muted">—</span>}
+                    {severity ? <StatusBadge tone={severity.tone} size="sm">{severity.label}</StatusBadge> : <span className="text-text-muted">—</span>}
                   </td>
                   <td className="px-4">{ticket.slaStatus ? <TicketSlaBadge status={ticket.slaStatus} /> : <span className="text-text-muted">—</span>}</td>
                   <td className="whitespace-nowrap px-4 text-text-secondary">{ticket.openedLabel}</td>

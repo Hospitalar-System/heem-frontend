@@ -1,3 +1,4 @@
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -121,7 +122,7 @@ export function SlaPolicyPage() {
                       {rowError?.resolucao?.valor?.message && <p role="alert" className="max-w-36 text-[10px] text-danger">{rowError.resolucao.valor.message}</p>}
                     </div>
                   </td>
-                  <td className="px-3 py-3"><span className={`inline-flex whitespace-nowrap rounded-md border px-2 py-1 text-[10px] font-medium ${item.padrao ? 'border-border bg-bg text-text-secondary' : 'border-primary/30 bg-primary/10 text-primary'}`}>{item.padrao ? 'Padrão do sistema' : 'Personalizado'}</span></td>
+                  <td className="px-3 py-3"><StatusBadge tone={item.padrao ? 'neutral' : 'success'} size="sm">{item.padrao ? 'Padrão do sistema' : 'Personalizado'}</StatusBadge></td>
                 </tr>
               })}</tbody>
             </table>

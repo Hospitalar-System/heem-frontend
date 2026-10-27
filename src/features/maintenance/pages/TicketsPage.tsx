@@ -12,6 +12,8 @@ import type { Ticket, TicketSeverity, TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { Pagination } from '@/components/ui/Pagination'
+import { DataTable, type DataColumn } from '@/components/ui/DataTable'
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
@@ -22,11 +24,11 @@ function canonicalStatus(status: TicketStatus) {
   return status.toLocaleUpperCase('pt-BR').replace('Ç', 'C')
 }
 
-function severityClass(severity: TicketSeverity) {
-  if (severity === 'CRITICA') return 'border-danger/30 bg-danger/10 text-danger'
-  if (severity === 'ALTA') return 'border-warning/30 bg-warning/10 text-warning'
-  if (severity === 'BAIXA') return 'border-primary/30 bg-primary/10 text-primary'
-  return 'border-border bg-bg text-text-secondary'
+function severityTone(severity: TicketSeverity): StatusTone {
+  if (severity === 'CRITICA') return 'danger'
+  if (severity === 'ALTA') return 'warning'
+  if (severity === 'BAIXA') return 'success'
+  return 'neutral'
 }
 
 function relativeTime(value: string) {
@@ -105,6 +107,26 @@ export function TicketsPage() {
     }
   }
 
+  const ticketColumns: DataColumn<Ticket>[] = [
+    { key: 'chamado', header: 'Chamado', className: 'max-w-[320px]', cell: (ticket) => <>
+      <Link to={`/tickets/${ticket.id}`} aria-label={`Abrir chamado ${ticket.id}`} className="text-sm font-semibold text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">Chamado {ticket.id.slice(0, 8)}</Link>
+      <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-secondary">{ticket.descricao || 'Sem descrição'}</p>
+    </> },
+    { key: 'severidade', header: 'Severidade', cell: (ticket) => <StatusBadge tone={severityTone(ticket.severidade)} size="sm">{severityText[ticket.severidade] ?? 'Severidade não informada'}</StatusBadge> },
+    { key: 'status', header: 'Status', cell: (ticket) => { const status = canonicalStatus(ticket.status); return <StatusBadge tone="neutral" size="sm">{statusText[status] ?? ticket.status}</StatusBadge> } },
+    { key: 'sla', header: 'SLA', cell: (ticket) => <TicketSlaBadge status={ticket.slaStatus} /> },
+    { key: 'equipamento', header: 'Equipamento', cell: (ticket) => { const equip = equipmentById.get(ticket.equipamentoId); return <span className="text-sm font-medium text-text-primary">{equip ? `${equip.codigo} · ${equip.nome}` : 'Equipamento —'}</span> } },
+    { key: 'local', header: 'Local', cell: (ticket) => { const hospital = hospitalById.get(ticket.hospitalId); const sector = sectorById.get(ticket.setorId); return <span className="text-[11px] text-text-muted">{hospital?.nome ?? 'Hospital —'}{sector?.nome ? ` · ${sector.nome}` : ''}</span> } },
+    { key: 'aberto', header: 'Aberto em', cell: (ticket) => <time dateTime={ticket.abertoEm} className="text-[11px] text-text-muted">{relativeTime(ticket.abertoEm)} · {new Date(ticket.abertoEm).toLocaleString('pt-BR')}</time> },
+    { key: 'acoes', header: '', srHeader: 'Ações', align: 'right', cell: (ticket) => {
+      const status = canonicalStatus(ticket.status)
+      const canGenerate = status === 'ABERTO' || status === 'AGUARDANDO_PECA'
+      return <div className="flex items-center justify-end gap-2">
+        <Link to={`/tickets/${ticket.id}`} className="inline-flex h-9 items-center gap-1 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Detalhes <ArrowUpRight aria-hidden="true" size={13} /></Link>
+        {canGenerate && <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT corretiva</button>}
+      </div>
+    } },
+  ]
   return <AdminPageShell title="Chamados de Emergência" subtitle="Fila de atendimento do tenant">
     <div className="space-y-4">
       {urgentOpenCount > 0 && <section role="status" className="flex items-center gap-3 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3">
@@ -121,38 +143,23 @@ export function TicketsPage() {
         <label className="min-w-0"><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={(next) => pagination.setFilters({ severidade: next })} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
       </FilterBar>
 
-      {tickets.isLoading ? <div aria-label="Carregando chamados" aria-busy="true" className="space-y-2 rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando chamados.</span>{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-24 animate-pulse rounded-md bg-bg" />)}</div> : null}
-      {tickets.isError ? <section role="alert" className="rounded-lg border border-border bg-surface p-8 text-center"><p className="text-sm text-text-primary">Não foi possível carregar os chamados.</p><button type="button" onClick={() => void tickets.refetch()} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Tentar novamente</button></section> : null}
-      {!tickets.isLoading && !tickets.isError && visibleTickets.length === 0 ? <section className="grid min-h-56 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><h2 className="text-sm font-semibold text-text-primary">{total > 0 || filtersActive ? 'Nenhum chamado encontrado' : 'Nenhum chamado registrado'}</h2><p className="mt-1 text-xs text-text-secondary">{total > 0 || filtersActive ? 'Ajuste a busca ou os filtros.' : 'Novos chamados aparecerão aqui quando forem abertos.'}</p>{filtersActive && <button type="button" onClick={() => { setSearch(''); pagination.setFilters({ status: undefined, severidade: undefined }) }} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button>}</div></section> : null}
-      {!tickets.isLoading && !tickets.isError && visibleTickets.length > 0 && <section aria-label="Lista de chamados" className="space-y-2">
-        {visibleTickets.map((ticket) => {
-          const equip = equipmentById.get(ticket.equipamentoId)
-          const sector = sectorById.get(ticket.setorId)
-          const hospital = hospitalById.get(ticket.hospitalId)
-          const status = canonicalStatus(ticket.status)
-          const canGenerate = status === 'ABERTO' || status === 'AGUARDANDO_PECA'
-          return <article key={ticket.id} className={`grid gap-4 rounded-lg border bg-surface p-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center ${ticket.severidade === 'CRITICA' ? 'border-l-4 border-l-danger border-y-border border-r-border' : ticket.severidade === 'ALTA' ? 'border-l-4 border-l-warning border-y-border border-r-border' : 'border-border'}`}>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Link to={`/tickets/${ticket.id}`} aria-label={`Abrir chamado ${ticket.id}`} className="text-sm font-semibold text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">Chamado {ticket.id.slice(0, 8)}</Link>
-                <span className={`rounded-md border px-2 py-1 text-[10px] font-medium ${severityClass(ticket.severidade)}`}>{severityText[ticket.severidade] ?? 'Severidade não informada'}</span>
-                <span className="rounded-md border border-border bg-bg px-2 py-1 text-[10px] text-text-secondary">{statusText[status] ?? ticket.status}</span>
-                <TicketSlaBadge status={ticket.slaStatus} />
-              </div>
-              <p className="mt-2 truncate text-sm font-medium text-text-primary">{equip ? `${equip.codigo} · ${equip.nome}` : 'Equipamento —'}</p>
-              <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-secondary">{ticket.descricao || 'Sem descrição'}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-text-muted">
-                <span>{hospital?.nome ?? 'Hospital —'}{sector?.nome ? ` · ${sector.nome}` : ''}</span>
-                <time dateTime={ticket.abertoEm}>{relativeTime(ticket.abertoEm)} · {new Date(ticket.abertoEm).toLocaleString('pt-BR')}</time>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              <Link to={`/tickets/${ticket.id}`} className="inline-flex h-9 items-center gap-1 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Detalhes <ArrowUpRight aria-hidden="true" size={13} /></Link>
-              {canGenerate && <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT corretiva</button>}
-            </div>
-          </article>
-        })}
-      </section>}
+      <DataTable
+        label="Lista de chamados"
+        columns={ticketColumns}
+        rows={visibleTickets}
+        getRowId={(ticket) => ticket.id}
+        rowHeightClass="h-16"
+        minWidth="1100px"
+        rowClassName={(ticket) => ticket.severidade === 'CRITICA' ? 'shadow-[inset_4px_0_0_var(--danger)]' : ticket.severidade === 'ALTA' ? 'shadow-[inset_4px_0_0_var(--warning)]' : ''}
+        isLoading={tickets.isLoading}
+        loadingLabel="Carregando chamados"
+        error={tickets.isError ? { message: 'Não foi possível carregar os chamados.', onRetry: () => void tickets.refetch() } : null}
+        empty={{
+          title: total > 0 || filtersActive ? 'Nenhum chamado encontrado' : 'Nenhum chamado registrado',
+          description: total > 0 || filtersActive ? 'Ajuste a busca ou os filtros.' : 'Novos chamados aparecerão aqui quando forem abertos.',
+          action: filtersActive ? <button type="button" onClick={() => { setSearch(''); pagination.setFilters({ status: undefined, severidade: undefined }) }} className="rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button> : undefined,
+        }}
+      />
       {!tickets.isLoading && !tickets.isError && <>
         {(search || severityFilter) && total > 0 && <p className="text-[11px] text-text-muted">Busca e severidade filtram apenas os chamados desta página.</p>}
         <Pagination className="rounded-lg border border-border bg-surface" page={pagination.page} size={pagination.size} total={total} onPageChange={pagination.setPage} onSizeChange={pagination.setSize} />
