@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -46,6 +46,10 @@ function response() {
   }
 }
 
+function indicators() {
+  return { mttaHoras: 1.5, mttrHoras: 12.25, mtbfHoras: 340, severidadesConsideradas: [] }
+}
+
 function renderDashboard() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
@@ -68,7 +72,7 @@ describe('DashboardPage', () => {
   beforeEach(() => {
     clearAuthSession()
     get.mockReset()
-    get.mockResolvedValue({ data: response() })
+    get.mockImplementation(async (path: string) => ({ data: path === '/relatorios/indicadores' ? indicators() : response() }))
   })
 
   afterEach(() => {
@@ -93,6 +97,49 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('link', { name: 'CH-5' })).toHaveAttribute('href', '/tickets/ticket-uuid-5')
     expect(screen.getByText('SLAs vencidos')).toBeInTheDocument()
     expect(screen.getByText('7')).toBeInTheDocument()
+  })
+
+  it('mostra MTTA, MTTR e MTBF dos últimos 30 dias com ajuda acessível', async () => {
+    setAuthSession('access-token', adminUser)
+    renderDashboard()
+    const section = await screen.findByRole('region', { name: 'Tempos de manutenção' })
+    await waitFor(() => expect(within(section).getByText('340 h')).toBeInTheDocument())
+    expect(within(section).getByText('1,5 h')).toBeInTheDocument()
+    expect(within(section).getByText('12,3 h')).toBeInTheDocument()
+    const call = get.mock.calls.find(([path]) => path === '/relatorios/indicadores')
+    expect(call?.[1].params.desde).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00\.000Z$/)
+    expect(call?.[1].params.ate).toMatch(/T23:59:59.999Z$/)
+    const help = within(section).getByRole('button', { name: 'O que é MTBF' })
+    expect(help).toHaveAttribute('aria-describedby', 'dashboard-mtbfHoras-hint')
+    expect(within(section).getAllByRole('tooltip')[2]).toHaveTextContent('Tempo médio entre falhas')
+  })
+
+  it('indica sem dados no período quando o indicador é nulo', async () => {
+    get.mockImplementation(async (path: string) => ({ data: path === '/relatorios/indicadores' ? { ...indicators(), mtbfHoras: null } : response() }))
+    setAuthSession('access-token', adminUser)
+    renderDashboard()
+    const section = await screen.findByRole('region', { name: 'Tempos de manutenção' })
+    await waitFor(() => expect(within(section).getByText('Sem dados no período')).toBeInTheDocument())
+  })
+
+  it('falha dos indicadores não derruba o restante do painel e permite tentar de novo', async () => {
+    const user = userEvent.setup()
+    let fail = true
+    get.mockImplementation(async (path: string) => {
+      if (path === '/relatorios/indicadores') {
+        if (fail) throw new Error('falha')
+        return { data: indicators() }
+      }
+      return { data: response() }
+    })
+    setAuthSession('access-token', adminUser)
+    renderDashboard()
+    expect(await screen.findByText('1.284')).toBeInTheDocument()
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Não foi possível carregar MTTA, MTTR e MTBF')
+    fail = false
+    await user.click(within(alert).getByRole('button', { name: 'Tentar novamente' }))
+    expect(await screen.findByText('340 h')).toBeInTheDocument()
   })
 
   it('torna o cartão de documentos vencendo um atalho para a lista filtrada', async () => {
@@ -125,7 +172,7 @@ describe('DashboardPage', () => {
     expect(networkAlert).toHaveTextContent('Não foi possível carregar o dashboard')
     expect(networkAlert).toHaveTextContent('Verifique sua conexão')
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
-    await waitFor(() => expect(get).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(get.mock.calls.filter(([path]) => path === '/relatorios/dashboard')).toHaveLength(2))
     expect(await screen.findByText('1.284')).toBeInTheDocument()
   })
 

@@ -15,6 +15,7 @@ import { userSchema } from '../schemas/user.schema'
 import type { TenantRole, TenantUser, TenantUserInput } from '../types'
 import { FormSelect } from '@/components/ui/FormSelect'
 import { RowActionsMenu, type RowAction } from '@/components/ui/RowActionsMenu'
+import { Badge } from '@/components/ui/Badge'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const roles: Record<TenantRole, string> = { admin_cliente: 'Admin do Cliente', tecnico: 'Técnico', interno_hospital: 'Interno do Hospital' }
@@ -78,7 +79,7 @@ export function UsersPage() {
       const index = items.findIndex((item) => item.id === user.id)
       const ids = linkQueries[index]?.data ?? []
       const names = ids.map((id) => hospitals.data?.find((hospital) => hospital.id === id)?.nome).filter(Boolean)
-      return <tr key={user.id} className="row-divider"><td className="px-4 py-3"><div className="font-medium text-sm">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm">{roles[user.role] ?? user.role}</td><td className="max-w-[240px] px-4 py-3 text-sm text-text-secondary">{linkQueries[index]?.isLoading ? 'Carregando…' : names.length ? names.join(', ') : '—'}</td><td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 text-xs ${user.ativo ? 'text-primary' : 'text-text-muted'}`}><span className={`size-1.5 rounded-full ${user.ativo ? 'bg-primary' : 'bg-text-muted'}`} />{user.ativo ? 'Ativo' : 'Inativo'}</span></td><td className="px-4 py-3"><RowActionsMenu label={user.nome} actions={userActions(user)} /></td></tr>
+      return <tr key={user.id} className="row-divider"><td className="px-4 py-3"><div className="font-medium text-sm">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm">{roles[user.role] ?? user.role}</td><td className="max-w-[240px] px-4 py-3 text-sm text-text-secondary">{linkQueries[index]?.isLoading ? 'Carregando…' : names.length ? names.join(', ') : '—'}</td><td className="px-4 py-3"><Badge variant={user.ativo ? 'success' : 'neutral'}>{user.ativo ? 'Ativo' : 'Inativo'}</Badge></td><td className="px-4 py-3"><RowActionsMenu label={user.nome} actions={userActions(user)} /></td></tr>
     })}</tbody></table></div> : null}
     {!users.isLoading && !users.isError ? <>
       {query && total > 0 ? <p className="mt-2 text-[11px] text-text-muted">A pesquisa filtra apenas os usuários desta página.</p> : null}

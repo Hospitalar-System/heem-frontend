@@ -3,9 +3,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ThemeSwitcher } from '@/app/ThemeSwitcher'
 import { useBodyScrollLock } from '@/components/ui/useBodyScrollLock'
-import { useDashboardSummary } from '../api/dashboard'
+import { DASHBOARD_INDICATORS_WINDOW_DAYS, useDashboardIndicators, useDashboardSummary } from '../api/dashboard'
 import { DashboardAttention } from '../components/DashboardAttention'
 import { DashboardKpis } from '../components/DashboardKpis'
+import { DashboardTimeIndicators } from '../components/DashboardTimeIndicators'
 import { DashboardSidebar } from '../components/DashboardSidebar'
 import { DashboardEmptyState, DashboardErrorState, DashboardLoadingState } from '../components/DashboardStates'
 import { NotificationsPopover } from '../components/NotificationsPopover'
@@ -18,6 +19,7 @@ export function DashboardPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   useBodyScrollLock(mobileNavOpen)
   const dashboard = useDashboardSummary()
+  const indicators = useDashboardIndicators()
   const summary = dashboard.data
   const isEmpty = summary ? isDashboardSummaryEmpty(summary) : false
 
@@ -78,6 +80,7 @@ export function DashboardPage() {
           {!dashboard.isPending && !dashboard.isError && summary && !isEmpty && (
             <div className="space-y-4 xl:space-y-5">
               <DashboardKpis data={summary} />
+              <DashboardTimeIndicators query={indicators} windowDays={DASHBOARD_INDICATORS_WINDOW_DAYS} />
               <DashboardAttention data={summary} />
               <WorkOrdersChart data={summary.workOrdersByStatus} />
               <RecentTicketsTable tickets={summary.recentTickets} query={search} />

@@ -7,6 +7,7 @@ import { useSaveSlaPolicy, useSlaPolicy } from '../api/sla-policy'
 import { slaPolicyFormSchema } from '../types'
 import type { SlaPolicyEntry, SlaPolicyFormValues, SlaPolicyUpdateEntry } from '../types'
 import { FormSelect } from '@/components/ui/FormSelect'
+import { Badge } from '@/components/ui/Badge'
 
 const severityLabels: Record<SlaPolicyEntry['severidade'], string> = {
   CRITICA: 'Crítica',
@@ -121,7 +122,7 @@ export function SlaPolicyPage() {
                       {rowError?.resolucao?.valor?.message && <p role="alert" className="max-w-36 text-[10px] text-danger">{rowError.resolucao.valor.message}</p>}
                     </div>
                   </td>
-                  <td className="px-3 py-3"><span className={`inline-flex whitespace-nowrap rounded-md border px-2 py-1 text-[10px] font-medium ${item.padrao ? 'border-border bg-bg text-text-secondary' : 'border-primary/30 bg-primary/10 text-primary'}`}>{item.padrao ? 'Padrão do sistema' : 'Personalizado'}</span></td>
+                  <td className="px-3 py-3"><Badge variant={item.padrao ? 'neutral' : 'success'}>{item.padrao ? 'Padrão do sistema' : 'Personalizado'}</Badge></td>
                 </tr>
               })}</tbody>
             </table>

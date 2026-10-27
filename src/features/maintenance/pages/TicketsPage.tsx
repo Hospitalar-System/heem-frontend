@@ -11,6 +11,7 @@ import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import type { Ticket, TicketSeverity, TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
 import { FilterBar } from '@/components/ui/FilterBar'
+import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 import { Pagination } from '@/components/ui/Pagination'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 
@@ -22,11 +23,11 @@ function canonicalStatus(status: TicketStatus) {
   return status.toLocaleUpperCase('pt-BR').replace('Ç', 'C')
 }
 
-function severityClass(severity: TicketSeverity) {
-  if (severity === 'CRITICA') return 'border-danger/30 bg-danger/10 text-danger'
-  if (severity === 'ALTA') return 'border-warning/30 bg-warning/10 text-warning'
-  if (severity === 'BAIXA') return 'border-primary/30 bg-primary/10 text-primary'
-  return 'border-border bg-bg text-text-secondary'
+function severityTone(severity: TicketSeverity): BadgeVariant {
+  if (severity === 'CRITICA') return 'danger'
+  if (severity === 'ALTA') return 'warning'
+  if (severity === 'BAIXA') return 'success'
+  return 'neutral'
 }
 
 function relativeTime(value: string) {
@@ -135,8 +136,8 @@ export function TicketsPage() {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <Link to={`/tickets/${ticket.id}`} aria-label={`Abrir chamado ${ticket.id}`} className="text-sm font-semibold text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">Chamado {ticket.id.slice(0, 8)}</Link>
-                <span className={`rounded-md border px-2 py-1 text-[10px] font-medium ${severityClass(ticket.severidade)}`}>{severityText[ticket.severidade] ?? 'Severidade não informada'}</span>
-                <span className="rounded-md border border-border bg-bg px-2 py-1 text-[10px] text-text-secondary">{statusText[status] ?? ticket.status}</span>
+                <Badge variant={severityTone(ticket.severidade)}>{severityText[ticket.severidade] ?? 'Severidade não informada'}</Badge>
+                <Badge>{statusText[status] ?? ticket.status}</Badge>
                 <TicketSlaBadge status={ticket.slaStatus} />
               </div>
               <p className="mt-2 truncate text-sm font-medium text-text-primary">{equip ? `${equip.codigo} · ${equip.nome}` : 'Equipamento —'}</p>
