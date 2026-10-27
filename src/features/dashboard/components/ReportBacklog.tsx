@@ -32,7 +32,7 @@ export function ReportBacklog({ backlog }: { backlog: BacklogReport }) {
             </thead>
             <tbody>
               {sorted.map((row) => (
-                <tr key={row.severidade} className="border-b border-border last:border-0">
+                <tr key={row.severidade} className="row-divider">
                   <th scope="row" className="px-4 py-2 text-left font-medium text-text-primary">{severityLabels[row.severidade] ?? row.severidade}</th>
                   <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{formatCount(row.ate24h)}</td>
                   <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{formatCount(row.de1a3Dias)}</td>

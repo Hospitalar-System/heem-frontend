@@ -125,3 +125,24 @@ describe('modo de demonstração', () => {
     expect(canceled).toEqual(expect.objectContaining({ status: 'cancelada', ativa: false }))
   })
 })
+
+describe('modo de demonstração: paginação', () => {
+  it.each(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos'])('%s respeita pagina/tamanho e devolve X-Total-Count', async (path) => {
+    const all = await apiClient.get(path)
+    const total = String((all.data as unknown[]).length)
+    expect(all.headers['x-total-count']).toBe(total)
+    const first = await apiClient.get(path, { params: { pagina: 0, tamanho: 1 } })
+    expect(first.data).toHaveLength(1)
+    expect(first.headers['x-total-count']).toBe(total)
+    const beyond = await apiClient.get(path, { params: { pagina: 50, tamanho: 10 } })
+    expect(beyond.data).toEqual([])
+  })
+
+  it('filtra chamados por status e usuários por papel antes de paginar', async () => {
+    const none = await apiClient.get('/chamados', { params: { status: 'NAO_EXISTE', pagina: 0, tamanho: 10 } })
+    expect(none.data).toEqual([])
+    expect(none.headers['x-total-count']).toBe('0')
+    const techs = await apiClient.get('/users', { params: { role: 'tecnico', pagina: 0, tamanho: 10 } })
+    expect((techs.data as Array<{ role: string }>).every((user) => user.role === 'tecnico')).toBe(true)
+  })
+})

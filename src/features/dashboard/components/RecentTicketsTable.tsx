@@ -42,7 +42,7 @@ export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicke
             {visibleTickets.map((ticket) => {
               const severity = ticket.severity ? severityStyle[ticket.severity] : null
               return (
-                <tr key={ticket.id} className="h-10 border-t border-border/80 transition hover:bg-bg/60 2xl:h-12">
+                <tr key={ticket.id} className="row-divider h-10 transition hover:bg-surface-hi 2xl:h-12">
                   <td className="px-5">
                     <Link to={`/tickets/${ticket.id}`} className="rounded text-text-secondary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">{ticket.code}</Link>
                   </td>

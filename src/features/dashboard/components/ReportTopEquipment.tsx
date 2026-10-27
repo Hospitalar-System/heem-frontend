@@ -24,7 +24,7 @@ export function ReportTopEquipment({ items }: { items: TopEquipment[] }) {
             </thead>
             <tbody>
               {sorted.map((item) => (
-                <tr key={item.equipamentoId} className="border-b border-border last:border-0">
+                <tr key={item.equipamentoId} className="row-divider">
                   <th scope="row" className="px-4 py-2 text-left font-medium text-text-primary">{item.nome ?? 'Equipamento excluído'}{item.codigo && <span className="ml-2 font-normal text-text-muted">{item.codigo}</span>}</th>
                   <td className="px-4 py-2 text-right font-semibold tabular-nums text-text-primary">{formatCount(item.qtdChamados)}</td>
                   <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{formatHours(item.mtbfHoras)}</td>

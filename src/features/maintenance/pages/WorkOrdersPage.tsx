@@ -1,13 +1,13 @@
 import { ClipboardPlus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { WorkOrdersTabs } from '../components/WorkOrdersTabs'
 import { Modal } from '@/components/ui/Modal'
 import { useEquipments, useHospitals, useSectorsForHospitals } from '@/features/assets/api/assets'
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
-import { useChecklists, useCreatePreventiveWorkOrder, useWorkOrders } from '../api/work-orders'
+import { useChecklists, useCreatePreventiveWorkOrder, useWorkOrdersPage } from '../api/work-orders'
 import { preventiveWorkOrderSchema } from '../schemas/work-orders.schema'
 import { Select } from '@/components/ui/Select'
 import { PageAction } from '@/components/ui/PageAction'
@@ -16,6 +16,8 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
+import { Pagination } from '@/components/ui/Pagination'
+import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const statusLabel: Record<string, string> = {
@@ -53,8 +55,13 @@ function errorMessage(error: unknown) {
 export function WorkOrdersPage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [onlyOverdue, setOnlyOverdue] = useState(false)
-  const orders = useWorkOrders(onlyOverdue)
+  const [searchParams] = useSearchParams()
+  const pagination = usePaginationParams()
+  // Status, tipo e atrasadas vão para o servidor (e para a URL); busca, técnico e datas valem para a página carregada.
+  const statusFilter = searchParams.get('status') ?? ''
+  const typeFilter = searchParams.get('tipo') ?? ''
+  const onlyOverdue = searchParams.get('atrasadas') === '1'
+  const orders = useWorkOrdersPage({ ...pagination.apiParams, status: statusFilter || undefined, tipo: typeFilter || undefined, atrasadas: onlyOverdue })
   const equipment = useEquipments()
   const hospitals = useHospitals()
   const sectors = useSectorsForHospitals(hospitals.data?.map(({ id }) => id) ?? [])
@@ -69,8 +76,6 @@ export function WorkOrdersPage() {
   const [tecnicoId, setTecnicoId] = useState('')
   const [dataAgendada, setDataAgendada] = useState('')
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
   const [technicianFilter, setTechnicianFilter] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -98,20 +103,20 @@ export function WorkOrdersPage() {
 
   const visibleOrders = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('pt-BR')
-    return (orders.data ?? []).filter((order) => {
+    return (orders.data?.items ?? []).filter((order) => {
       const equip = equipmentById.get(order.equipamentoId)
       const sector = equip ? sectorById.get(equip.setorId) : undefined
       const fields = [order.codigo, equip?.codigo, equip?.nome, sector?.nome]
       const when = order.dataAgendada ? Date.parse(order.dataAgendada) : NaN
       return (!term || fields.some((value) => value?.toLocaleLowerCase('pt-BR').includes(term)))
-        && (!statusFilter || normalized(order.status) === statusFilter)
-        && (!typeFilter || normalized(order.tipo) === typeFilter)
         && (!technicianFilter || order.tecnicoId === technicianFilter)
-        && (!onlyOverdue || isOverdue(order))
         && (!dateFrom || (Number.isFinite(when) && when >= Date.parse(`${dateFrom}T00:00:00`)))
         && (!dateTo || (Number.isFinite(when) && when <= Date.parse(`${dateTo}T23:59:59`)))
-    }).sort((a, b) => (a.dataAgendada ?? '').localeCompare(b.dataAgendada ?? ''))
-  }, [dateFrom, dateTo, equipmentById, onlyOverdue, orders.data, search, sectorById, statusFilter, technicianFilter, typeFilter])
+    })
+  }, [dateFrom, dateTo, equipmentById, orders.data, search, sectorById, technicianFilter])
+
+  const total = orders.data?.total ?? 0
+  usePageClamp(pagination, orders.data?.total, !orders.isPlaceholderData)
 
   function resetForm() {
     setCodigo(''); setEquipamentoId(''); setChecklistId(''); setTecnicoId(''); setDataAgendada('')
@@ -143,28 +148,32 @@ export function WorkOrdersPage() {
   return <AdminPageShell tabs={<WorkOrdersTabs />} title="Ordens de Trabalho" subtitle="Planejamento e acompanhamento da manutenção" action={<PageAction icon={ClipboardPlus} onClick={() => { resetForm(); setIsCreateOpen(true) }} collapseLabelOnMobile>Nova OT</PageAction>}>
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-text-secondary">{orders.data?.length ?? 0} ordem(ns) carregada(s)</p>
+        <p className="text-xs text-text-secondary">{total} ordem(ns)</p>
       </div>
 
       <FilterBar label="Filtros de ordens de trabalho">
         <label className="relative min-w-0 sm:col-span-2"><span className="sr-only">Buscar ordens</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input type="search" aria-label="Buscar ordens" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, equipamento ou setor" className={`${inputClass} w-full pl-8`} /></label>
-        <Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={setStatusFilter} options={[{ value: '', label: 'Todos os status' }, { value: 'AGENDADA', label: 'Agendada' }, { value: 'EM_EXECUCAO', label: 'Em execução' }, { value: 'CONCLUIDA', label: 'Concluída' }, { value: 'CANCELADA', label: 'Cancelada' }]} />
-        <Checkbox label="Atrasadas" checked={onlyOverdue} onCheckedChange={setOnlyOverdue} containerClassName="h-9 justify-center rounded-md border border-border bg-bg px-3 text-xs text-text-secondary" />
-        <Select size="sm" aria-label="Filtrar por tipo" value={typeFilter} onChange={setTypeFilter} options={[{ value: '', label: 'Todos os tipos' }, { value: 'PREVENTIVA', label: 'Preventiva' }, { value: 'CORRETIVA', label: 'Corretiva' }]} />
+        <Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={(next) => pagination.setFilters({ status: next })} options={[{ value: '', label: 'Todos os status' }, { value: 'AGENDADA', label: 'Agendada' }, { value: 'EM_EXECUCAO', label: 'Em execução' }, { value: 'CONCLUIDA', label: 'Concluída' }, { value: 'CANCELADA', label: 'Cancelada' }]} />
+        <Checkbox label="Atrasadas" checked={onlyOverdue} onCheckedChange={(next) => pagination.setFilters({ atrasadas: next ? '1' : undefined })} containerClassName="h-9 justify-center rounded-md border border-border bg-bg px-3 text-xs text-text-secondary" />
+        <Select size="sm" aria-label="Filtrar por tipo" value={typeFilter} onChange={(next) => pagination.setFilters({ tipo: next })} options={[{ value: '', label: 'Todos os tipos' }, { value: 'PREVENTIVA', label: 'Preventiva' }, { value: 'CORRETIVA', label: 'Corretiva' }]} />
         <Select size="sm" aria-label="Filtrar por técnico" value={technicianFilter} onChange={setTechnicianFilter} options={[{ value: '', label: 'Todos os técnicos' }, ...(users.data ?? []).filter((user) => user.role === 'tecnico').map((user) => ({ value: user.id, label: user.nome }))]} />
         <FilterRange from={<DatePicker size="sm" aria-label="Data inicial" value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} />} to={<DatePicker size="sm" aria-label="Data final" value={dateTo} min={dateFrom || undefined} onChange={setDateTo} />} />
       </FilterBar>
 
       {orders.isLoading && <div aria-label="Carregando ordens de trabalho" aria-busy="true" className="overflow-hidden rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando ordens.</span><div className="mb-3 h-9 animate-pulse rounded-md bg-bg" />{Array.from({ length: 6 }, (_, index) => <div key={index} className="my-2 h-12 animate-pulse rounded-md bg-bg" />)}</div>}
       {orders.isError && <section role="alert" className="rounded-lg border border-border bg-surface p-8 text-center"><p className="text-sm text-text-primary">Não foi possível carregar as ordens de trabalho.</p><button type="button" onClick={() => void orders.refetch()} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Tentar novamente</button></section>}
-      {!orders.isLoading && !orders.isError && visibleOrders.length === 0 && <section className="grid min-h-56 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><h2 className="text-sm font-semibold text-text-primary">{(orders.data?.length ?? 0) ? 'Nenhuma OT encontrada' : 'Nenhuma ordem de trabalho registrada'}</h2><p className="mt-1 text-xs text-text-secondary">{(orders.data?.length ?? 0) ? 'Ajuste os filtros para consultar outras ordens.' : 'As ordens criadas para este tenant aparecerão aqui.'}</p>{filtersActive && <button type="button" onClick={() => { setSearch(''); setStatusFilter(''); setTypeFilter(''); setTechnicianFilter(''); setDateFrom(''); setDateTo(''); setOnlyOverdue(false) }} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button>}</div></section>}
+      {!orders.isLoading && !orders.isError && visibleOrders.length === 0 && <section className="grid min-h-56 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><h2 className="text-sm font-semibold text-text-primary">{total > 0 || filtersActive ? 'Nenhuma OT encontrada' : 'Nenhuma ordem de trabalho registrada'}</h2><p className="mt-1 text-xs text-text-secondary">{total > 0 || filtersActive ? 'Ajuste os filtros para consultar outras ordens.' : 'As ordens criadas para este tenant aparecerão aqui.'}</p>{filtersActive && <button type="button" onClick={() => { setSearch(''); setTechnicianFilter(''); setDateFrom(''); setDateTo(''); pagination.setFilters({ status: undefined, tipo: undefined, atrasadas: undefined }) }} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button>}</div></section>}
       {!orders.isLoading && !orders.isError && visibleOrders.length > 0 && <section aria-label="Lista de ordens de trabalho" className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[860px] border-collapse text-left"><thead><tr className="table-head h-10 text-[10px] uppercase"><th scope="col" className="px-4">OT</th><th scope="col" className="px-4">Tipo</th><th scope="col" className="px-4">Equipamento</th><th scope="col" className="px-4">Técnico</th><th scope="col" className="px-4">Setor</th><th scope="col" className="px-4">Vencimento</th><th scope="col" className="px-4">Status</th></tr></thead><tbody>{visibleOrders.map((order) => {
         const equip = equipmentById.get(order.equipamentoId)
         const sector = equip ? sectorById.get(equip.setorId) : undefined
         const technician = users.data?.find((user) => user.id === order.tecnicoId)
         const openOrder = () => navigate(`/work-orders/${order.id}`)
-        return <tr key={order.id} role="link" tabIndex={0} aria-label={`Abrir ${order.codigo || order.id}`} onClick={(event) => { if (!(event.target as HTMLElement).closest('a,button')) openOrder() }} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openOrder() } }} className="h-12 row-clickable border-b border-border/70 text-xs last:border-0"><td className="px-4"><Link to={`/work-orders/${order.id}`} className="font-semibold text-text-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{order.codigo || order.id}</Link>{order.planoPreventivoId && <span className="mt-1 block text-[10px] text-text-muted">Plano preventivo</span>}</td><td className="px-4 text-text-secondary">{normalized(order.tipo) === 'PREVENTIVA' ? 'Preventiva' : normalized(order.tipo) === 'CORRETIVA' ? 'Corretiva' : order.tipo || '—'}</td><td className="px-4"><span className="block font-medium text-text-primary">{equip?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equip?.codigo ?? ''}</span></td><td className="px-4 text-text-secondary">{technician?.nome ?? '—'}</td><td className="px-4 text-text-secondary">{sector?.nome ?? '—'}</td><td className="px-4 text-text-secondary">{formatDate(order.dataAgendada)}</td><td className="px-4"><div className="flex flex-wrap items-center gap-1.5"><Badge variant={statusTone(order.status)}>{statusLabel[normalized(order.status)] ?? order.status.replaceAll('_', ' ')}</Badge>{isOverdue(order) && <Badge variant="danger">Atrasada</Badge>}</div></td></tr>
+        return <tr key={order.id} role="link" tabIndex={0} aria-label={`Abrir ${order.codigo || order.id}`} onClick={(event) => { if (!(event.target as HTMLElement).closest('a,button')) openOrder() }} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); openOrder() } }} className="h-12 row-clickable row-divider text-xs"><td className="px-4"><Link to={`/work-orders/${order.id}`} className="font-semibold text-text-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{order.codigo || order.id}</Link>{order.planoPreventivoId && <span className="mt-1 block text-[10px] text-text-muted">Plano preventivo</span>}</td><td className="px-4 text-text-secondary">{normalized(order.tipo) === 'PREVENTIVA' ? 'Preventiva' : normalized(order.tipo) === 'CORRETIVA' ? 'Corretiva' : order.tipo || '—'}</td><td className="px-4"><span className="block font-medium text-text-primary">{equip?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equip?.codigo ?? ''}</span></td><td className="px-4 text-text-secondary">{technician?.nome ?? '—'}</td><td className="px-4 text-text-secondary">{sector?.nome ?? '—'}</td><td className="px-4 text-text-secondary">{formatDate(order.dataAgendada)}</td><td className="px-4"><div className="flex flex-wrap items-center gap-1.5"><Badge variant={statusTone(order.status)}>{statusLabel[normalized(order.status)] ?? order.status.replaceAll('_', ' ')}</Badge>{isOverdue(order) && <Badge variant="danger">Atrasada</Badge>}</div></td></tr>
       })}</tbody></table></section>}
+      {!orders.isLoading && !orders.isError && <>
+        {(search || technicianFilter || dateFrom || dateTo) && total > 0 && <p className="text-[11px] text-text-muted">Busca, técnico e datas filtram apenas as OTs desta página.</p>}
+        <Pagination className="rounded-lg border border-border bg-surface" page={pagination.page} size={pagination.size} total={total} onPageChange={pagination.setPage} onSizeChange={pagination.setSize} />
+      </>}
     </div>
 
     {isCreateOpen && <Modal title="Agendar OT preventiva" description="Defina equipamento, checklist, responsável e data." busy={createOrder.isPending} onClose={closeCreateDialog}>

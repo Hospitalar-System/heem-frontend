@@ -1,20 +1,21 @@
 import { AlertTriangle, ArrowUpRight, ClipboardPlus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { Modal } from '@/components/ui/Modal'
 import { useEquipments, useHospitals, useSectorsForHospitals } from '@/features/assets/api/assets'
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
-import { useCreateCorrectiveWorkOrder, useTickets } from '../api/tickets'
+import { useCreateCorrectiveWorkOrder, useTicketsPage, useUrgentTicketCount } from '../api/tickets'
 import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import type { Ticket, TicketSeverity, TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
+import { Pagination } from '@/components/ui/Pagination'
+import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
-const severityOrder: Record<string, number> = { CRITICA: 0, ALTA: 1, MEDIA: 2, BAIXA: 3 }
 const severityText: Record<string, string> = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }
 const statusText: Record<string, string> = { ABERTO: 'Aberto', EM_ANDAMENTO: 'Em andamento', AGUARDANDO_PECA: 'Aguardando peça', AGUARDANDO_PEÇA: 'Aguardando peça', RESOLVIDO: 'Resolvido', CANCELADO: 'Cancelado' }
 
@@ -41,7 +42,13 @@ function relativeTime(value: string) {
 }
 
 export function TicketsPage() {
-  const tickets = useTickets()
+  const [searchParams] = useSearchParams()
+  const pagination = usePaginationParams()
+  const statusFilter = searchParams.get('status') ?? ''
+  const severityFilter = searchParams.get('severidade') ?? ''
+  // Status filtra no servidor; busca e severidade (que o backend não filtra) valem para a página carregada.
+  const tickets = useTicketsPage({ ...pagination.apiParams, status: statusFilter || undefined })
+  const urgent = useUrgentTicketCount()
   const equipment = useEquipments()
   const hospitals = useHospitals()
   const users = useTenantUsers()
@@ -49,8 +56,6 @@ export function TicketsPage() {
   const sectors = useSectorsForHospitals(hospitals.data?.map(({ id }) => id) ?? [])
   const createWorkOrder = useCreateCorrectiveWorkOrder()
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [severityFilter, setSeverityFilter] = useState('')
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [codigo, setCodigo] = useState('')
   const [tecnicoId, setTecnicoId] = useState('')
@@ -67,8 +72,7 @@ export function TicketsPage() {
 
   const visibleTickets = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('pt-BR')
-    return [...(tickets.data ?? [])]
-      .filter((ticket) => !statusFilter || canonicalStatus(ticket.status) === statusFilter)
+    return (tickets.data?.items ?? [])
       .filter((ticket) => !severityFilter || ticket.severidade === severityFilter)
       .filter((ticket) => {
         if (!term) return true
@@ -78,13 +82,12 @@ export function TicketsPage() {
         return [ticket.id, ticket.descricao, equip?.codigo, equip?.nome, hospital?.nome, sector?.nome]
           .some((value) => value?.toLocaleLowerCase('pt-BR').includes(term))
       })
-      .sort((a, b) => (severityOrder[a.severidade] ?? 4) - (severityOrder[b.severidade] ?? 4) || Date.parse(a.abertoEm) - Date.parse(b.abertoEm))
-  }, [equipmentById, hospitalById, search, sectorById, severityFilter, statusFilter, tickets.data])
+  }, [equipmentById, hospitalById, search, sectorById, severityFilter, tickets.data])
 
-  const urgentOpenCount = (tickets.data ?? []).filter((ticket) =>
-    (ticket.severidade === 'CRITICA' || ticket.severidade === 'ALTA') &&
-    ['ABERTO', 'AGUARDANDO_PECA'].includes(canonicalStatus(ticket.status)),
-  ).length
+  const total = tickets.data?.total ?? 0
+  usePageClamp(pagination, tickets.data?.total, !tickets.isPlaceholderData)
+  const urgentOpenCount = urgent.data ?? 0
+  const filtersActive = Boolean(search || statusFilter || severityFilter)
   const eligibleTechnicians = selectedTicket
     ? technicians.filter((technician) => technician.hospitalId === selectedTicket.hospitalId)
     : []
@@ -115,13 +118,13 @@ export function TicketsPage() {
           <span className="sr-only">Buscar chamados</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input type="search" aria-label="Buscar chamados" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Chamado, equipamento ou hospital" className={`${inputClass} w-full pl-8`} />
         </label>
-        <label className="min-w-0"><span className="sr-only">Filtrar por status</span><Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={setStatusFilter} options={[{ value: '', label: 'Todos os status' }, { value: 'ABERTO', label: 'Aberto' }, { value: 'EM_ANDAMENTO', label: 'Em andamento' }, { value: 'AGUARDANDO_PECA', label: 'Aguardando peça' }, { value: 'RESOLVIDO', label: 'Resolvido' }, { value: 'CANCELADO', label: 'Cancelado' }]} /></label>
-        <label className="min-w-0"><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={setSeverityFilter} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
+        <label className="min-w-0"><span className="sr-only">Filtrar por status</span><Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={(next) => pagination.setFilters({ status: next })} options={[{ value: '', label: 'Todos os status' }, { value: 'ABERTO', label: 'Aberto' }, { value: 'EM_ANDAMENTO', label: 'Em andamento' }, { value: 'AGUARDANDO_PECA', label: 'Aguardando peça' }, { value: 'RESOLVIDO', label: 'Resolvido' }, { value: 'CANCELADO', label: 'Cancelado' }]} /></label>
+        <label className="min-w-0"><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={(next) => pagination.setFilters({ severidade: next })} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
       </FilterBar>
 
       {tickets.isLoading ? <div aria-label="Carregando chamados" aria-busy="true" className="space-y-2 rounded-lg border border-border bg-surface p-4"><span className="sr-only">Carregando chamados.</span>{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-24 animate-pulse rounded-md bg-bg" />)}</div> : null}
       {tickets.isError ? <section role="alert" className="rounded-lg border border-border bg-surface p-8 text-center"><p className="text-sm text-text-primary">Não foi possível carregar os chamados.</p><button type="button" onClick={() => void tickets.refetch()} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Tentar novamente</button></section> : null}
-      {!tickets.isLoading && !tickets.isError && visibleTickets.length === 0 ? <section className="grid min-h-56 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><h2 className="text-sm font-semibold text-text-primary">{(tickets.data?.length ?? 0) ? 'Nenhum chamado encontrado' : 'Nenhum chamado registrado'}</h2><p className="mt-1 text-xs text-text-secondary">{(tickets.data?.length ?? 0) ? 'Ajuste a busca ou os filtros.' : 'Novos chamados aparecerão aqui quando forem abertos.'}</p>{(search || statusFilter || severityFilter) && <button type="button" onClick={() => { setSearch(''); setStatusFilter(''); setSeverityFilter('') }} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button>}</div></section> : null}
+      {!tickets.isLoading && !tickets.isError && visibleTickets.length === 0 ? <section className="grid min-h-56 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><h2 className="text-sm font-semibold text-text-primary">{total > 0 || filtersActive ? 'Nenhum chamado encontrado' : 'Nenhum chamado registrado'}</h2><p className="mt-1 text-xs text-text-secondary">{total > 0 || filtersActive ? 'Ajuste a busca ou os filtros.' : 'Novos chamados aparecerão aqui quando forem abertos.'}</p>{filtersActive && <button type="button" onClick={() => { setSearch(''); pagination.setFilters({ status: undefined, severidade: undefined }) }} className="mt-3 rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button>}</div></section> : null}
       {!tickets.isLoading && !tickets.isError && visibleTickets.length > 0 && <section aria-label="Lista de chamados" className="space-y-2">
         {visibleTickets.map((ticket) => {
           const equip = equipmentById.get(ticket.equipamentoId)
@@ -151,6 +154,10 @@ export function TicketsPage() {
           </article>
         })}
       </section>}
+      {!tickets.isLoading && !tickets.isError && <>
+        {(search || severityFilter) && total > 0 && <p className="text-[11px] text-text-muted">Busca e severidade filtram apenas os chamados desta página.</p>}
+        <Pagination className="rounded-lg border border-border bg-surface" page={pagination.page} size={pagination.size} total={total} onPageChange={pagination.setPage} onSizeChange={pagination.setSize} />
+      </>}
     </div>
 
     {selectedTicket && <Modal title="Gerar OT corretiva" description={`Chamado ${selectedTicket.id.slice(0, 8)}`} busy={createWorkOrder.isPending} onClose={() => setSelectedTicket(null)}>

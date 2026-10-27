@@ -1,17 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
+import { usePagedQuery } from '@/lib/pagination'
 import type { ChecklistItem, ChecklistSummary, CreateChecklistInput, PreventiveWorkOrderInput, SaveChecklistItemInput, WorkOrderChecklistItem, WorkOrderDetail, WorkOrderListItem } from '../types'
 
 export const workOrdersKey = ['work-orders'] as const
 const workOrderDetailKey = (id: string) => [...workOrdersKey, 'detail', id] as const
 
-export function useWorkOrders(atrasadas = false) {
-  return useQuery({
-    queryKey: [...workOrdersKey, { atrasadas }],
-    queryFn: async () => (await apiClient.get<WorkOrderListItem[]>('/ordens-de-trabalho', {
-      params: atrasadas ? { atrasadas: true } : undefined,
-    })).data,
-  })
+export interface WorkOrderListFilters {
+  status?: string
+  tipo?: string
+  atrasadas?: boolean
+  pagina: number
+  tamanho: number
+}
+
+/** OTs paginadas no servidor (`pagina` 0-based, total em X-Total-Count); status, tipo e atrasadas filtram no servidor. */
+export function useWorkOrdersPage({ atrasadas, ...filters }: WorkOrderListFilters) {
+  return usePagedQuery<WorkOrderListItem>([...workOrdersKey, 'list'], '/ordens-de-trabalho', { ...filters, atrasadas: atrasadas || undefined })
 }
 
 export function useChecklists() {
