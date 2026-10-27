@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
 import { apiClient } from '@/lib/axios'
 import { PlatformUsersPage } from '../pages/PlatformUsersPage'
+import { chooseRowAction, confirmRowAction } from '@/test/row-action-helpers'
 
 vi.mock('@/components/layout/AdminPageShell', () => ({
   AdminPageShell: ({ title, subtitle, children, action }: PropsWithChildren<{ title: string; subtitle?: string; action?: ReactNode }>) => <main><h1>{title}</h1><p>{subtitle}</p>{action}{children}</main>,
@@ -52,7 +53,8 @@ describe('PlatformUsersPage', () => {
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: [platformUser] } as never).mockResolvedValueOnce({ data: platformUser } as never).mockResolvedValueOnce({ data: [{ ...platformUser, nome: 'Clara Mendes Silva' }] } as never)
     vi.mocked(apiClient.put).mockResolvedValueOnce({ data: { ...platformUser, nome: 'Clara Mendes Silva' } } as never)
     renderPage()
-    await user.click(await screen.findByRole('button', { name: 'Editar' }))
+    await screen.findByText('Clara Mendes')
+    await chooseRowAction(user, 'Ações de Clara Mendes', 'Editar')
     const nameInput = await screen.findByLabelText('Nome')
     await user.clear(nameInput)
     await user.type(nameInput, 'Clara Mendes Silva')
@@ -65,15 +67,15 @@ describe('PlatformUsersPage', () => {
 
   it('deactivates an internal user through the platform endpoint after confirmation', async () => {
     const user = userEvent.setup()
-    vi.stubGlobal('confirm', vi.fn(() => true))
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: [platformUser] } as never).mockResolvedValueOnce({ data: [{ ...platformUser, ativo: false }] } as never)
     vi.mocked(apiClient.post).mockResolvedValueOnce({ data: {} } as never)
     renderPage()
-    await user.click(await screen.findByRole('button', { name: 'Desativar' }))
+    await screen.findByText('Clara Mendes')
+    await chooseRowAction(user, 'Ações de Clara Mendes', 'Desativar')
+    await confirmRowAction(user, 'Desativar')
 
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/platform-users/platform-1/desativar'))
     expect(apiClient.post).not.toHaveBeenCalledWith('/users/platform-1/desativar')
-    vi.unstubAllGlobals()
   })
 
   it('shows a recoverable error when the list request fails', async () => {

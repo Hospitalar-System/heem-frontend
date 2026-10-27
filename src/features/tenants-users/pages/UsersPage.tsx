@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, ChevronDown, Plus, Search, UserRound, X } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, Pencil, Plus, PowerOff, Search, ShieldOff, UserRound, X } from 'lucide-react'
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -11,6 +11,7 @@ import { useAnonymizeUserCpf, useDeactivateUser, useHospitalChoices, useSaveTena
 import { userSchema } from '../schemas/user.schema'
 import type { TenantRole, TenantUser, TenantUserInput } from '../types'
 import { FormSelect } from '@/components/ui/FormSelect'
+import { RowActionsMenu, type RowAction } from '@/components/ui/RowActionsMenu'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const roles: Record<TenantRole, string> = { admin_cliente: 'Admin do Cliente', tecnico: 'Técnico', interno_hospital: 'Interno do Hospital' }
@@ -39,8 +40,14 @@ export function UsersPage() {
   const filtered = useMemo(() => (users.data ?? []).filter((user) => `${user.nome} ${user.email} ${roles[user.role]}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [users.data, query])
 
   async function deactivateUser(user: TenantUser) {
-    if (!window.confirm(`Desativar ${user.nome}? A pessoa perderá acesso ao HEMM.`)) return
     try { await deactivate.mutateAsync(user.id); toast.success('Usuário desativado.') } catch (error) { toast.error(getApiErrorMessage(error, 'Não foi possível desativar o usuário.')) }
+  }
+
+  function userActions(user: TenantUser): RowAction[] {
+    const actions: RowAction[] = [{ label: 'Editar', icon: <Pencil size={14} />, onSelect: () => setModal(user) }]
+    if (user.ativo) actions.push({ label: 'Desativar', icon: <PowerOff size={14} />, destructive: true, disabled: deactivate.isPending, onSelect: () => deactivateUser(user), confirm: { title: 'Desativar usuário?', description: `Desativar ${user.nome}? A pessoa perderá acesso ao HEMM.`, confirmLabel: 'Desativar' } })
+    if (canAnonymize && isTenantUserRole(user.role)) actions.push({ label: 'Anonimizar CPF', icon: <ShieldOff size={14} />, destructive: true, onSelect: () => setAnonymizeTarget(user) })
+    return actions
   }
 
   async function anonymizeUserCpf(user: TenantUser) {
@@ -63,7 +70,7 @@ export function UsersPage() {
       const index = (users.data ?? []).findIndex((item) => item.id === user.id)
       const ids = linkQueries[index]?.data ?? []
       const names = ids.map((id) => hospitals.data?.find((hospital) => hospital.id === id)?.nome).filter(Boolean)
-      return <tr key={user.id} className="border-b border-border/70 last:border-0"><td className="px-4 py-3"><div className="font-medium text-sm">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm">{roles[user.role] ?? user.role}</td><td className="max-w-[240px] px-4 py-3 text-sm text-text-secondary">{linkQueries[index]?.isLoading ? 'Carregando…' : names.length ? names.join(', ') : '—'}</td><td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 text-xs ${user.ativo ? 'text-primary' : 'text-text-muted'}`}><span className={`size-1.5 rounded-full ${user.ativo ? 'bg-primary' : 'bg-text-muted'}`} />{user.ativo ? 'Ativo' : 'Inativo'}</span></td><td className="px-4 py-3"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><button type="button" onClick={() => setModal(user)} className="text-xs text-primary hover:underline">Editar</button>{user.ativo && <button type="button" disabled={deactivate.isPending} onClick={() => void deactivateUser(user)} className="text-xs text-danger hover:underline disabled:opacity-50">Desativar</button>}{canAnonymize && isTenantUserRole(user.role) && <button type="button" onClick={() => setAnonymizeTarget(user)} className="text-xs text-danger hover:underline">Anonimizar CPF</button>}</div></td></tr>
+      return <tr key={user.id} className="border-b border-border/70 last:border-0"><td className="px-4 py-3"><div className="font-medium text-sm">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm">{roles[user.role] ?? user.role}</td><td className="max-w-[240px] px-4 py-3 text-sm text-text-secondary">{linkQueries[index]?.isLoading ? 'Carregando…' : names.length ? names.join(', ') : '—'}</td><td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 text-xs ${user.ativo ? 'text-primary' : 'text-text-muted'}`}><span className={`size-1.5 rounded-full ${user.ativo ? 'bg-primary' : 'bg-text-muted'}`} />{user.ativo ? 'Ativo' : 'Inativo'}</span></td><td className="px-4 py-3"><RowActionsMenu label={user.nome} actions={userActions(user)} /></td></tr>
     })}</tbody></table></div> : null}
     {modal && <UserForm user={modal === 'create' ? undefined : modal} hospitals={hospitals.data ?? []} hospitalsLoading={hospitals.isLoading} onClose={() => setModal(null)} onSaved={() => setModal(null)} />}
     {anonymizeTarget && <AnonymizeCpfModal user={anonymizeTarget} busy={anonymizeCpf.isPending} error={anonymizeError} onClose={() => setAnonymizeTarget(null)} onConfirm={() => void anonymizeUserCpf(anonymizeTarget)} />}

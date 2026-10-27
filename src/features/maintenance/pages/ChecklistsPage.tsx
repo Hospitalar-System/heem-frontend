@@ -10,6 +10,7 @@ import { useAddChecklistItem, useChecklistItems, useChecklists, useCreateCheckli
 import { checklistItemSchema, createChecklistSchema } from '../schemas/checklists.schema'
 import { checklistItemTypeChoices, checklistItemTypeLabel, normalizeChecklistItemType, type ChecklistItem } from '../types'
 import { Select } from '@/components/ui/Select'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 const inputClass = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const initialItem = { descricao: '', tipo: '', unidade: '', obrigatorio: false }
@@ -166,7 +167,7 @@ export function ChecklistsPage() {
               <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Descrição<input required maxLength={240} value={firstItem.descricao} onChange={(event) => setFirstItem((item) => ({ ...item, descricao: event.target.value }))} className={inputClass} placeholder="O que deve ser verificado?" /></label>
               <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Tipo<Select required value={firstItem.tipo} onChange={(next) => setFirstItem((item) => ({ ...item, tipo: next }))} placeholder="Selecione o tipo" size="sm" options={checklistItemTypeChoices()} /></label>
               <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Unidade<input maxLength={40} value={firstItem.unidade} onChange={(event) => setFirstItem((item) => ({ ...item, unidade: event.target.value }))} className={inputClass} placeholder="Opcional" /></label>
-              <label className="flex min-h-8 items-center gap-2 text-xs text-text-secondary"><input type="checkbox" checked={firstItem.obrigatorio} onChange={(event) => setFirstItem((item) => ({ ...item, obrigatorio: event.target.checked }))} className="size-4 accent-primary" />Item obrigatório</label>
+              <Checkbox label="Item obrigatório" checked={firstItem.obrigatorio} onCheckedChange={(checked) => setFirstItem((item) => ({ ...item, obrigatorio: checked }))} containerClassName="min-h-8 justify-center text-xs text-text-secondary" />
             </fieldset>
             <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" onClick={() => setShowCreate(false)} disabled={createChecklist.isPending} className="h-8 rounded-md border border-border px-3 text-xs text-text-secondary">Cancelar</button><button type="submit" disabled={createChecklist.isPending} className="h-8 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand disabled:opacity-50">{createChecklist.isPending ? 'Criando…' : 'Criar checklist'}</button></div>
           </form>
@@ -188,7 +189,7 @@ export function ChecklistsPage() {
               <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Descrição<input required maxLength={240} value={draft.descricao} onChange={(event) => setDraft((value) => ({ ...value, descricao: event.target.value }))} className={inputClass} placeholder="O que deve ser verificado?" /></label>
               <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Tipo<Select required value={draft.tipo} onChange={(next) => setDraft((value) => ({ ...value, tipo: next }))} placeholder="Selecione o tipo" size="sm" options={checklistItemTypeChoices(selectedItem?.tipo)} /></label>
               <label className="grid gap-1.5 text-[11px] font-medium text-text-secondary">Unidade<input maxLength={40} value={draft.unidade} onChange={(event) => setDraft((value) => ({ ...value, unidade: event.target.value }))} className={inputClass} placeholder="Opcional" /></label>
-              <label className="flex min-h-9 items-center gap-2 text-xs text-text-secondary"><input type="checkbox" checked={draft.obrigatorio} onChange={(event) => setDraft((value) => ({ ...value, obrigatorio: event.target.checked }))} className="size-4 accent-primary" />Item obrigatório</label>
+              <Checkbox label="Item obrigatório" checked={draft.obrigatorio} onCheckedChange={(checked) => setDraft((value) => ({ ...value, obrigatorio: checked }))} containerClassName="min-h-9 justify-center text-xs text-text-secondary" />
               <div className="flex justify-end border-t border-border pt-3"><button type="submit" disabled={!selectedId || itemsQuery.isLoading || itemsQuery.isError || addItem.isPending || updateItem.isPending || reorderItems.isPending} className="h-8 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand disabled:opacity-50">{addItem.isPending || updateItem.isPending ? 'Salvando…' : selectedItem ? 'Salvar item' : 'Adicionar item'}</button></div>
             </form>
           </div>

@@ -11,6 +11,7 @@ import { apiClient } from '@/lib/axios'
 import { chooseDate } from '@/test/date-helpers'
 import { chooseOption, listOptions } from '@/test/select-helpers'
 import { PreventivePlansPage } from '../pages/PreventivePlansPage'
+import { chooseRowAction } from '@/test/row-action-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -250,7 +251,8 @@ describe('PreventivePlansPage', () => {
   it('edita enviando só técnico, intervalo e âncora, com equipamento e checklist fixos', async () => {
     const user = userEvent.setup()
     renderPage()
-    await user.click(await screen.findByRole('button', { name: 'Editar plano de EQ-01 · Bomba de infusão' }))
+    await screen.findByText('Bomba de infusão')
+    await chooseRowAction(user, 'Ações de plano de EQ-01 · Bomba de infusão', 'Editar plano')
     const dialog = await screen.findByRole('dialog', { name: 'Editar plano preventivo' })
     expect(within(dialog).getByRole('combobox', { name: 'Equipamento' })).toBeDisabled()
     expect(within(dialog).getByRole('combobox', { name: 'Checklist' })).toBeDisabled()
@@ -267,7 +269,8 @@ describe('PreventivePlansPage', () => {
     const user = userEvent.setup()
     vi.mocked(apiClient.put).mockRejectedValue(httpError(409, { code: 'PLANO_INATIVO' }))
     renderPage()
-    await user.click(await screen.findByRole('button', { name: 'Editar plano de EQ-01 · Bomba de infusão' }))
+    await screen.findByText('Bomba de infusão')
+    await chooseRowAction(user, 'Ações de plano de EQ-01 · Bomba de infusão', 'Editar plano')
     const dialog = await screen.findByRole('dialog')
     const callsBefore = listCalls().length
     await user.click(within(dialog).getByRole('button', { name: 'Salvar alterações' }))
@@ -280,7 +283,8 @@ describe('PreventivePlansPage', () => {
     let resolveDeactivate: (value: unknown) => void = () => undefined
     vi.mocked(apiClient.post).mockImplementation(() => new Promise((resolve) => { resolveDeactivate = resolve }) as never)
     renderPage()
-    await user.click(await screen.findByRole('button', { name: 'Desativar plano de EQ-01 · Bomba de infusão' }))
+    await screen.findByText('Bomba de infusão')
+    await chooseRowAction(user, 'Ações de plano de EQ-01 · Bomba de infusão', 'Desativar plano')
     expect(apiClient.post).not.toHaveBeenCalled()
     const dialog = await screen.findByRole('dialog', { name: 'Desativar plano preventivo' })
     const callsBefore = listCalls().length
@@ -297,10 +301,11 @@ describe('PreventivePlansPage', () => {
     const user = userEvent.setup()
     vi.mocked(apiClient.post).mockRejectedValue(httpError(404, { code: 'NAO_ENCONTRADO' }))
     renderPage()
-    await user.click(await screen.findByRole('button', { name: 'Desativar plano de EQ-01 · Bomba de infusão' }))
+    await screen.findByText('Bomba de infusão')
+    await chooseRowAction(user, 'Ações de plano de EQ-01 · Bomba de infusão', 'Desativar plano')
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancelar' }))
     expect(apiClient.post).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: 'Desativar plano de EQ-01 · Bomba de infusão' }))
+    await chooseRowAction(user, 'Ações de plano de EQ-01 · Bomba de infusão', 'Desativar plano')
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Desativar plano' }))
     expect(await screen.findByText('Plano preventivo não encontrado. A lista foi atualizada.')).toBeInTheDocument()
   })
@@ -309,7 +314,7 @@ describe('PreventivePlansPage', () => {
     mockApi(() => ({ data: [{ ...plans[0], ativo: false }], headers: { 'x-total-count': '1' } }))
     renderPage()
     expect(await screen.findByText('Inativo')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Editar plano|Desativar plano/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Ações de/ })).not.toBeInTheDocument()
   })
 })
 

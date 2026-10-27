@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Download, FileText, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { DatePicker } from '@/components/ui/DatePicker'
@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { documentFormSchema, validateDocumentFile, type DocumentFormValues } from '../schemas/assets.schema'
 import { fetchDocumentDownloadUrl, useDeleteEquipmentDocument, useEquipmentDocuments, useUpdateDocumentValidity, useUploadEquipmentDocument } from '../api/equipment-documents'
 import type { DocumentType, EquipmentDocument } from '../types'
+import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
 
 const documentTypeNames: Record<DocumentType, string> = {
   MANUAL: 'Manual', CERTIFICADO_CALIBRACAO: 'Certificado de calibração', LAUDO_SEGURANCA: 'Laudo de segurança', NOTA_FISCAL: 'Nota fiscal', OUTRO: 'Outro',
@@ -65,11 +66,13 @@ export function EquipmentDocumentsSection({ equipmentId, canWrite, canManage }: 
         <td className="px-4 text-text-secondary">{formatTimestamp(document.uploadedEm)}</td>
         <td className="px-4 text-text-secondary">{formatCivilDate(document.validadeAte)}</td>
         <td className="px-4"><ValidityBadge document={document} /></td>
-        <td className="px-4"><div className="flex justify-end gap-1">
-          <IconButton label={`Baixar ${document.nomeArquivo}`} onClick={() => void download(document)}><Download aria-hidden="true" size={15} /></IconButton>
-          {canManage ? <IconButton label={`Editar validade de ${document.nomeArquivo}`} onClick={() => setValidityTarget(document)}><Pencil aria-hidden="true" size={15} /></IconButton> : null}
-          {canManage ? <IconButton label={`Excluir ${document.nomeArquivo}`} danger onClick={() => { remove.reset(); setDeleteTarget(document) }}><Trash2 aria-hidden="true" size={15} /></IconButton> : null}
-        </div></td>
+        <td className="px-4"><div className="flex justify-end"><RowActionsMenu label={document.nomeArquivo} actions={[
+          { label: 'Baixar', icon: <Download size={14} />, onSelect: () => download(document) },
+          ...(canManage ? [
+            { label: 'Editar validade', icon: <Pencil size={14} />, onSelect: () => setValidityTarget(document) },
+            { label: 'Excluir', icon: <Trash2 size={14} />, destructive: true, onSelect: () => { remove.reset(); setDeleteTarget(document) } },
+          ] : []),
+        ]} /></div></td>
       </tr>)}</tbody></table></div> : null}
 
     {uploadOpen ? <UploadModal equipmentId={equipmentId} onClose={() => setUploadOpen(false)} /> : null}
@@ -148,10 +151,6 @@ export function ValidityBadge({ document }: { document: Pick<EquipmentDocument, 
   if (document.vencendo) return <span className="rounded-full bg-warning/10 px-2.5 py-1 text-[11px] font-medium text-warning">Vencendo</span>
   if (document.validadeAte) return <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">Válido</span>
   return <span className="rounded-full bg-bg px-2.5 py-1 text-[11px] font-medium text-text-secondary">Sem validade</span>
-}
-
-function IconButton({ label, onClick, danger = false, children }: { label: string; onClick: () => void; danger?: boolean; children: ReactNode }) {
-  return <button type="button" aria-label={label} title={label} onClick={onClick} className={`grid size-9 shrink-0 place-items-center rounded-md text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${danger ? 'hover:text-danger' : 'hover:text-text-primary'}`}>{children}</button>
 }
 
 function formatCivilDate(value: string | null) {

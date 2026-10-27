@@ -1,4 +1,4 @@
-import { Pencil, Search, UserRoundCog } from 'lucide-react'
+import { Pencil, PowerOff, Search, UserRoundCog } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -9,6 +9,7 @@ import { Field, Modal } from '@/components/ui/Modal'
 import { useDeactivatePlatformUser, usePlatformUser, usePlatformUsers, useSavePlatformUser } from '../api/platform-users'
 import { platformUserSchema } from '../schemas/platform-user.schema'
 import type { PlatformUser, PlatformUserInput } from '../types'
+import { RowActionsMenu, type RowAction } from '@/components/ui/RowActionsMenu'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 
@@ -27,8 +28,13 @@ export function PlatformUsersPage() {
   const [selected, setSelected] = useState<'create' | PlatformUser | null>(null)
   const filtered = useMemo(() => (users.data ?? []).filter((user) => `${user.nome} ${user.email} ${user.codigo} ${user.role}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [users.data, query])
 
+  function userActions(user: PlatformUser): RowAction[] {
+    const actions: RowAction[] = [{ label: 'Editar', icon: <Pencil size={14} />, onSelect: () => setSelected(user) }]
+    if (user.ativo) actions.push({ label: 'Desativar', icon: <PowerOff size={14} />, destructive: true, disabled: deactivate.isPending, onSelect: () => deactivateUser(user), confirm: { title: 'Desativar usuário?', description: `Desativar ${user.nome}? A pessoa perderá acesso à plataforma.`, confirmLabel: 'Desativar' } })
+    return actions
+  }
+
   async function deactivateUser(user: PlatformUser) {
-    if (!window.confirm(`Desativar ${user.nome}? A pessoa perderá acesso à plataforma.`)) return
     try {
       await deactivate.mutateAsync(user.id)
       toast.success('Usuário da plataforma desativado.')
@@ -42,7 +48,7 @@ export function PlatformUsersPage() {
     {users.isLoading && <div aria-label="Carregando usuários da plataforma" aria-busy="true" className="h-64 animate-pulse rounded-lg border border-border bg-surface" />}
     {users.isError && <section role="alert" className="rounded-lg border border-border bg-surface p-6"><p>Não foi possível carregar os usuários da plataforma.</p><button type="button" onClick={() => void users.refetch()} className="mt-3 text-sm text-primary underline">Tentar novamente</button></section>}
     {!users.isLoading && !users.isError && filtered.length === 0 && <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><UserRoundCog className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{query ? 'Nenhum resultado' : 'Nenhum usuário interno cadastrado'}</h2><p className="mt-1 text-sm text-text-secondary">{query ? 'Ajuste a pesquisa e tente novamente.' : 'Cadastre um usuário para compartilhar a administração da plataforma.'}</p>{!query && <div className="mt-4 flex justify-center"><PageAction onClick={() => setSelected('create')} fullWidthMobile>Novo usuário</PageAction></div>}</div></section>}
-    {!users.isLoading && !users.isError && filtered.length > 0 && <div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[700px] border-collapse text-left"><thead><tr className="table-head text-[11px] uppercase">{['Nome', 'E-mail', 'Papel', 'Status', 'Ações'].map((heading) => <th key={heading} scope="col" className="px-4 py-3 font-medium">{heading}</th>)}</tr></thead><tbody>{filtered.map((user) => <tr key={user.id} className="border-b border-border/70 last:border-0"><td className="px-4 py-3"><div className="text-sm font-medium text-text-primary">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm text-text-secondary">{user.role}</td><td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 text-xs ${user.ativo ? 'text-primary' : 'text-text-muted'}`}><span className={`size-1.5 rounded-full ${user.ativo ? 'bg-primary' : 'bg-text-muted'}`} />{user.ativo ? 'Ativo' : 'Inativo'}</span></td><td className="px-4 py-3"><div className="flex items-center gap-3"><button type="button" onClick={() => setSelected(user)} className="inline-flex items-center gap-1 text-xs text-primary hover:underline"><Pencil size={12} /> Editar</button>{user.ativo && <button type="button" disabled={deactivate.isPending} onClick={() => void deactivateUser(user)} className="text-xs text-danger hover:underline disabled:opacity-50">Desativar</button>}</div></td></tr>)}</tbody></table></div>}
+    {!users.isLoading && !users.isError && filtered.length > 0 && <div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[700px] border-collapse text-left"><thead><tr className="table-head text-[11px] uppercase">{['Nome', 'E-mail', 'Papel', 'Status', 'Ações'].map((heading) => <th key={heading} scope="col" className="px-4 py-3 font-medium">{heading}</th>)}</tr></thead><tbody>{filtered.map((user) => <tr key={user.id} className="border-b border-border/70 last:border-0"><td className="px-4 py-3"><div className="text-sm font-medium text-text-primary">{user.nome}</div><div className="mt-0.5 text-[11px] text-text-muted">{user.codigo}</div></td><td className="px-4 py-3 text-sm text-text-secondary">{user.email}</td><td className="px-4 py-3 text-sm text-text-secondary">{user.role}</td><td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 text-xs ${user.ativo ? 'text-primary' : 'text-text-muted'}`}><span className={`size-1.5 rounded-full ${user.ativo ? 'bg-primary' : 'bg-text-muted'}`} />{user.ativo ? 'Ativo' : 'Inativo'}</span></td><td className="px-4 py-3"><RowActionsMenu label={user.nome} actions={userActions(user)} /></td></tr>)}</tbody></table></div>}
     {selected && <PlatformUserForm user={selected === 'create' ? undefined : selected} onClose={() => setSelected(null)} onSaved={() => setSelected(null)} />}
   </AdminPageShell>
 }

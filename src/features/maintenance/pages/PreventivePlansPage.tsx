@@ -10,6 +10,7 @@ import { useDeactivatePreventivePlan, usePlanLookups, usePreventivePlans } from 
 import { PreventivePlanFormModal } from '../components/PreventivePlanFormModal'
 import type { PreventivePlan } from '../types'
 import { formatPlanDate, planApiError } from '../utils/preventive-plans'
+import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
 
 const PAGE_SIZE = 20
 const statusOptions = [{ value: 'true', label: 'Ativos' }, { value: 'false', label: 'Inativos' }, { value: '', label: 'Todos os status' }]
@@ -94,10 +95,10 @@ export function PreventivePlansPage() {
                 <span className={`inline-flex rounded-md border px-2 py-1 text-[10px] font-medium ${plan.ativo ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-bg text-text-muted'}`}>{plan.ativo ? 'Ativo' : 'Inativo'}</span>
                 {plan.ativo && plan.pendencia && <span title="O técnico padrão está inativo ou desvinculado do hospital; nenhuma OT foi gerada." className="inline-flex rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-[10px] font-medium text-warning">Pendência</span>}
               </div></td>
-              <td className="px-4"><div className="flex justify-end gap-1">
-                {plan.ativo && <button type="button" aria-label={`Editar plano de ${label}`} onClick={() => setFormPlan(plan)} className="grid size-8 place-items-center rounded-md text-text-secondary hover:bg-bg hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Pencil aria-hidden="true" size={14} /></button>}
-                {plan.ativo && <button type="button" aria-label={`Desativar plano de ${label}`} onClick={() => { setDeactivateError(''); setToDeactivate(plan) }} className="grid size-8 place-items-center rounded-md text-text-secondary hover:bg-bg hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><PowerOff aria-hidden="true" size={14} /></button>}
-              </div></td>
+              <td className="px-4"><div className="flex justify-end">{plan.ativo ? <RowActionsMenu label={`plano de ${label}`} actions={[
+                { label: 'Editar plano', icon: <Pencil size={14} />, onSelect: () => setFormPlan(plan) },
+                { label: 'Desativar plano', icon: <PowerOff size={14} />, destructive: true, onSelect: () => { setDeactivateError(''); setToDeactivate(plan) } },
+              ]} /> : null}</div></td>
             </tr>
           })}</tbody>
         </table>

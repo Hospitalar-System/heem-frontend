@@ -10,6 +10,7 @@ import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { apiClient } from '@/lib/axios'
 import { chooseOption } from '@/test/select-helpers'
 import { CategoriesPage } from '../pages/CategoriesPage'
+import { chooseRowAction, listRowActions } from '@/test/row-action-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
@@ -122,7 +123,8 @@ describe('CategoriesPage', () => {
     const user = userEvent.setup()
     vi.mocked(apiClient.put).mockResolvedValue({ data: {} } as never)
     render(<CategoriesPage />, { wrapper: TestProviders })
-    await user.click(await screen.findByRole('button', { name: 'Editar Bomba de Infusão' }))
+    await screen.findByText('Bomba de Infusão')
+    await chooseRowAction(user, 'Ações de Bomba de Infusão', 'Editar')
     const dialog = await screen.findByRole('dialog')
     const name = within(dialog).getByLabelText('Nome')
     expect(name).toHaveValue('Bomba de Infusão')
@@ -138,15 +140,16 @@ describe('CategoriesPage', () => {
     const user = userEvent.setup()
     vi.mocked(apiClient.delete).mockResolvedValue({ data: null } as never)
     render(<CategoriesPage />, { wrapper: TestProviders })
-    await user.click(await screen.findByRole('button', { name: 'Desativar Bomba de Infusão' }))
+    await screen.findByText('Bomba de Infusão')
+    await chooseRowAction(user, 'Ações de Bomba de Infusão', 'Desativar')
     const dialog = await screen.findByRole('dialog')
     expect(apiClient.delete).not.toHaveBeenCalled()
     await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
     expect(apiClient.delete).not.toHaveBeenCalled()
-    await user.click(screen.getByRole('button', { name: 'Desativar Bomba de Infusão' }))
+    await chooseRowAction(user, 'Ações de Bomba de Infusão', 'Desativar')
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Desativar categoria' }))
     await waitFor(() => expect(apiClient.delete).toHaveBeenCalledWith('/categorias-equipamento/cat-1'))
-    expect(screen.queryByRole('button', { name: 'Desativar Ventilador Pulmonar' })).not.toBeInTheDocument()
+    expect(await listRowActions(user, 'Ações de Ventilador Pulmonar')).not.toContain('Desativar')
   })
 
   it('marks a loaded category as reviewed and offers the action only when it needs review', async () => {
@@ -154,8 +157,8 @@ describe('CategoriesPage', () => {
     vi.mocked(apiClient.put).mockResolvedValue({ data: {} } as never)
     render(<CategoriesPage />, { wrapper: TestProviders })
     await screen.findByText('Monitor MX')
-    expect(screen.queryByRole('button', { name: 'Marcar Bomba de Infusão como revisada' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Marcar Monitor MX como revisada' }))
+    expect(await listRowActions(user, 'Ações de Bomba de Infusão')).not.toContain('Marcar como revisada')
+    await chooseRowAction(user, 'Ações de Monitor MX', 'Marcar como revisada')
     await waitFor(() => expect(apiClient.put).toHaveBeenCalledWith('/categorias-equipamento/cat-2/revisada'))
   })
 
@@ -163,7 +166,8 @@ describe('CategoriesPage', () => {
     const user = userEvent.setup()
     vi.mocked(apiClient.post).mockResolvedValue({ data: {} } as never)
     render(<CategoriesPage />, { wrapper: TestProviders })
-    await user.click(await screen.findByRole('button', { name: 'Mesclar em Bomba de Infusão' }))
+    await screen.findByText('Bomba de Infusão')
+    await chooseRowAction(user, 'Ações de Bomba de Infusão', /Mesclar/)
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByRole('note')).toHaveTextContent(/serão movidos para "Bomba de Infusão".*origem será desativada/)
     await user.click(within(dialog).getByRole('button', { name: 'Mesclar categorias' }))
@@ -181,7 +185,8 @@ describe('CategoriesPage', () => {
     const user = userEvent.setup()
     vi.mocked(apiClient.post).mockRejectedValue(problem('MESCLAGEM_INVALIDA', 400))
     render(<CategoriesPage />, { wrapper: TestProviders })
-    await user.click(await screen.findByRole('button', { name: 'Mesclar em Bomba de Infusão' }))
+    await screen.findByText('Bomba de Infusão')
+    await chooseRowAction(user, 'Ações de Bomba de Infusão', /Mesclar/)
     const dialog = await screen.findByRole('dialog')
     await chooseOption(user, within(dialog).getByRole('combobox', { name: 'Categoria de origem' }), 'Monitor MX')
     await user.click(within(dialog).getByRole('button', { name: 'Mesclar categorias' }))

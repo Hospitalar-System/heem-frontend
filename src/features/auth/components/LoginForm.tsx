@@ -6,6 +6,7 @@ import { isDemoMode } from '@/lib/demo-mode'
 import { AccessBlockedError, getLoginErrorMessage, useLogin } from '../hooks/useLogin'
 import { loginSchema, type LoginFormInput, type LoginFormValues } from '../schemas/login.schema'
 import { AccessBlockedScreen } from './AccessBlockedScreen'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 const inputClass = 'h-[45px] w-full rounded-[8px] border border-border bg-bg px-3 text-sm text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 aria-[invalid=true]:border-danger disabled:opacity-60'
 const buttonClass = 'flex h-[45px] w-full items-center justify-center gap-2 rounded-[8px] bg-primary px-4 text-sm font-medium text-bg-brand outline-none transition hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg-login disabled:cursor-wait disabled:opacity-70'
@@ -94,10 +95,7 @@ export function LoginForm() {
           {...form.register('password')}
         />
       </FormField>
-      <label className="flex items-center gap-2 text-sm text-text-secondary">
-        <input type="checkbox" disabled={pending} className="size-4 accent-primary" {...form.register('rememberMe')} />
-        Lembrar de mim
-      </label>
+      <Checkbox label="Lembrar de mim" disabled={pending} containerClassName="text-sm text-text-secondary" {...form.register('rememberMe')} />
       {errorRegion}
       <button type="submit" disabled={pending} className={buttonClass}>
         {submitIcon}
