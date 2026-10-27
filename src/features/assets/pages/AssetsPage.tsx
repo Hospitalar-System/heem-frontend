@@ -4,6 +4,7 @@ import { Plus, Search } from 'lucide-react'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { EquipmentStatusBadge } from '../components/EquipmentStatusBadge'
+import { EquipmentThumb } from '../components/EquipmentPhotoSection'
 import { useEquipments, useHospitals, useSectorsForHospitals } from '../api/assets'
 import { useCategories } from '../api/categories'
 import type { EquipmentLifecycle } from '../types'
@@ -93,7 +94,7 @@ export function AssetsPage() {
       <table className="w-full min-w-[1080px] border-collapse text-left">
         <thead><tr className="table-head h-12 text-[11px]">{['Código', 'Nome', 'Categoria', 'Modelo', 'Nº série', 'Setor', 'Últ. manut.', 'Status'].map((heading) => <th key={heading} scope="col" className="px-4">{heading}</th>)}</tr></thead>
         <tbody>{visibleEquipment.map((item) => <tr key={item.id} role="link" tabIndex={0} aria-label={`Abrir ${item.codigo}, ${item.nome}`} onClick={() => navigate(`/assets/${item.id}`)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/assets/${item.id}`) } }} className="h-12 row-clickable border-b border-border/70 text-xs last:border-0">
-          <td className="whitespace-nowrap px-4 font-medium text-text-secondary">{item.codigo}</td><td className="max-w-[280px] truncate px-4 text-sm font-medium text-text-primary">{item.nome}</td><td className="px-4 text-text-secondary">{item.categoriaNome ?? <span className="text-text-muted">Sem categoria</span>}</td><td className="px-4 text-text-secondary">{item.modelo || '—'}</td><td className="px-4 text-text-secondary">{item.numeroSerie || '—'}</td><td className="px-4 text-text-secondary">{sectorById.get(item.setorId)?.nome ?? '—'}</td><td className="px-4 text-text-muted" title="A API não fornece a data da última manutenção na listagem">—</td><td className="px-4"><EquipmentStatusBadge status={item.statusCicloVida} /></td>
+          <td className="whitespace-nowrap px-4 font-medium text-text-secondary">{item.codigo}</td><td className="max-w-[320px] px-4 text-sm font-medium text-text-primary"><span className="flex items-center gap-3"><EquipmentThumb equipmentId={item.id} nome={item.nome} fotoVersao={item.fotoVersao} /><span className="truncate">{item.nome}</span></span></td><td className="px-4 text-text-secondary">{item.categoriaNome ?? <span className="text-text-muted">Sem categoria</span>}</td><td className="px-4 text-text-secondary">{item.modelo || '—'}</td><td className="px-4 text-text-secondary">{item.numeroSerie || '—'}</td><td className="px-4 text-text-secondary">{sectorById.get(item.setorId)?.nome ?? '—'}</td><td className="px-4 text-text-muted" title="A API não fornece a data da última manutenção na listagem">—</td><td className="px-4"><EquipmentStatusBadge status={item.statusCicloVida} /></td>
         </tr>)}</tbody>
       </table>
     </div> : null}

@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
-import { isDemoMode } from '@/lib/demo-mode'
-import type { CreateEquipmentInput, Equipment, EquipmentFilters, Hospital, HospitalInput, Setor, SetorInput, SignedUploadUrl, UpdateEquipmentInput, WorkOrderSummary } from '../types'
+import type { CreateEquipmentInput, Equipment, EquipmentFilters, Hospital, HospitalInput, Setor, SetorInput, UpdateEquipmentInput, WorkOrderSummary } from '../types'
 
 const hospitalKey = ['hospitals'] as const
 export function useHospitals() { return useQuery({ queryKey: hospitalKey, queryFn: async () => (await apiClient.get<Hospital[]>('/hospitais')).data }) }
@@ -78,14 +77,3 @@ export function useSaveEquipment() {
   })
 }
 
-export function useUploadEquipmentPhoto() {
-  return useMutation({
-    mutationFn: async (file: File) => {
-      if (isDemoMode) return `demo/${file.name}`
-      const { data } = await apiClient.post<SignedUploadUrl>('/equipamentos/foto-upload-url', { nomeArquivo: file.name })
-      const response = await fetch(data.url, { method: 'PUT', body: file })
-      if (!response.ok) throw new Error('Não foi possível enviar a foto para o armazenamento.')
-      return data.chave
-    },
-  })
-}

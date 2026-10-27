@@ -8,6 +8,8 @@ import { Modal } from '@/components/ui/Modal'
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
 import { useReassignWorkOrderTechnician, useWorkOrder, useWorkOrderChecklistItems } from '../api/work-orders'
 import { Select } from '@/components/ui/Select'
+import { getAuthState } from '@/features/auth/session'
+import { WorkOrderPhotosSection } from '../components/WorkOrderPhotosSection'
 
 const statusLabels: Record<string, string> = { AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída', CANCELADA: 'Cancelada', CANCELADO: 'Cancelada' }
 
@@ -111,6 +113,8 @@ export function WorkOrderDetailPage() {
           <h3 id="measurements-title" className="flex items-center gap-2 text-sm font-semibold text-text-primary"><Gauge aria-hidden="true" size={16} />Medições registradas</h3>
           <UnavailableMessage>O backend ainda não disponibiliza uma consulta de medições associadas à OT.</UnavailableMessage>
         </section>
+
+        {canonical(order.data.tipo) === 'PREVENTIVA' ? <WorkOrderPhotosSection order={order.data} user={getAuthState().user} /> : null}
 
         <section aria-labelledby="timeline-title" className="rounded-lg border border-border bg-surface p-5 xl:col-span-2">
           <h3 id="timeline-title" className="text-sm font-semibold text-text-primary">Linha do tempo</h3>

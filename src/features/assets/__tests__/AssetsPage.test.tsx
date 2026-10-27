@@ -65,4 +65,21 @@ describe('AssetsPage', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Limpar filtros' }))
     expect(await screen.findByText('Ventilador VentPro')).toBeInTheDocument()
   })
+
+  it('loads the list thumbnail lazily, only for equipment with a photo and only once the row is visible', async () => {
+    const observers: Array<(entries: Array<{ isIntersecting: boolean }>) => void> = []
+    vi.stubGlobal('IntersectionObserver', class { constructor(callback: (entries: Array<{ isIntersecting: boolean }>) => void) { observers.push(callback) } observe() {} disconnect() {} })
+    vi.mocked(apiClient.get).mockImplementation(async (url) => {
+      if (url === '/equipamentos') return { data: [{ ...equipment, fotoVersao: '2026-10-01T10:00:00Z' }, { ...equipment, id: 'equipment-2', codigo: 'EQ-2', nome: 'Monitor', fotoVersao: null }] } as never
+      if (url === '/equipamentos/equipment-1/foto/miniatura') return { data: { url: 'https://img/mini.jpg' } } as never
+      return { data: [] } as never
+    })
+    render(<AssetsPage />, { wrapper: TestProviders })
+    await screen.findByText('Ventilador VentPro')
+    expect(apiClient.get).not.toHaveBeenCalledWith('/equipamentos/equipment-1/foto/miniatura')
+    observers.forEach((callback) => callback([{ isIntersecting: true }]))
+    expect(await screen.findByAltText('Miniatura de Ventilador VentPro')).toHaveAttribute('src', 'https://img/mini.jpg')
+    expect(apiClient.get).not.toHaveBeenCalledWith('/equipamentos/equipment-2/foto/miniatura')
+    vi.unstubAllGlobals()
+  })
 })

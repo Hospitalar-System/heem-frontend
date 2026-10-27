@@ -24,7 +24,10 @@ export interface Equipment {
   modelo: string | null
   numeroSerie: string | null
   marca: string | null
+  /** Legado (deprecated): use a API de foto (`fotoVersao`). */
   fotoUrl: string | null
+  /** Instante da última troca da foto principal; null/ausente = sem foto na API nova. */
+  fotoVersao?: string | null
   categoriaId: string | null
   categoriaNome: string | null
   dadosGerais: Record<string, unknown> | null
