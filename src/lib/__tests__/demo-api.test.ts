@@ -100,4 +100,28 @@ describe('modo de demonstração', () => {
     expect(last.comErro).toBe(last.erros.length)
     expect(last.erros.map((error) => error.code)).toContain('CATEGORIA_NAO_ENCONTRADA')
   })
+  it('simula a campanha de preventiva: prévia, criação, progresso por consulta e cancelamento', async () => {
+    const body = { hospitalId: 'hospital-demo-1', nome: 'Campanha demo', setorIds: [], categoriaIds: [], dataInicio: '2999-01-01', recorrencia: 'avulsa', modoAtribuicao: 'equilibrado' }
+    const preview = (await apiClient.post('/campanhas-preventivas/previa', body)).data as { totalEquipamentos: number; aGerar: number; totalPendencias: number; pendenciasPorMotivo: Record<string, number> }
+    expect(preview.totalEquipamentos).toBe(2)
+    expect(preview.aGerar).toBe(1)
+    expect(preview.pendenciasPorMotivo.CATEGORIA_SEM_CHECKLIST).toBe(1)
+
+    const created = (await apiClient.post('/campanhas-preventivas', body)).data as { id: string; status: string }
+    expect(created.status).toBe('pendente')
+    const list = (await apiClient.get('/campanhas-preventivas', { params: { hospitalId: 'hospital-demo-1' } })).data as Array<{ id: string }>
+    expect(list.map((item) => item.id)).toContain(created.id)
+
+    const detail = `/campanhas-preventivas/${created.id}`
+    const first = (await apiClient.get(detail)).data as { status: string; execucao: { processadas: number; totalEquipamentos: number } }
+    expect(first.status).toBe('processando')
+    expect(first.execucao.processadas).toBeLessThan(first.execucao.totalEquipamentos)
+    await apiClient.get(detail)
+    const done = (await apiClient.get(detail)).data as { status: string; pendenciasDetalhe: unknown[] }
+    expect(done.status).toBe('concluida')
+    expect(done.pendenciasDetalhe).toHaveLength(1)
+
+    const canceled = (await apiClient.post(`${detail}/cancelar`)).data as { status: string; ativa: boolean }
+    expect(canceled).toEqual(expect.objectContaining({ status: 'cancelada', ativa: false }))
+  })
 })
