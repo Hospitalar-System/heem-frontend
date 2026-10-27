@@ -66,6 +66,7 @@ const history: Record<string, RecordValue[]> = {
 const checklistItemsById = new Map<string, RecordValue[]>([[checklists[0].id as string, checklistItems]])
 const userHospitals = new Map<string, string[]>(users.map((user) => [user.id as string, [hospitals[0].id as string]]))
 const exportsById = new Map<string, RecordValue>()
+const importsById = new Map<string, { tipo: string; polls: number }>()
 let slaPolicy: RecordValue[] = [
   { severidade: 'CRITICA', atendimentoMin: 15, resolucaoMin: 120, padrao: true },
   { severidade: 'ALTA', atendimentoMin: 30, resolucaoMin: 240, padrao: true },
@@ -151,6 +152,8 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     return result
   }
   if (path.startsWith('/relatorios/exportacoes/')) return exportsById.get(lastPart(path)) ?? { id: lastPart(path), status: 'concluido', urlDownload: 'https://example.test/demo-relatorio.csv' }
+  if (path === '/importacoes' && method === 'post') return startDemoImport(body)
+  if (path.startsWith('/importacoes/') && method === 'get') return pollDemoImport(lastPart(path))
   if (path === '/sla/politica') {
     if (method === 'put') slaPolicy = body as unknown as RecordValue[]
     return slaPolicy
@@ -377,6 +380,51 @@ function parseBody(value: unknown): RecordValue {
     try { return JSON.parse(value) as RecordValue } catch { return {} }
   }
   return typeof value === 'object' && value !== null ? value as RecordValue : {}
+}
+
+/** Importação em lote simulada: 120 linhas, 40 a cada consulta; algumas linhas com erro (sem dado real). */
+const DEMO_IMPORT_TOTAL = 120
+const DEMO_IMPORT_STEP = 40
+const demoImportErrors: RecordValue[] = [
+  { linha: 7, codigo: 'EQ-2007', code: 'CATEGORIA_NAO_ENCONTRADA', mensagem: 'Categoria nao encontrada ou desativada.' },
+  { linha: 18, codigo: 'EQ-2018', code: 'CAMPO_OBRIGATORIO', mensagem: "Coluna 'categoria' obrigatoria." },
+  { linha: 33, codigo: 'EQ-2033', code: 'SETOR_NAO_ENCONTRADO', mensagem: 'Setor nao encontrado: cadastre o setor antes dos equipamentos.' },
+  { linha: 54, codigo: 'EQ-2054', code: 'DATA_INVALIDA', mensagem: "Data invalida na coluna 'data_instalacao': use yyyy-MM-dd ou dd/MM/yyyy." },
+]
+
+function startDemoImport(body: RecordValue) {
+  const form = body as unknown as { get?: (name: string) => unknown }
+  const tipo = String(typeof form.get === 'function' ? form.get('tipo') : body.tipo ?? 'equipamentos')
+  const id = makeId('import-demo')
+  importsById.set(id, { tipo, polls: 0 })
+  return demoImportState(id, tipo, 0)
+}
+
+function pollDemoImport(id: string) {
+  const entry = importsById.get(id) ?? { tipo: 'equipamentos', polls: 0 }
+  entry.polls += 1
+  importsById.set(id, entry)
+  return demoImportState(id, entry.tipo, entry.polls)
+}
+
+function demoImportState(id: string, tipo: string, polls: number) {
+  const processadas = Math.min(DEMO_IMPORT_TOTAL, polls * DEMO_IMPORT_STEP)
+  const done = processadas >= DEMO_IMPORT_TOTAL
+  const erros = demoImportErrors.filter((error) => (error.linha as number) <= processadas)
+  return {
+    id,
+    tipo,
+    status: done ? 'concluido' : polls === 0 ? 'pendente' : 'processando',
+    total: DEMO_IMPORT_TOTAL,
+    processadas,
+    criados: Math.max(0, processadas - erros.length - Math.floor(processadas / 12)),
+    ignorados: Math.floor(processadas / 12),
+    comErro: erros.length,
+    erros,
+    errosTruncados: false,
+    criadoEm: now,
+    concluidoEm: done ? now : null,
+  }
 }
 
 function lastPart(path: string) { return path.split('/').filter(Boolean).at(-1) ?? '' }

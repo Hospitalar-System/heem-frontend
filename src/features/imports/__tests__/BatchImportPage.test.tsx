@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { PropsWithChildren } from 'react'
@@ -13,10 +14,10 @@ vi.mock('@/components/layout/AdminPageShell', () => ({
 }))
 
 function renderPage() {
-  return render(<MemoryRouter initialEntries={['/imports']}><Routes>
+  return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter initialEntries={['/imports']}><Routes>
     <Route path="/imports" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><BatchImportPage /></RequireRole>} />
     <Route path="/access-denied" element={<h1>Acesso não permitido</h1>} />
-  </Routes></MemoryRouter>)
+  </Routes></MemoryRouter></QueryClientProvider>)
 }
 
 describe('BatchImportPage', () => {
@@ -28,9 +29,11 @@ describe('BatchImportPage', () => {
   afterEach(() => clearAuthSession())
 
   it('creates a header-only semicolon CSV template for each supported record type', () => {
-    expect(createBatchImportTemplate('equipamentos')).toContain('setorId;codigo;nome')
-    expect(createBatchImportTemplate('setores')).toContain('hospitalId;codigo;nome')
-    expect(createBatchImportTemplate('usuarios')).toContain('codigo;nome;email;role')
+    // Cabeçalhos do contrato da Story 11.1 (snake_case sem acento): camelCase seria rejeitado com CABECALHO_INVALIDO.
+    expect(createBatchImportTemplate('equipamentos')).toContain('setor;codigo;nome')
+    expect(createBatchImportTemplate('equipamentos')).not.toContain('setorId')
+    expect(createBatchImportTemplate('setores')).toContain('hospital;codigo;nome')
+    expect(createBatchImportTemplate('usuarios')).toContain('codigo;nome;email;papel')
     expect(getBatchImportType('usuarios').label).toBe('Usuários')
   })
 
@@ -58,15 +61,16 @@ describe('BatchImportPage', () => {
     expect(describeBatchImportError('OUTRO')).toBe('OUTRO')
   })
 
-  it('shows the chosen file but keeps processing blocked pending the backend API', async () => {
+  it('shows the chosen file and enables the send button only after a valid file is chosen', async () => {
     const user = userEvent.setup()
     renderPage()
+    expect(screen.getByRole('button', { name: 'Enviar para processamento' })).toBeDisabled()
     const file = new File(['codigo;nome\nEQ-1;Monitor'], 'ativos.csv', { type: 'text/csv' })
     await user.upload(screen.getByLabelText('Selecionar arquivo CSV'), file)
 
     expect(await screen.findByText('ativos.csv')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Enviar para processamento' })).toBeDisabled()
-    expect(screen.getByRole('status')).toHaveTextContent('Nenhum arquivo será enviado')
+    expect(screen.getByRole('button', { name: 'Enviar para processamento' })).toBeEnabled()
+    expect(screen.queryByText(/Nenhum arquivo será enviado/)).not.toBeInTheDocument()
   })
 
   it('rejects non-CSV files and explains the accepted extension', () => {
