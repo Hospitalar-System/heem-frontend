@@ -60,6 +60,7 @@ function mockApi(listResult: () => unknown = () => ({ data: plans, headers: { 'x
   })
 }
 
+const rowOf = (text: string) => screen.getAllByRole('row').find((row) => within(row).queryByText(text)) as HTMLElement
 function renderPage() { return render(<PreventivePlansPage />, { wrapper: Providers }) }
 const listCalls = () => vi.mocked(apiClient.get).mock.calls.filter(([url]) => url === '/planos-preventivos')
 
@@ -86,7 +87,8 @@ describe('PreventivePlansPage', () => {
 
   it('lista os planos do backend com equipamento, checklist, periodicidade, próxima geração, técnico e status', async () => {
     renderPage()
-    const row = (await screen.findByText('Bomba de infusão')).closest('tr') as HTMLElement
+    await screen.findByText('Bomba de infusão')
+    const row = rowOf('Bomba de infusão')
     expect(within(row).getByText('EQ-01')).toBeInTheDocument()
     expect(within(row).getByText('Inspeção geral')).toBeInTheDocument()
     expect(within(row).getByText(/A cada 30 dias/)).toBeInTheDocument()
@@ -94,7 +96,7 @@ describe('PreventivePlansPage', () => {
     expect(within(row).getByText('Rafael')).toBeInTheDocument()
     expect(within(row).getByText('Ativo')).toBeInTheDocument()
     expect(within(row).queryByText('Pendência')).not.toBeInTheDocument()
-    const pending = screen.getByText('Monitor').closest('tr') as HTMLElement
+    const pending = rowOf('Monitor')
     expect(within(pending).getByText('Pendência')).toBeInTheDocument()
     expect(within(pending).getByText(/A cada 1 dia\b/)).toBeInTheDocument()
     expect(listCalls()[0][1]).toEqual({ params: { pagina: 0, tamanho: 20, ativo: true } })
@@ -284,7 +286,7 @@ describe('PreventivePlansPage', () => {
     const callsBefore = listCalls().length
     await user.click(within(dialog).getByRole('button', { name: 'Desativar plano' }))
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/planos-preventivos/plan-1/desativar'))
-    const row = screen.getByText('Bomba de infusão', { selector: 'span' }).closest('tr') as HTMLElement
+    const row = rowOf('Bomba de infusão')
     await waitFor(() => expect(within(row).getByText('Inativo')).toBeInTheDocument())
     resolveDeactivate({ data: { ...plans[0], ativo: false } })
     await waitFor(() => expect(listCalls().length).toBeGreaterThan(callsBefore))
