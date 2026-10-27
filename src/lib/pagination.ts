@@ -29,10 +29,11 @@ export async function fetchPaged<T>(path: string, params: Record<string, unknown
  * `useQuery` de listagem paginada. `keepPreviousData` mantém a página anterior na tela
  * enquanto a próxima carrega, sem piscar o esqueleto a cada troca de página.
  */
-export function usePagedQuery<T>(queryKey: QueryKey, path: string, params: Record<string, unknown>) {
+export function usePagedQuery<T>(queryKey: QueryKey, path: string, params: Record<string, unknown>, enabled = true) {
   return useQuery({
     queryKey: [...queryKey, params],
     queryFn: () => fetchPaged<T>(path, params),
     placeholderData: keepPreviousData,
+    enabled,
   })
 }

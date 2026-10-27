@@ -10,7 +10,7 @@ import { DashboardSidebar } from '@/features/dashboard/components/DashboardSideb
 import { apiClient } from '@/lib/axios'
 import { chooseDate } from '@/test/date-helpers'
 import { chooseOption, listOptions } from '@/test/select-helpers'
-import { PreventivePlansPage } from '../pages/PreventivePlansPage'
+import { PreventiveRoutinesPage } from '../pages/PreventiveRoutinesPage'
 import { chooseRowAction } from '@/test/row-action-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
@@ -62,7 +62,11 @@ function mockApi(listResult: () => unknown = () => ({ data: plans, headers: { 'x
 }
 
 const rowOf = (text: string) => screen.getAllByRole('row').find((row) => within(row).queryByText(text)) as HTMLElement
-function renderPage() { return render(<PreventivePlansPage />, { wrapper: Providers }) }
+async function openNewPlan(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Nova rotina' }))
+  await user.click(await screen.findByRole('button', { name: 'Continuar' }))
+}
+function renderPage() { return render(<PreventiveRoutinesPage />, { wrapper: Providers }) }
 const listCalls = () => vi.mocked(apiClient.get).mock.calls.filter(([url]) => url === '/planos-preventivos')
 
 async function fillValidCreateForm(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) {
@@ -74,7 +78,7 @@ async function fillValidCreateForm(user: ReturnType<typeof userEvent.setup>, dia
   await chooseDate(user, 'Data âncora', '2026-11-10')
 }
 
-describe('PreventivePlansPage', () => {
+describe('PreventiveRoutinesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     clearAuthSession()
@@ -90,12 +94,13 @@ describe('PreventivePlansPage', () => {
     renderPage()
     await screen.findByText('Bomba de infusão')
     const row = rowOf('Bomba de infusão')
-    expect(within(row).getByText('EQ-01')).toBeInTheDocument()
+    expect(within(row).getByText(/EQ-01/)).toBeInTheDocument()
     expect(within(row).getByText('Inspeção geral')).toBeInTheDocument()
     expect(within(row).getByText(/A cada 30 dias/)).toBeInTheDocument()
     expect(within(row).getByText('04/11/2026')).toBeInTheDocument()
-    expect(within(row).getByText('Rafael')).toBeInTheDocument()
-    expect(within(row).getByText('Ativo')).toBeInTheDocument()
+    expect(within(row).getByText('Técnico Rafael')).toBeInTheDocument()
+    expect(within(row).getByText('Equipamento')).toBeInTheDocument()
+    expect(within(row).getByText('Ativa')).toBeInTheDocument()
     expect(within(row).queryByText('Pendência')).not.toBeInTheDocument()
     const pending = rowOf('Monitor')
     expect(within(pending).getByText('Pendência')).toBeInTheDocument()
@@ -107,15 +112,15 @@ describe('PreventivePlansPage', () => {
   it('mostra skeleton enquanto carrega', async () => {
     mockApi(() => new Promise(() => undefined))
     renderPage()
-    expect(await screen.findByLabelText('Carregando planos preventivos')).toHaveAttribute('aria-busy', 'true')
+    expect(await screen.findByLabelText('Carregando rotinas preventivas')).toHaveAttribute('aria-busy', 'true')
   })
 
   it('mostra EmptyState sem planos e leva ao formulário', async () => {
     const user = userEvent.setup()
     mockApi(() => ({ data: [], headers: { 'x-total-count': '0' } }))
     renderPage()
-    expect(await screen.findByRole('heading', { name: 'Nenhum plano preventivo cadastrado' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Cadastrar plano' }))
+    expect(await screen.findByRole('heading', { name: 'Nenhuma rotina preventiva cadastrada' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Criar rotina' })); await user.click(await screen.findByRole('button', { name: 'Continuar' }))
     expect(await screen.findByRole('dialog', { name: 'Novo plano preventivo' })).toBeInTheDocument()
   })
 
@@ -124,7 +129,7 @@ describe('PreventivePlansPage', () => {
     let fail = true
     mockApi(() => { if (fail) throw httpError(500); return { data: plans, headers: {} } })
     renderPage()
-    expect(await screen.findByText('Não foi possível carregar os planos preventivos.')).toBeInTheDocument()
+    expect(await screen.findByText('Não foi possível carregar as rotinas preventivas.')).toBeInTheDocument()
     fail = false
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
     expect(await screen.findByText('Bomba de infusão')).toBeInTheDocument()
@@ -141,9 +146,11 @@ describe('PreventivePlansPage', () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByText('Bomba de infusão')
-    await chooseOption(user, 'Filtrar por status', 'Inativos')
+    await chooseOption(user, 'Filtrar por situação', 'Inativas')
     await waitFor(() => expect(listCalls().at(-1)?.[1]).toEqual({ params: { pagina: 0, tamanho: 25, ativo: false } }))
-    await chooseOption(user, 'Filtrar por status', 'Todos os status')
+    await chooseOption(user, 'Filtrar por situação', 'Todas as situações')
+    expect(screen.queryByRole('combobox', { name: 'Filtrar por equipamento' })).not.toBeInTheDocument()
+    await chooseOption(user, 'Filtrar por escopo', 'Equipamento')
     await chooseOption(user, 'Filtrar por equipamento', 'EQ-02 · Monitor')
     await waitFor(() => expect(listCalls().at(-1)?.[1]).toEqual({ params: { pagina: 0, tamanho: 25, equipamentoId: 'equipment-2' } }))
   })
@@ -162,7 +169,7 @@ describe('PreventivePlansPage', () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByText('Bomba de infusão')
-    await user.click(screen.getByRole('button', { name: 'Novo plano' }))
+    await openNewPlan(user)
     const dialog = await screen.findByRole('dialog', { name: 'Novo plano preventivo' })
     await chooseOption(user, 'Equipamento', 'EQ-01 · Bomba de infusão')
     await waitFor(async () => expect(await listOptions(user, screen.getByRole('combobox', { name: 'Técnico padrão' }))).toEqual(['Rafael']))
@@ -184,7 +191,7 @@ describe('PreventivePlansPage', () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByText('Bomba de infusão')
-    await user.click(screen.getByRole('button', { name: 'Novo plano' }))
+    await openNewPlan(user)
     await chooseOption(user, 'Equipamento', 'EQ-03 · Ventilador')
     await waitFor(async () => expect(await listOptions(user, screen.getByRole('combobox', { name: 'Checklist' }))).toEqual(['Inspeção geral', 'Checklist Norte']))
     await waitFor(async () => expect(await listOptions(user, screen.getByRole('combobox', { name: 'Técnico padrão' }))).toEqual(['Marina']))
@@ -202,7 +209,7 @@ describe('PreventivePlansPage', () => {
     })
     renderPage()
     await screen.findByText('Bomba de infusão', { selector: 'span' })
-    await user.click(screen.getByRole('button', { name: 'Novo plano' }))
+    await openNewPlan(user)
     await chooseOption(user, 'Equipamento', 'EQ-01 · Bomba de infusão')
     expect(await screen.findByText(/Não há checklist ativo disponível para o hospital deste equipamento/)).toBeInTheDocument()
   })
@@ -211,7 +218,7 @@ describe('PreventivePlansPage', () => {
     const user = userEvent.setup()
     renderPage()
     await screen.findByText('Bomba de infusão')
-    await user.click(screen.getByRole('button', { name: 'Novo plano' }))
+    await openNewPlan(user)
     const dialog = await screen.findByRole('dialog')
     await user.click(within(dialog).getByRole('button', { name: 'Criar plano' }))
     expect(await within(dialog).findByText('Selecione um equipamento.')).toBeInTheDocument()
@@ -240,7 +247,7 @@ describe('PreventivePlansPage', () => {
     vi.mocked(apiClient.post).mockRejectedValue(httpError(409, { code, detail: 'texto do servidor' }))
     renderPage()
     await screen.findByText('Bomba de infusão')
-    await user.click(screen.getByRole('button', { name: 'Novo plano' }))
+    await openNewPlan(user)
     const dialog = await screen.findByRole('dialog')
     await fillValidCreateForm(user, dialog)
     await user.click(within(dialog).getByRole('button', { name: 'Criar plano' }))
@@ -292,7 +299,7 @@ describe('PreventivePlansPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Desativar plano' }))
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/planos-preventivos/plan-1/desativar'))
     const row = rowOf('Bomba de infusão')
-    await waitFor(() => expect(within(row).getByText('Inativo')).toBeInTheDocument())
+    await waitFor(() => expect(within(row).getByText('Inativa')).toBeInTheDocument())
     resolveDeactivate({ data: { ...plans[0], ativo: false } })
     await waitFor(() => expect(listCalls().length).toBeGreaterThan(callsBefore))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -314,12 +321,12 @@ describe('PreventivePlansPage', () => {
   it('planos inativos não oferecem edição nem desativação', async () => {
     mockApi(() => ({ data: [{ ...plans[0], ativo: false }], headers: { 'x-total-count': '1' } }))
     renderPage()
-    expect(await screen.findByText('Inativo')).toBeInTheDocument()
+    expect(await screen.findByText('Inativa')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Ações de/ })).not.toBeInTheDocument()
   })
 })
 
-describe('PreventivePlansPage acesso', () => {
+describe('PreventiveRoutinesPage acesso', () => {
   beforeEach(() => {
     clearAuthSession()
     setAuthSession('token', { id: 'technician-1', name: 'Rafael', roles: ['tecnico'], tenantId: 'tenant-1' })
@@ -328,11 +335,12 @@ describe('PreventivePlansPage acesso', () => {
 
   it('nega outros papéis e esconde o link do menu', () => {
     render(<MemoryRouter initialEntries={['/work-orders/rotinas']}><Routes>
-      <Route path="/work-orders/rotinas" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><PreventivePlansPage /></RequireRole>} />
+      <Route path="/work-orders/rotinas" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><PreventiveRoutinesPage /></RequireRole>} />
       <Route path="/access-denied" element={<h1>Acesso não permitido</h1>} />
     </Routes></MemoryRouter>)
     expect(screen.getByRole('heading', { name: 'Acesso não permitido' })).toBeInTheDocument()
     render(<MemoryRouter><DashboardSidebar /></MemoryRouter>)
     expect(screen.queryByRole('link', { name: 'Planos preventivos' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Rotinas preventivas' })).not.toBeInTheDocument()
   })
 })

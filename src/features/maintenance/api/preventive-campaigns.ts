@@ -15,8 +15,9 @@ export const CAMPAIGN_POLL_MS = 2000
 /** Teto do polling (~10 min): depois disso o painel para de consultar sozinho e oferece atualização manual. */
 export const CAMPAIGN_POLL_MAX_UPDATES = 300
 
-export function useCampaigns(filters: CampaignFilters) {
+export function useCampaigns(filters: CampaignFilters, enabled = true) {
   return useQuery({
+    enabled,
     queryKey: [...campaignsKey, 'list', filters],
     queryFn: async () => {
       const params: Record<string, string> = {}

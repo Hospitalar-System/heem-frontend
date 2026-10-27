@@ -408,6 +408,24 @@ describe('Campanha de preventiva', () => {
     })
   })
 
+  describe('escopo pré-selecionado pela tela de Rotinas', () => {
+    it('hospital e setor da URL já vêm marcados no formulário', async () => {
+      renderFlow('/work-orders/campanhas/new?hospitalId=hospital-1&setorId=sector-2')
+      expect(await screen.findByRole('combobox', { name: 'Hospital' })).toHaveTextContent('Santa Casa')
+      expect(await screen.findByRole('checkbox', { name: 'CC · Centro Cirúrgico' })).toBeChecked()
+      expect(screen.getByRole('checkbox', { name: 'UTI · UTI Adulto' })).not.toBeChecked()
+    })
+
+    it('só o hospital da URL deixa todos os setores desmarcados; setor sem hospital é ignorado', async () => {
+      const { unmount } = renderFlow('/work-orders/campanhas/new?hospitalId=hospital-1')
+      expect(await screen.findByRole('combobox', { name: 'Hospital' })).toHaveTextContent('Santa Casa')
+      expect((await screen.findAllByRole('checkbox', { name: /^(UTI|CC) · / })).every((box) => !(box as HTMLInputElement).checked)).toBe(true)
+      unmount()
+      renderFlow('/work-orders/campanhas/new?setorId=sector-2')
+      expect(await screen.findByRole('combobox', { name: 'Hospital' })).toHaveTextContent('Selecione um hospital')
+    })
+  })
+
   describe('acesso', () => {
     it('só o admin_cliente vê o item de menu e acessa a rota', () => {
       render(<MemoryRouter><DashboardSidebar /></MemoryRouter>)

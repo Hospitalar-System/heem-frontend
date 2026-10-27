@@ -10,6 +10,10 @@ export interface WorkOrderListFilters {
   status?: string
   tipo?: string
   atrasadas?: boolean
+  hospitalId?: string
+  setorId?: string
+  planoPreventivoId?: string
+  campanhaPreventivaId?: string
   pagina: number
   tamanho: number
 }

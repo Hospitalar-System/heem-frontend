@@ -157,7 +157,14 @@ export interface WorkOrderListItem {
   iniciadaEm: string | null
   concluidaEm: string | null
   atrasada?: boolean
+  /** Story 18.2: só a lista traz hospital e setor; nulos quando não se aplica. */
+  hospitalId?: string | null
+  hospitalNome?: string | null
+  setorId?: string | null
+  setorNome?: string | null
+  /** Rotina que gerou a OT (nulos = OT avulsa ou corretiva). */
   planoPreventivoId?: string | null
+  campanhaPreventivaId?: string | null
 }
 
 export interface WorkOrderDetail {
@@ -198,6 +205,11 @@ export interface PreventivePlan {
   pendencia: boolean
   createdAt: string
   updatedAt: string
+  /** Story 18.2: progresso do plano (todas as OTs geradas e as concluídas). */
+  otsGeradas?: number
+  otsConcluidas?: number
+  /** Dia da próxima OT agendada (a partir de hoje); sem ela, a `proximaData` do plano. */
+  proximaExecucao?: string | null
 }
 
 export interface CreatePreventivePlanInput {
