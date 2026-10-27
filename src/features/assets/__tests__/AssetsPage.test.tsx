@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { useState, type PropsWithChildren } from 'react'
+import { useState, type PropsWithChildren, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
@@ -11,7 +11,7 @@ import { chooseOption } from '@/test/select-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
-  AdminPageShell: ({ title, children }: PropsWithChildren<{ title: string }>) => <main><h1>{title}</h1>{children}</main>,
+  AdminPageShell: ({ title, action, children }: PropsWithChildren<{ title: string; action?: ReactNode }>) => <main><h1>{title}</h1>{action}{children}</main>,
 }))
 
 const equipment = {
@@ -54,6 +54,14 @@ describe('AssetsPage', () => {
     expect(within(row).getAllByText('—')).toHaveLength(2)
     await user.click(row)
     expect(await screen.findByTestId('current-route')).toHaveTextContent('/assets/equipment-1')
+  })
+
+  it('mantém a ação principal "Novo equipamento" acessível e leva ao cadastro', async () => {
+    const user = userEvent.setup()
+    render(<AssetsPage />, { wrapper: TestProviders })
+
+    await user.click(await screen.findByRole('link', { name: 'Novo equipamento' }))
+    expect(await screen.findByTestId('current-route')).toHaveTextContent('/assets/new')
   })
 
   it('applies text and lifecycle filters to the equipment list', async () => {

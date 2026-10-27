@@ -1,9 +1,10 @@
-import { BriefcaseBusiness, Plus, Search } from 'lucide-react'
+import { BriefcaseBusiness, Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
+import { PageAction } from '@/components/ui/PageAction'
 import { Field, Modal } from '@/components/ui/Modal'
 import { useCreateTenant, useTenants } from '../api/tenants'
 import { createTenantSchema, normalizeCnpj } from '../schemas/tenant.schema'
@@ -25,17 +26,16 @@ export function ClientsPage() {
   }, [createOpen])
   const filtered = useMemo(() => (tenants.data ?? []).filter((tenant) => `${tenant.nome} ${tenant.cnpj}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())), [tenants.data, search])
 
-  return <AdminPageShell title="Clientes" subtitle="Super Admin · gestão de tenants">
+  return <AdminPageShell title="Clientes" subtitle="Super Admin · gestão de tenants" action={<PageAction buttonRef={createButtonRef} onClick={() => setCreateOpen(true)} collapseLabelOnMobile>Novo cliente</PageAction>}>
     <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
       <p className="text-xs text-text-muted">Clientes e organizações cadastradas na plataforma</p>
-      <button ref={createButtonRef} type="button" onClick={() => setCreateOpen(true)} className="inline-flex h-[35px] items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover"><Plus size={14} /> Novo cliente</button>
     </div>
     <div className="mb-3 flex justify-end">
       <label className="relative block w-full sm:w-64"><Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={14} /><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Pesquisar clientes" placeholder="Pesquisar clientes" className={`${inputClass} pl-9`} /></label>
     </div>
     {tenants.isLoading && <div aria-label="Carregando clientes" aria-busy="true" className="h-[290px] animate-pulse rounded-lg border border-border bg-surface" />}
     {tenants.isError && <section role="alert" className="rounded-lg border border-border bg-surface p-6"><p>Não foi possível carregar os clientes.</p><button type="button" className="mt-3 text-sm text-primary underline" onClick={() => void tenants.refetch()}>Tentar novamente</button></section>}
-    {!tenants.isLoading && !tenants.isError && filtered.length === 0 && <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><BriefcaseBusiness className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{search ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}</h2><p className="mt-1 text-sm text-text-secondary">{search ? 'Ajuste a pesquisa e tente novamente.' : 'Cadastre um cliente para provisionar seu tenant.'}</p>{!search && <button type="button" onClick={() => setCreateOpen(true)} className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-bg-brand"><Plus size={14} /> Novo cliente</button>}</div></section>}
+    {!tenants.isLoading && !tenants.isError && filtered.length === 0 && <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><BriefcaseBusiness className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{search ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}</h2><p className="mt-1 text-sm text-text-secondary">{search ? 'Ajuste a pesquisa e tente novamente.' : 'Cadastre um cliente para provisionar seu tenant.'}</p>{!search && <div className="mt-4 flex justify-center"><PageAction onClick={() => setCreateOpen(true)} fullWidthMobile>Cadastrar cliente</PageAction></div>}</div></section>}
     {!tenants.isLoading && !tenants.isError && filtered.length > 0 && <div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[680px] border-collapse text-left"><thead><tr className="table-head h-12 text-[11px]"><th scope="col" className="px-5 font-medium">Cliente</th><th scope="col" className="px-5 font-medium">CNPJ</th><th scope="col" className="px-5 font-medium">Hospitais</th><th scope="col" className="px-5 font-medium">Status</th></tr></thead><tbody>{filtered.map((tenant) => <tr key={tenant.id} className="h-12 border-b border-border/70 last:border-0"><td className="px-5 text-sm text-text-primary">{tenant.nome}</td><td className="px-5 text-[13px] text-text-secondary">{formatCnpj(tenant.cnpj)}</td><td className="px-5 text-sm text-text-secondary" aria-label="Contagem de hospitais não disponível">—</td><td className="px-5"><span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium ${tenant.ativo ? 'bg-primary/15 text-primary' : 'bg-bg text-text-muted'}`}>{tenant.ativo ? 'Ativo' : 'Inativo'}</span></td></tr>)}</tbody></table></div>}
     {createOpen && <CreateTenantModal onClose={() => setCreateOpen(false)} onCreated={() => setCreateOpen(false)} />}
   </AdminPageShell>

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { PropsWithChildren } from 'react'
+import type { PropsWithChildren, ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
 import { ClientsPage } from '../pages/ClientsPage'
@@ -10,7 +10,7 @@ import { chooseOption } from '@/test/select-helpers'
 const { success } = vi.hoisted(() => ({ success: vi.fn() }))
 
 vi.mock('@/components/layout/AdminPageShell', () => ({
-  AdminPageShell: ({ title, subtitle, children }: PropsWithChildren<{ title: string; subtitle?: string }>) => <main><h1>{title}</h1><p>{subtitle}</p>{children}</main>,
+  AdminPageShell: ({ title, subtitle, action, children }: PropsWithChildren<{ title: string; subtitle?: string; action?: ReactNode }>) => <main><h1>{title}</h1><p>{subtitle}</p>{action}{children}</main>,
 }))
 vi.mock('sonner', () => ({ toast: { success } }))
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }))

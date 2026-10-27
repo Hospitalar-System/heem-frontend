@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
-import { GitMerge, Pencil, Plus, PowerOff, Search, Tags, CheckCheck } from 'lucide-react'
+import { GitMerge, Pencil, PowerOff, Search, Tags, CheckCheck } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
+import { PageAction } from '@/components/ui/PageAction'
+import { FilterBar, filterInputClass } from '@/components/ui/FilterBar'
 import { Field, Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
 import { FormSelect } from '@/components/ui/FormSelect'
@@ -49,16 +51,16 @@ export function CategoriesPage() {
 
   const clearFilters = () => { setStatus(''); setOnlyReview(false); setSearch('') }
 
-  return <AdminPageShell title="Categorias de equipamento" subtitle="Tipos de equipamento e checklist padrão" action={<button type="button" onClick={() => setCreating(true)} className="inline-flex h-[38px] items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover"><Plus size={15} /> Nova categoria</button>}>
-    <div className="mb-4 flex flex-wrap items-center gap-2">
-      <label className="min-w-[160px] flex-1 sm:max-w-[200px]"><span className="sr-only">Filtrar por situação</span><Select size="sm" aria-label="Filtrar por situação" value={status} onChange={setStatus} options={statusOptions} /></label>
+  return <AdminPageShell title="Categorias de equipamento" subtitle="Tipos de equipamento e checklist padrão" action={<PageAction onClick={() => setCreating(true)} collapseLabelOnMobile>Nova categoria</PageAction>}>
+    <FilterBar label="Filtros de categorias" className="mb-4">
+      <label className="min-w-0"><span className="sr-only">Filtrar por situação</span><Select size="sm" aria-label="Filtrar por situação" value={status} onChange={setStatus} options={statusOptions} /></label>
       <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-border bg-bg px-3 text-xs text-text-primary"><input type="checkbox" checked={onlyReview} onChange={(event) => setOnlyReview(event.target.checked)} className="accent-primary" />A revisar</label>
-      <label className="relative min-w-[200px] flex-1 sm:max-w-[280px]"><span className="sr-only">Buscar categoria</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input aria-label="Buscar categoria" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nome da categoria" className="h-9 w-full rounded-md border border-border bg-bg pl-8 pr-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
-    </div>
+      <label className="relative min-w-0 sm:col-span-2"><span className="sr-only">Buscar categoria</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input aria-label="Buscar categoria" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nome da categoria" className={`${filterInputClass} pl-8`} /></label>
+    </FilterBar>
 
     {categories.isError ? <section role="alert" className="rounded-lg border border-danger/40 bg-surface p-5 text-sm"><p>Não foi possível carregar as categorias.</p><button type="button" className="mt-2 text-xs font-semibold text-primary underline" onClick={() => void categories.refetch()}>Tentar novamente</button></section> : null}
     {categories.isLoading ? <div aria-label="Carregando categorias" aria-busy="true" className="space-y-2 rounded-lg border border-border bg-surface p-4">{Array.from({ length: 6 }, (_, index) => <div key={index} className="h-10 animate-pulse rounded bg-bg" />)}</div> : null}
-    {!categories.isLoading && !categories.isError && visible.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><Tags className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{hasFilters ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria cadastrada'}</h2><p className="mt-1 max-w-md text-sm text-text-secondary">{hasFilters ? 'Ajuste os filtros ou a busca para ver outras categorias.' : 'Cadastre a primeira categoria (tipo de equipamento, como Bomba ou Ventilador Pulmonar).'}</p>{hasFilters ? <button type="button" onClick={clearFilters} className="mt-4 text-xs font-semibold text-primary underline">Limpar filtros</button> : <button type="button" onClick={() => setCreating(true)} className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-bg-brand"><Plus size={14} /> Criar categoria</button>}</div></section> : null}
+    {!categories.isLoading && !categories.isError && visible.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><Tags className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{hasFilters ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria cadastrada'}</h2><p className="mt-1 max-w-md text-sm text-text-secondary">{hasFilters ? 'Ajuste os filtros ou a busca para ver outras categorias.' : 'Cadastre a primeira categoria (tipo de equipamento, como Bomba ou Ventilador Pulmonar).'}</p>{hasFilters ? <button type="button" onClick={clearFilters} className="mt-4 text-xs font-semibold text-primary underline">Limpar filtros</button> : <div className="mt-4 flex justify-center"><PageAction onClick={() => setCreating(true)} fullWidthMobile>Criar categoria</PageAction></div>}</div></section> : null}
     {!categories.isLoading && !categories.isError && visible.length > 0 ? <div className="overflow-x-auto rounded-lg border border-border bg-surface">
       <table className="w-full min-w-[900px] border-collapse text-left">
         <thead><tr className="table-head h-12 text-[11px]">{['Nome', 'Checklist padrão', 'Origem', 'Equipamentos', 'Situação', ''].map((heading, index) => <th key={`${heading}${index}`} scope="col" className="px-4">{heading}</th>)}</tr></thead>

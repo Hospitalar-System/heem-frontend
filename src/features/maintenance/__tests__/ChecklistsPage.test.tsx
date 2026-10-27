@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useState, type PropsWithChildren } from 'react'
+import { useState, type PropsWithChildren, type ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
@@ -10,7 +10,7 @@ import { chooseOption, listOptions } from '@/test/select-helpers'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
-  AdminPageShell: ({ title, children }: PropsWithChildren<{ title: string }>) => <main><h1>{title}</h1>{children}</main>,
+  AdminPageShell: ({ title, action, children }: PropsWithChildren<{ title: string; action?: ReactNode }>) => <main><h1>{title}</h1>{action}{children}</main>,
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
@@ -78,14 +78,14 @@ describe('ChecklistsPage', () => {
     expect(await listOptions(user, 'Tipo')).toEqual(['Número (medição)', 'Sim ou Não', 'Texto livre', 'Lista de opções'])
     await user.click(screen.getByText('1. Verificar cabo'))
     expect(await listOptions(user, 'Tipo')).not.toContain('Lista de opções')
-    await user.click(screen.getAllByRole('button', { name: 'Novo' })[0])
+    await user.click(screen.getByRole('button', { name: 'Novo checklist' }))
     expect(await listOptions(user, 'Tipo')).toEqual(['Número (medição)', 'Sim ou Não', 'Texto livre'])
   })
 
   it('creates a checklist and adds an item with configured properties', async () => {
     const user = userEvent.setup()
     render(<ChecklistsPage />, { wrapper: TestProviders })
-    await user.click(await screen.findByRole('button', { name: 'Novo' }))
+    await user.click(await screen.findByRole('button', { name: 'Novo checklist' }))
     await user.type(screen.getByRole('textbox', { name: 'Código do checklist' }), 'CL-001')
     await user.type(screen.getByRole('textbox', { name: 'Nome do checklist' }), 'Novo modelo')
     await user.type(screen.getByRole('textbox', { name: 'Descrição' }), 'Verificar cabo')

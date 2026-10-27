@@ -11,6 +11,7 @@ import { ReportTopEquipment } from '../components/ReportTopEquipment'
 import { formatPercent, getErrorMessage } from '../components/report-format'
 import { SectionError, SectionSkeleton } from '../components/report-ui'
 import { Select } from '@/components/ui/Select'
+import { FilterBar } from '@/components/ui/FilterBar'
 import { DatePicker } from '@/components/ui/DatePicker'
 
 type ExportContent = ExportRequest['conteudo']
@@ -89,40 +90,40 @@ export function ReportsPage() {
   return (
     <AdminPageShell title="Relatórios & Indicadores" subtitle="Indicadores de manutenção e conformidade">
       <div className="space-y-5">
-        <section aria-label="Filtros do relatório" className="flex flex-wrap items-end gap-3">
-          <label className="grid gap-1 text-xs text-text-secondary">
+        <FilterBar label="Filtros do relatório" className="items-end">
+          <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
             <span>Desde</span>
             <DatePicker size="sm" required aria-label="Data inicial" value={desde} max={ate || undefined} onChange={setDesde} />
           </label>
-          <label className="grid gap-1 text-xs text-text-secondary">
+          <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
             <span>Até</span>
             <DatePicker size="sm" required aria-label="Data final" value={ate} min={desde || undefined} onChange={setAte} />
           </label>
-          <label className="grid min-w-40 gap-1 text-xs text-text-secondary">
+          <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
             <span>Hospital</span>
             <Select size="sm" aria-label="Hospital" value={hospitalId} onChange={(next) => { setHospitalId(next); setSetorId('') }} options={[{ value: '', label: 'Todos' }, ...(hospitals.data ?? []).map((hospital) => ({ value: hospital.id, label: hospital.nome }))]} />
           </label>
-          <label className="grid min-w-40 gap-1 text-xs text-text-secondary">
+          <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
             <span>Setor</span>
             <Select size="sm" aria-label="Setor" value={setorId} disabled={!hospitalId} onChange={setSetorId} options={[{ value: '', label: 'Todos' }, ...(sectors.data ?? []).map((sector) => ({ value: sector.id, label: sector.nome }))]} />
           </label>
-          <label className="grid min-w-40 gap-1 text-xs text-text-secondary">
+          <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
             <span>Agrupar por</span>
             <Select size="sm" aria-label="Agrupar por" value={agrupar} onChange={(next) => setAgrupar(next as ReportGrouping)} options={[{ value: 'hospital', label: 'Hospital' }, { value: 'setor', label: 'Setor' }]} />
           </label>
-          <div className="ml-auto flex flex-wrap items-end gap-2">
-            <label className="grid gap-1 text-xs text-text-secondary">
+          <div className="col-span-full flex flex-wrap items-end justify-end gap-2">
+            <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
               <span>Conteúdo</span>
               <Select size="sm" aria-label="Conteúdo da exportação" value={conteudo} onChange={(next) => setConteudo(next as ExportContent)} options={[{ value: 'INDICADORES', label: 'Indicadores' }, { value: 'chamados', label: 'Chamados' }, { value: 'ordens_trabalho', label: 'Ordens de trabalho' }, { value: 'medicoes', label: 'Medições' }]} />
             </label>
-            <button type="button" aria-label="Exportar Excel" disabled={invalidRange || requestExport.isPending} onClick={() => void handleExport('xlsx')} className="inline-flex h-[38px] items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
+            <button type="button" aria-label="Exportar Excel" disabled={invalidRange || requestExport.isPending} onClick={() => void handleExport('xlsx')} className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
               <FileSpreadsheet aria-hidden="true" size={14} /> Excel
             </button>
-            <button type="button" aria-label="Exportar PDF" disabled={invalidRange || requestExport.isPending} onClick={() => void handleExport('pdf')} className="inline-flex h-[38px] items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand outline-none hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
+            <button type="button" aria-label="Exportar PDF" disabled={invalidRange || requestExport.isPending} onClick={() => void handleExport('pdf')} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand outline-none hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
               <FileText aria-hidden="true" size={14} /> PDF
             </button>
           </div>
-        </section>
+        </FilterBar>
 
         {invalidRange && <p role="alert" className="text-xs text-danger">Informe um período válido: a data inicial deve ser anterior ou igual à data final.</p>}
         {requestExport.isError && <p role="alert" className="text-xs text-danger">{getErrorMessage(requestExport.error, 'Falha ao solicitar exportação.')}</p>}
