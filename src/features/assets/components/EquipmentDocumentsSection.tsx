@@ -61,7 +61,7 @@ export function EquipmentDocumentsSection({ equipmentId, canWrite, canManage }: 
     {!documents.isLoading && !documents.isError && list.length === 0 ? <div className="grid min-h-36 place-items-center rounded-md border border-dashed border-border bg-surface p-5 text-center"><div><FileText aria-hidden="true" className="mx-auto text-text-muted" size={20} /><p className="mt-2 text-xs font-medium text-text-primary">Nenhum documento anexado</p><p className="mt-1 text-[11px] text-text-secondary">{canWrite ? 'Envie manuais, laudos ou certificados deste equipamento.' : 'Ainda não há documentos para este equipamento.'}</p></div></div> : null}
     {!documents.isLoading && !documents.isError && list.length > 0 ? <div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[720px] border-collapse text-left">
       <thead><tr className="table-head h-11 text-[11px]"><th scope="col" className="px-4">Documento</th><th scope="col" className="px-4">Tipo</th><th scope="col" className="px-4">Enviado em</th><th scope="col" className="px-4">Validade</th><th scope="col" className="px-4">Situação</th><th scope="col" className="px-4 text-right">Ações</th></tr></thead>
-      <tbody>{list.map((document) => <tr key={document.id} className="row-idle h-12 border-b text-xs last:border-0">
+      <tbody>{list.map((document) => <tr key={document.id} className="row-idle row-divider h-12 text-xs">
         <td className="break-all px-4 font-medium">{document.nomeArquivo}</td>
         <td className="px-4 text-text-secondary">{documentTypeNames[document.tipoDocumento] ?? document.tipoDocumento}</td>
         <td className="px-4 text-text-secondary">{formatTimestamp(document.uploadedEm)}</td>

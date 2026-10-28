@@ -3,7 +3,7 @@ import { useMemo, useState, type KeyboardEvent } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { PageAction } from '@/components/ui/PageAction'
-import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
+import { DataTable, type DataColumn } from '@/components/ui/DataTable'
 import { Select } from '@/components/ui/Select'
 import { useEquipments, useHospital, useSectors } from '../api/assets'
 import { EquipmentListTable } from '../components/EquipmentListTable'
@@ -60,6 +60,15 @@ export function HospitalDetailPage() {
     })
   }, [equipment.data, search, sectorFilter])
 
+  const sectorColumns: DataColumn<Setor>[] = [
+    { key: 'codigo', header: 'Código', cell: (sector) => <span className="font-semibold">{sector.codigo}</span> },
+    { key: 'nome', header: 'Nome', cell: (sector) => <span className="text-sm font-medium text-text-primary">{sector.nome}</span> },
+    { key: 'andar', header: 'Andar', cell: (sector) => <span className="text-text-secondary">{sector.andar || '—'}</span> },
+    { key: 'risco', header: 'Classificação de risco', cell: (sector) => <span className="text-text-secondary">{riskLabels[sector.classificacaoRisco]}</span> },
+    { key: 'grupo', header: 'Grupo de instalação', cell: (sector) => <span className="text-text-secondary">{groupLabels[sector.grupoInstalacao]}</span> },
+    { key: 'equipamentos', header: 'Equipamentos', cell: (sector) => <span className="tabular-nums text-text-secondary" data-testid={`sector-count-${sector.id}`}>{equipment.data ? countBySector.get(sector.id) ?? 0 : '—'}</span> },
+  ]
+
   const action = activeTab === 'setores' ? <PageAction onClick={() => setCreatingSector(true)} collapseLabelOnMobile>Novo setor</PageAction> : undefined
 
   return <AdminPageShell title={hospital.data?.nome ?? 'Hospital'} subtitle="Dados, setores e equipamentos do hospital" action={action}>
@@ -77,10 +86,19 @@ export function HospitalDetailPage() {
         </div> : null}
 
         {activeTab === 'setores' ? <>
-          {sectors.isError ? <section role="alert" className="rounded-lg border border-border bg-surface p-6"><p>Não foi possível carregar os setores deste hospital.</p><button type="button" className="mt-3 text-sm text-primary underline" onClick={() => void sectors.refetch()}>Tentar novamente</button></section> : null}
-          {sectors.isLoading ? <div aria-label="Carregando setores" aria-busy="true" className="h-64 animate-pulse rounded-lg border border-border bg-surface" /> : null}
-          {!sectors.isLoading && !sectors.isError && (sectors.data?.length ?? 0) === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><Rows3 className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">Nenhum setor cadastrado</h2><p className="mt-1 text-sm text-text-secondary">Adicione o primeiro setor de {hospital.data?.nome ?? 'este hospital'}.</p><div className="mt-4 flex justify-center"><PageAction onClick={() => setCreatingSector(true)} fullWidthMobile>Criar setor</PageAction></div></div></section> : null}
-          {!sectors.isLoading && !sectors.isError && (sectors.data?.length ?? 0) > 0 ? <div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[860px] border-collapse text-left"><thead><tr className="table-head text-[11px] uppercase">{['Código', 'Nome', 'Andar', 'Classificação de risco', 'Grupo de instalação', 'Equipamentos', ''].map((heading, index) => <th key={`${heading}${index}`} scope="col" className="px-4 py-3 font-medium">{heading || <span className="sr-only">Ações</span>}</th>)}</tr></thead><tbody>{sectors.data?.map((sector) => <tr key={sector.id} className="border-b border-border/70 last:border-0"><td className="px-4 py-3 text-xs font-semibold">{sector.codigo}</td><td className="px-4 py-3 text-sm">{sector.nome}</td><td className="px-4 py-3 text-sm text-text-secondary">{sector.andar || '—'}</td><td className="px-4 py-3 text-sm text-text-secondary">{riskLabels[sector.classificacaoRisco]}</td><td className="px-4 py-3 text-sm text-text-secondary">{groupLabels[sector.grupoInstalacao]}</td><td className="px-4 py-3 text-sm tabular-nums" data-testid={`sector-count-${sector.id}`}>{equipment.data ? countBySector.get(sector.id) ?? 0 : '—'}</td><td className="px-4 py-3"><div className="flex justify-end"><RowActionsMenu label={sector.nome} actions={[{ label: 'Editar', icon: <Pencil size={14} />, onSelect: () => setEditingSector(sector) }]} /></div></td></tr>)}</tbody></table></div> : null}
+          <DataTable
+            label="Setores"
+            columns={sectorColumns}
+            rows={sectors.data ?? []}
+            getRowId={(sector) => sector.id}
+            rowLabel={(sector) => sector.nome}
+            rowActions={(sector) => [{ label: 'Editar', icon: <Pencil size={14} />, onSelect: () => setEditingSector(sector) }]}
+            isLoading={sectors.isLoading}
+            loadingLabel="Carregando setores"
+            minWidth="860px"
+            error={sectors.isError ? { message: 'Não foi possível carregar os setores deste hospital.', onRetry: () => void sectors.refetch() } : null}
+            empty={{ icon: <Rows3 />, title: 'Nenhum setor cadastrado', description: `Adicione o primeiro setor de ${hospital.data?.nome ?? 'este hospital'}.`, action: <PageAction onClick={() => setCreatingSector(true)} fullWidthMobile>Criar setor</PageAction> }}
+          />
           {equipment.isError && !sectors.isError ? <p role="alert" className="mt-3 text-xs text-text-muted">Não foi possível carregar a contagem de equipamentos por setor.</p> : null}
         </> : null}
 
@@ -89,10 +107,13 @@ export function HospitalDetailPage() {
             <Select size="sm" aria-label="Filtrar por setor" value={sectorFilter} onChange={setSectorFilter} options={[{ value: '', label: 'Todos os setores' }, ...(sectors.data ?? []).map((sector) => ({ value: sector.id, label: sector.nome }))]} />
             <input aria-label="Buscar equipamento" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, nome, modelo, série…" className={inputClass} />
           </div>
-          {equipment.isError ? <section role="alert" className="rounded-lg border border-danger/40 bg-surface p-4 text-sm"><p>Não foi possível carregar os equipamentos.</p><button type="button" onClick={() => void equipment.refetch()} className="mt-2 text-xs font-semibold text-primary underline">Tentar novamente</button></section> : null}
-          {equipment.isLoading ? <div aria-label="Carregando equipamentos" aria-busy="true" className="h-48 animate-pulse rounded-lg border border-border bg-surface" /> : null}
-          {!equipment.isLoading && !equipment.isError && visibleEquipment.length === 0 ? <section className="grid min-h-48 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><h2 className="text-base font-semibold">{(equipment.data?.length ?? 0) === 0 ? 'Nenhum equipamento neste hospital' : 'Nenhum equipamento encontrado'}</h2></section> : null}
-          {!equipment.isLoading && !equipment.isError && visibleEquipment.length > 0 ? <EquipmentListTable items={visibleEquipment} sectorNameById={sectorNameById} /> : null}
+          <EquipmentListTable
+            items={visibleEquipment}
+            sectorNameById={sectorNameById}
+            isLoading={equipment.isLoading}
+            error={equipment.isError ? { message: 'Não foi possível carregar os equipamentos.', onRetry: () => void equipment.refetch() } : null}
+            empty={{ title: (equipment.data?.length ?? 0) === 0 ? 'Nenhum equipamento neste hospital' : 'Nenhum equipamento encontrado' }}
+          />
         </> : null}
       </section>
     </>}

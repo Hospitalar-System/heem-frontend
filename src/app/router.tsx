@@ -2,6 +2,7 @@ import { lazy, Suspense, useSyncExternalStore, type PropsWithChildren } from 're
 import { createBrowserRouter, generatePath, Link, Navigate, RouterProvider, useLocation, useParams } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RequireRole } from './RequireRole'
+import { RouteContentFallback } from '@/components/layout/RouteContentFallback'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { SessionRestoring } from '@/features/auth/components/SessionRestoring'
 import { useAuthRestoring } from '@/features/auth/hooks/useAuthRestoring'
@@ -43,21 +44,21 @@ export const routes = [
   { path: '/privacidade', element: <Suspense fallback={<DashboardRouteLoading />}><PoliticaPrivacidadePage /></Suspense> },
   { path: '/termos', element: <Suspense fallback={<DashboardRouteLoading />}><TermosDeUsoPage /></Suspense> },
   { path: '/login', element: <LoginPage /> },
-  { path: '/platform/clients', element: <RequireRole role="super_admin"><Suspense fallback={<DashboardRouteLoading />}><ClientsPage /></Suspense></RequireRole> },
-  { path: '/platform/users', element: <RequireRole role="super_admin"><Suspense fallback={<DashboardRouteLoading />}><PlatformUsersPage /></Suspense></RequireRole> },
-  { path: '/hospitals', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><HospitalsPage /></Suspense></RequireRole> },
-  { path: '/hospitals/:id', element: <RequireRole><Suspense fallback={<DashboardRouteLoading />}><HospitalDetailPage /></Suspense></RequireRole> },
+  { path: '/platform/clients', element: <RequireRole role="super_admin"><Suspense fallback={<RouteContentFallback />}><ClientsPage /></Suspense></RequireRole> },
+  { path: '/platform/users', element: <RequireRole role="super_admin"><Suspense fallback={<RouteContentFallback />}><PlatformUsersPage /></Suspense></RequireRole> },
+  { path: '/hospitals', element: <RequireRole><Suspense fallback={<RouteContentFallback />}><HospitalsPage /></Suspense></RequireRole> },
+  { path: '/hospitals/:id', element: <RequireRole><Suspense fallback={<RouteContentFallback />}><HospitalDetailPage /></Suspense></RequireRole> },
   { path: '/sectors', element: <LegacyRedirect to="/hospitals" /> },
-  { path: '/assets', element: <RequireRole><RequireEquipmentRole><Suspense fallback={<DashboardRouteLoading />}><AssetsPage /></Suspense></RequireEquipmentRole></RequireRole> },
-  { path: '/assets/new', element: <RequireRole><RequireEquipmentRole editorOnly><Suspense fallback={<DashboardRouteLoading />}><EquipmentFormPage /></Suspense></RequireEquipmentRole></RequireRole> },
-  { path: '/assets/:id/edit', element: <RequireRole><RequireEquipmentRole editorOnly><Suspense fallback={<DashboardRouteLoading />}><EquipmentFormPage /></Suspense></RequireEquipmentRole></RequireRole> },
-  { path: '/assets/:id', element: <RequireRole><RequireEquipmentRole><Suspense fallback={<DashboardRouteLoading />}><EquipmentDetailPage /></Suspense></RequireEquipmentRole></RequireRole> },
-  { path: '/reports', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><ReportsPage /></Suspense></RequireRole> },
+  { path: '/assets', element: <RequireRole><RequireEquipmentRole><Suspense fallback={<RouteContentFallback />}><AssetsPage /></Suspense></RequireEquipmentRole></RequireRole> },
+  { path: '/assets/new', element: <RequireRole><RequireEquipmentRole editorOnly><Suspense fallback={<RouteContentFallback />}><EquipmentFormPage /></Suspense></RequireEquipmentRole></RequireRole> },
+  { path: '/assets/:id/edit', element: <RequireRole><RequireEquipmentRole editorOnly><Suspense fallback={<RouteContentFallback />}><EquipmentFormPage /></Suspense></RequireEquipmentRole></RequireRole> },
+  { path: '/assets/:id', element: <RequireRole><RequireEquipmentRole><Suspense fallback={<RouteContentFallback />}><EquipmentDetailPage /></Suspense></RequireEquipmentRole></RequireRole> },
+  { path: '/reports', element: <RequireRole role="admin_cliente"><Suspense fallback={<RouteContentFallback />}><ReportsPage /></Suspense></RequireRole> },
   { path: '/settings', element: <SettingsIndexRedirect /> },
-  { path: '/settings/categories', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><CategoriesPage /></Suspense></RequireRole> },
-  { path: '/settings/sla-policy', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><SlaPolicyPage /></Suspense></RequireRole> },
-  { path: '/settings/imports', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><BatchImportPage /></Suspense></RequireRole> },
-  { path: '/settings/users', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><UsersPage /></Suspense></RequireRole> },
+  { path: '/settings/categories', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><CategoriesPage /></Suspense></RequireRole> },
+  { path: '/settings/sla-policy', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><SlaPolicyPage /></Suspense></RequireRole> },
+  { path: '/settings/imports', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><BatchImportPage /></Suspense></RequireRole> },
+  { path: '/settings/users', element: <RequireRole role="admin_cliente"><Suspense fallback={<RouteContentFallback />}><UsersPage /></Suspense></RequireRole> },
   // Rotas antigas: mantidas só como redirecionamento (preservam query string e hash).
   { path: '/categories', element: <LegacyRedirect to="/settings/categories" /> },
   { path: '/settings/sla', element: <LegacyRedirect to="/settings/sla-policy" /> },
@@ -70,21 +71,21 @@ export const routes = [
   { path: '/preventive-campaigns/new', element: <LegacyRedirect to="/work-orders/campanhas/new" /> },
   { path: '/preventive-campaigns/:id', element: <LegacyRedirect to="/work-orders/campanhas/:id" /> },
   { path: '/access-denied', element: <AccessDeniedRoute /> },
-  { path: '/tickets', element: <RequireTicketListAccess><Suspense fallback={<DashboardRouteLoading />}><TicketsPage /></Suspense></RequireTicketListAccess> },
-  { path: '/tickets/:id', element: <RequireTicketAccess><Suspense fallback={<DashboardRouteLoading />}><TicketDetailPage /></Suspense></RequireTicketAccess> },
-  { path: '/work-orders', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrdersPage /></Suspense></RequireRole> },
-  { path: '/work-orders/new', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrdersPage /></Suspense></RequireRole> },
-  { path: '/work-orders/rotinas', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveRoutinesPage /></Suspense></RequireRole> },
-  { path: '/work-orders/campanhas', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignsPage /></Suspense></RequireRole> },
-  { path: '/work-orders/campanhas/new', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignFormPage /></Suspense></RequireRole> },
-  { path: '/work-orders/campanhas/:id', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<DashboardRouteLoading />}><PreventiveCampaignDetailPage /></Suspense></RequireRole> },
-  { path: '/work-orders/:id', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><WorkOrderDetailPage /></Suspense></RequireRole> },
-  { path: '/checklists', element: <RequireRole role="admin_cliente"><Suspense fallback={<DashboardRouteLoading />}><ChecklistsPage /></Suspense></RequireRole> },
+  { path: '/tickets', element: <RequireTicketListAccess><Suspense fallback={<RouteContentFallback />}><TicketsPage /></Suspense></RequireTicketListAccess> },
+  { path: '/tickets/:id', element: <RequireTicketAccess><Suspense fallback={<RouteContentFallback />}><TicketDetailPage /></Suspense></RequireTicketAccess> },
+  { path: '/work-orders', element: <RequireRole role="admin_cliente"><Suspense fallback={<RouteContentFallback />}><WorkOrdersPage /></Suspense></RequireRole> },
+  { path: '/work-orders/new', element: <RequireRole role="admin_cliente"><Suspense fallback={<RouteContentFallback />}><WorkOrdersPage /></Suspense></RequireRole> },
+  { path: '/work-orders/rotinas', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><PreventiveRoutinesPage /></Suspense></RequireRole> },
+  { path: '/work-orders/campanhas', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><PreventiveCampaignsPage /></Suspense></RequireRole> },
+  { path: '/work-orders/campanhas/new', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><PreventiveCampaignFormPage /></Suspense></RequireRole> },
+  { path: '/work-orders/campanhas/:id', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><PreventiveCampaignDetailPage /></Suspense></RequireRole> },
+  { path: '/work-orders/:id', element: <RequireRole role="admin_cliente"><Suspense fallback={<RouteContentFallback />}><WorkOrderDetailPage /></Suspense></RequireRole> },
+  { path: '/checklists', element: <RequireRole role="admin_cliente"><Suspense fallback={<RouteContentFallback />}><ChecklistsPage /></Suspense></RequireRole> },
   {
     path: '/dashboard',
     element: (
       <RequireRole>
-        <Suspense fallback={<DashboardRouteLoading />}>
+        <Suspense fallback={<RouteContentFallback />}>
           <DashboardPage />
         </Suspense>
       </RequireRole>
