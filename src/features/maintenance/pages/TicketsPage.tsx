@@ -1,12 +1,15 @@
 import { AlertTriangle, ArrowUpRight, ClipboardPlus, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { Modal } from '@/components/ui/Modal'
+import { PageAction } from '@/components/ui/PageAction'
+import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { useEquipments, useHospitals, useSectorsForHospitals } from '@/features/assets/api/assets'
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
 import { useCreateCorrectiveWorkOrder, useTicketsPage, useUrgentTicketCount } from '../api/tickets'
+import { NewTicketModal } from '../components/NewTicketModal'
 import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import type { Ticket, TicketSeverity, TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
@@ -44,6 +47,9 @@ function relativeTime(value: string) {
 
 export function TicketsPage() {
   const [searchParams] = useSearchParams()
+  const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
+  const isAdmin = auth.user?.roles.includes('admin_cliente') ?? false
+  const [showNewTicket, setShowNewTicket] = useState(false)
   const pagination = usePaginationParams()
   const statusFilter = searchParams.get('status') ?? ''
   const severityFilter = searchParams.get('severidade') ?? ''
@@ -127,7 +133,7 @@ export function TicketsPage() {
       </div>
     } },
   ]
-  return <AdminPageShell title="Chamados de Emergência" subtitle="Fila de atendimento do tenant">
+  return <AdminPageShell title="Chamados de Emergência" subtitle="Fila de atendimento do tenant" action={isAdmin ? <PageAction onClick={() => setShowNewTicket(true)} collapseLabelOnMobile>Novo chamado</PageAction> : undefined}>
     <div className="space-y-4">
       {urgentOpenCount > 0 && <section role="status" className="flex items-center gap-3 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3">
         <AlertTriangle aria-hidden="true" size={18} className="shrink-0 text-danger" />
@@ -166,6 +172,7 @@ export function TicketsPage() {
       </>}
     </div>
 
+    {showNewTicket && <NewTicketModal onClose={() => setShowNewTicket(false)} />}
     {selectedTicket && <Modal title="Gerar OT corretiva" description={`Chamado ${selectedTicket.id.slice(0, 8)}`} busy={createWorkOrder.isPending} onClose={() => setSelectedTicket(null)}>
         <form className="space-y-4" onSubmit={(event) => void submitCorrectiveWorkOrder(event)}>
           <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Código da OT<input autoFocus required maxLength={40} value={codigo} onChange={(event) => setCodigo(event.target.value)} placeholder="Ex.: OT-2042" className={`${inputClass} w-full`} /></label>
