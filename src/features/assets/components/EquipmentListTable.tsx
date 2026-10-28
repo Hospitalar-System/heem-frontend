@@ -35,8 +35,8 @@ export function EquipmentListTable({ items, sectorNameById, isLoading, error, em
     { key: 'serie', header: 'Nº série', cell: (item) => <span className="text-text-secondary">{item.numeroSerie || '—'}</span> },
     { key: 'setor', header: 'Setor', cell: (item) => <span className="text-text-secondary">{sectorNameById.get(item.setorId) ?? '—'}</span> },
     { key: 'manutencao', header: 'Últ. manut.', cell: () => <span className="text-text-muted" title="A API não fornece a data da última manutenção na listagem">—</span> },
-    { key: 'documentos', header: 'Documentos', cell: (item) => <DocumentsIndicator vencidos={item.documentosVencidos} vencendo={item.documentosVencendo} proximaValidade={item.proximaValidade} /> },
-    { key: 'status', header: 'Status', cell: (item) => <EquipmentStatusBadge status={item.statusCicloVida} /> },
+    { key: 'documentos', header: 'Documentos', className: 'whitespace-nowrap', cell: (item) => <DocumentsIndicator vencidos={item.documentosVencidos} vencendo={item.documentosVencendo} proximaValidade={item.proximaValidade} /> },
+    { key: 'status', header: 'Status', width: '9.5rem', className: 'whitespace-nowrap', cell: (item) => <EquipmentStatusBadge status={item.statusCicloVida} /> },
   ]
   return <DataTable
     label="Equipamentos"
@@ -49,6 +49,6 @@ export function EquipmentListTable({ items, sectorNameById, isLoading, error, em
     loadingLabel="Carregando equipamentos"
     error={error}
     empty={empty}
-    minWidth="1200px"
+    minWidth="1280px"
   />
 }

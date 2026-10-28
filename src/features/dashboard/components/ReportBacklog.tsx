@@ -22,7 +22,7 @@ export function ReportBacklog({ backlog }: { backlog: BacklogReport }) {
           <table className="w-full text-xs">
             <caption className="sr-only">Backlog de chamados por severidade e faixa de idade</caption>
             <thead className="text-text-secondary">
-              <tr className="border-b border-border">
+              <tr className="table-head">
                 <SortableHeader label="Severidade" sortKey="severidade" sort={sort} onToggle={toggle} align="left" />
                 <SortableHeader label="Até 24 h" sortKey="ate24h" sort={sort} onToggle={toggle} />
                 <SortableHeader label="1 a 3 dias" sortKey="de1a3Dias" sort={sort} onToggle={toggle} />

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useSyncExternalStore } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { preloadRoute } from '@/lib/route-preload'
 import { logout } from '@/features/auth/api/logout'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import type { UserRole } from '@/features/auth/types'
@@ -70,6 +71,8 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
             key={to}
             to={to}
             onClick={onNavigate}
+            onMouseEnter={() => preloadRoute(to)}
+            onFocus={() => preloadRoute(to)}
             className={({ isActive }) => `flex min-h-[39px] items-center gap-3 rounded-md px-3 text-[14px] font-medium leading-[17px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary ${isActive ? 'bg-primary/15 text-primary' : 'text-text-secondary hover:bg-surface hover:text-text-primary'}`}
           >
             <Icon aria-hidden="true" className="size-[14px] shrink-0" strokeWidth={1.8} />
