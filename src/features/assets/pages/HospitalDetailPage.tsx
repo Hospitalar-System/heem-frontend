@@ -1,15 +1,19 @@
-import { ArrowLeft, Building2, Package, Pencil, Rows3, type LucideIcon } from 'lucide-react'
-import { useMemo, useState, type KeyboardEvent } from 'react'
+import { ArrowLeft, Building2, Package, Pencil, Power, PowerOff, Rows3, type LucideIcon } from 'lucide-react'
+import { useMemo, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
+import { toast } from 'sonner'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { PageAction } from '@/components/ui/PageAction'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
 import { Select } from '@/components/ui/Select'
-import { useEquipments, useHospital, useSectors } from '../api/assets'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
+import { getAuthState, subscribeAuthState } from '@/features/auth/session'
+import { useEquipments, useHospital, useSectors, useSectorsPage, useSetSectorActive } from '../api/assets'
 import { EquipmentListTable } from '../components/EquipmentListTable'
 import { HospitalForm, formatCnpj } from '../components/HospitalForm'
 import { SectorForm } from '../components/SectorForm'
-import type { RiscoSetor, Setor } from '../types'
+import type { RiscoSetor, Setor, SetorAtivoFiltro } from '../types'
 
 type HospitalTab = 'dados' | 'setores' | 'equipamentos'
 const tabs: Array<{ id: HospitalTab; label: string; Icon: LucideIcon }> = [
@@ -20,6 +24,23 @@ const tabs: Array<{ id: HospitalTab; label: string; Icon: LucideIcon }> = [
 const riskLabels: Record<RiscoSetor, string> = { CRITICO: 'Crítico', SEMI_CRITICO: 'Semicrítico', NAO_CRITICO: 'Não crítico' }
 const groupLabels = { GRUPO_0: 'Grupo 0', GRUPO_1: 'Grupo 1', GRUPO_2: 'Grupo 2' }
 const inputClass = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
+const activeFilters: Array<{ value: SetorAtivoFiltro; label: string }> = [{ value: 'true', label: 'Ativos' }, { value: 'false', label: 'Inativos' }, { value: 'todos', label: 'Todos' }]
+const parseActiveFilter = (value: string | null): SetorAtivoFiltro => (value === 'false' || value === 'todos' ? value : 'true')
+/** Mensagem da falha ao desativar/reativar, a partir do ProblemDetail do backend. */
+function sectorActiveError(error: unknown, activating: boolean) {
+  const response = (error as { response?: { status?: number; data?: { code?: string; equipamentosAtivos?: number } } } | null)?.response
+  const code = response?.data?.code
+  if (code === 'SETOR_COM_EQUIPAMENTOS_ATIVOS') {
+    const count = response?.data?.equipamentosAtivos
+    return typeof count === 'number'
+      ? `Este setor tem ${count} equipamento${count === 1 ? '' : 's'} ativo${count === 1 ? '' : 's'}. Transfira ou desative os equipamentos antes.`
+      : 'Este setor tem equipamento(s) ativo(s). Transfira ou desative os equipamentos antes.'
+  }
+  if (code === 'HOSPITAL_DESATIVADO') return 'O hospital deste setor está desativado. Reative o hospital antes de reativar o setor.'
+  if (response?.status === 403) return 'Você não tem permissão para alterar a situação de setores.'
+  if (response?.status === 404) return 'Setor não encontrado. Atualize a página e tente novamente.'
+  return activating ? 'Não foi possível reativar o setor.' : 'Não foi possível desativar o setor.'
+}
 const parseTab = (value: string | null): HospitalTab => (tabs.some((tab) => tab.id === value) ? (value as HospitalTab) : 'dados')
 
 export function HospitalDetailPage() {
@@ -27,7 +48,14 @@ export function HospitalDetailPage() {
   const [params, setParams] = useSearchParams()
   const activeTab = parseTab(params.get('aba'))
   const hospital = useHospital(id)
-  const sectors = useSectors(id)
+  const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
+  const isAdmin = auth.user?.roles.includes('admin_cliente') ?? false
+  const pagination = usePaginationParams()
+  const activeFilter = parseActiveFilter(params.get('ativo'))
+  // Aba Setores: o servidor filtra (ativo), pagina e conta equipamentos. Demais abas usam a lista completa (seletor e nomes).
+  const sectorsPage = useSectorsPage(id, { ...pagination.apiParams, ativo: activeFilter }, activeTab === 'setores')
+  const allSectors = useSectors(id, { ativo: 'todos' }, activeTab !== 'setores')
+  const setSectorActive = useSetSectorActive()
   const equipment = useEquipments({ hospitalId: id })
   const [editingHospital, setEditingHospital] = useState(false)
   const [creatingSector, setCreatingSector] = useState(false)
@@ -44,13 +72,16 @@ export function HospitalDetailPage() {
     document.getElementById(`hospital-tab-${next}`)?.focus()
   }
 
-  // Uma única chamada de equipamentos do hospital alimenta a contagem por setor e a aba Equipamentos.
-  const countBySector = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const item of equipment.data ?? []) counts.set(item.setorId, (counts.get(item.setorId) ?? 0) + 1)
-    return counts
-  }, [equipment.data])
-  const sectorNameById = useMemo(() => new Map((sectors.data ?? []).map((sector) => [sector.id, sector.nome])), [sectors.data])
+  const sectorNameById = useMemo(() => new Map((allSectors.data ?? []).map((sector) => [sector.id, sector.nome])), [allSectors.data])
+  const selectableSectors = useMemo(() => (allSectors.data ?? []).filter((sector) => sector.ativo !== false), [allSectors.data])
+  const sectorTotal = sectorsPage.data?.total ?? 0
+  usePageClamp(pagination, sectorsPage.data?.total, activeTab === 'setores' && !sectorsPage.isPlaceholderData)
+  const changeActive = async (sector: Setor, ativo: boolean) => {
+    try {
+      await setSectorActive.mutateAsync({ id: sector.id, hospitalId: id, ativo })
+      toast.success(ativo ? 'Setor reativado.' : 'Setor desativado.')
+    } catch (error) { toast.error(sectorActiveError(error, ativo)) }
+  }
   const visibleEquipment = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('pt-BR')
     return (equipment.data ?? []).filter((item) => {
@@ -66,7 +97,8 @@ export function HospitalDetailPage() {
     { key: 'andar', header: 'Andar', cell: (sector) => <span className="text-text-secondary">{sector.andar || '—'}</span> },
     { key: 'risco', header: 'Classificação de risco', cell: (sector) => <span className="text-text-secondary">{riskLabels[sector.classificacaoRisco]}</span> },
     { key: 'grupo', header: 'Grupo de instalação', cell: (sector) => <span className="text-text-secondary">{groupLabels[sector.grupoInstalacao]}</span> },
-    { key: 'equipamentos', header: 'Equipamentos', cell: (sector) => <span className="tabular-nums text-text-secondary" data-testid={`sector-count-${sector.id}`}>{equipment.data ? countBySector.get(sector.id) ?? 0 : '—'}</span> },
+    { key: 'equipamentos', header: 'Equipamentos', cell: (sector) => <span className="tabular-nums text-text-secondary" data-testid={`sector-count-${sector.id}`}>{sector.equipamentosTotal === undefined ? '—' : `${sector.equipamentosAtivos ?? 0} ativos / ${sector.equipamentosTotal}`}</span> },
+    { key: 'situacao', header: 'Situação', cell: (sector) => <StatusBadge tone={sector.ativo === false ? 'neutral' : 'success'}>{sector.ativo === false ? 'Inativo' : 'Ativo'}</StatusBadge> },
   ]
 
   const action = activeTab === 'setores' ? <PageAction onClick={() => setCreatingSector(true)} collapseLabelOnMobile>Novo setor</PageAction> : undefined
@@ -80,31 +112,37 @@ export function HospitalDetailPage() {
       <section role="tabpanel" id="hospital-tab-panel" aria-labelledby={`hospital-tab-${activeTab}`} className="mt-4">
         {activeTab === 'dados' ? <div className="max-w-xl rounded-lg border border-border bg-surface p-5">
           {hospital.isLoading ? <div aria-label="Carregando hospital" aria-busy="true" className="h-24 animate-pulse rounded bg-bg" /> : <>
-            <dl className="grid gap-4 sm:grid-cols-2"><div><dt className="text-[11px] uppercase text-text-muted">Nome</dt><dd className="mt-1 text-sm font-medium">{hospital.data?.nome}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">CNPJ</dt><dd className="mt-1 text-sm">{formatCnpj(hospital.data?.cnpj ?? '') || '—'}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">Setores</dt><dd className="mt-1 text-sm tabular-nums">{sectors.data?.length ?? '—'}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">Equipamentos</dt><dd className="mt-1 text-sm tabular-nums">{equipment.data?.length ?? '—'}</dd></div></dl>
+            <dl className="grid gap-4 sm:grid-cols-2"><div><dt className="text-[11px] uppercase text-text-muted">Nome</dt><dd className="mt-1 text-sm font-medium">{hospital.data?.nome}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">CNPJ</dt><dd className="mt-1 text-sm">{formatCnpj(hospital.data?.cnpj ?? '') || '—'}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">Setores</dt><dd className="mt-1 text-sm tabular-nums">{allSectors.data ? selectableSectors.length : '—'}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">Equipamentos</dt><dd className="mt-1 text-sm tabular-nums">{equipment.data?.length ?? '—'}</dd></div></dl>
             <div className="mt-5 flex justify-end border-t border-border pt-4"><button type="button" onClick={() => setEditingHospital(true)} className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium hover:bg-bg"><Pencil size={14} /> Editar hospital</button></div>
           </>}
         </div> : null}
 
         {activeTab === 'setores' ? <>
+          <div className="mb-4 max-w-[12rem]"><Select size="sm" aria-label="Filtrar setores por situação" value={activeFilter} onChange={(next) => pagination.setFilters({ ativo: next === 'true' ? undefined : next })} options={activeFilters} /></div>
           <DataTable
             label="Setores"
             columns={sectorColumns}
-            rows={sectors.data ?? []}
+            rows={sectorsPage.data?.items ?? []}
             getRowId={(sector) => sector.id}
             rowLabel={(sector) => sector.nome}
-            rowActions={(sector) => [{ label: 'Editar', icon: <Pencil size={14} />, onSelect: () => setEditingSector(sector) }]}
-            isLoading={sectors.isLoading}
+            rowActions={(sector) => [
+              { label: 'Editar', icon: <Pencil size={14} />, onSelect: () => setEditingSector(sector) },
+              ...(isAdmin ? [sector.ativo === false
+                ? { label: 'Reativar', icon: <Power size={14} />, onSelect: () => changeActive(sector, true) }
+                : { label: 'Desativar', icon: <PowerOff size={14} />, destructive: true, confirm: { title: `Desativar o setor ${sector.nome}?`, description: 'O setor deixa de aparecer nos seletores e filtros, mas o histórico é preservado. Só é possível desativar setores sem equipamentos ativos.', confirmLabel: 'Desativar' }, onSelect: () => changeActive(sector, false) }] : []),
+            ]}
+            isLoading={sectorsPage.isLoading}
             loadingLabel="Carregando setores"
             minWidth="860px"
-            error={sectors.isError ? { message: 'Não foi possível carregar os setores deste hospital.', onRetry: () => void sectors.refetch() } : null}
-            empty={{ icon: <Rows3 />, title: 'Nenhum setor cadastrado', description: `Adicione o primeiro setor de ${hospital.data?.nome ?? 'este hospital'}.`, action: <PageAction onClick={() => setCreatingSector(true)} fullWidthMobile>Criar setor</PageAction> }}
+            error={sectorsPage.isError ? { message: 'Não foi possível carregar os setores deste hospital.', onRetry: () => void sectorsPage.refetch() } : null}
+            empty={activeFilter === 'true' ? { icon: <Rows3 />, title: 'Nenhum setor cadastrado', description: `Adicione o primeiro setor de ${hospital.data?.nome ?? 'este hospital'}.`, action: <PageAction onClick={() => setCreatingSector(true)} fullWidthMobile>Criar setor</PageAction> } : { icon: <Rows3 />, title: activeFilter === 'false' ? 'Nenhum setor inativo' : 'Nenhum setor cadastrado' }}
+            pagination={{ page: pagination.page, size: pagination.size, total: sectorTotal, onPageChange: pagination.setPage, onSizeChange: pagination.setSize }}
           />
-          {equipment.isError && !sectors.isError ? <p role="alert" className="mt-3 text-xs text-text-muted">Não foi possível carregar a contagem de equipamentos por setor.</p> : null}
         </> : null}
 
         {activeTab === 'equipamentos' ? <>
           <div className="mb-4 grid gap-2 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-            <Select size="sm" aria-label="Filtrar por setor" value={sectorFilter} onChange={setSectorFilter} options={[{ value: '', label: 'Todos os setores' }, ...(sectors.data ?? []).map((sector) => ({ value: sector.id, label: sector.nome }))]} />
+            <Select size="sm" aria-label="Filtrar por setor" value={sectorFilter} onChange={setSectorFilter} options={[{ value: '', label: 'Todos os setores' }, ...selectableSectors.map((sector) => ({ value: sector.id, label: sector.nome }))]} />
             <input aria-label="Buscar equipamento" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, nome, modelo, série…" className={inputClass} />
           </div>
           <EquipmentListTable
