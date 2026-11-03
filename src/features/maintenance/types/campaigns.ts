@@ -19,6 +19,9 @@ export interface CampaignInput {
 
 export interface CampaignPendingItem { equipamentoId: string; codigo: string; motivo: CampaignPendingReason }
 
+/** Equipamento pulado pela campanha. `motivo` é o código do backend (hoje só JA_TEM_OT_PREVENTIVA_ABERTA); `otCodigo` é a OT preventiva aberta que o fez ser pulado. */
+export interface CampaignSkippedItem { equipamentoId: string; codigo: string; motivo: string; otCodigo: string | null }
+
 export interface CampaignPreview {
   totalEquipamentos: number
   aGerar: number
@@ -26,6 +29,8 @@ export interface CampaignPreview {
   totalPendencias: number
   pendenciasPorMotivo: Partial<Record<CampaignPendingReason, number>>
   pendencias: CampaignPendingItem[]
+  /** Primeiras 200 puladas, com motivo (ausente em backends anteriores à Story 18.4). */
+  puladasDetalhe?: CampaignSkippedItem[]
   distribuicaoPorTecnico: Array<{ tecnicoId: string; nome: string; quantidade: number }>
 }
 
@@ -49,6 +54,8 @@ export interface Campaign {
   ots: { total: number; agendadas: number; emExecucao: number; concluidas: number; canceladas: number; atrasadas: number }
   /** Só no detalhe (até 1000 itens); vazio na lista. */
   pendenciasDetalhe: CampaignPendingItem[]
+  /** Só no detalhe (até 1000 itens); vazio na lista. */
+  puladasDetalhe?: CampaignSkippedItem[]
   criadaEm: string
   canceladaEm: string | null
 }

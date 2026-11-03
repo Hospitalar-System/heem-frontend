@@ -129,7 +129,7 @@ export const demoApiAdapter: AxiosAdapter = async (config) => {
     config,
     data,
     headers,
-    status: method === 'post' ? 201 : 200,
+    status: method === 'post' ? (path === '/relatorios/exportacoes' && (data as { status?: string }).status === 'pendente' ? 202 : 201) : 200,
     statusText: 'OK',
   } as AxiosResponse
 }
@@ -248,9 +248,22 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path === '/relatorios/conformidade') return ['CRITICO', 'ALTO', 'MEDIO', 'BAIXO'].map((nivelRisco, index) => ({ nivelRisco, percentualConforme: [96, 92, 98, 100][index], totalMedicoes: [25, 38, 54, 12][index] }))
   if (path === '/relatorios/exportacoes' && method === 'post') {
     const id = makeId('export')
+    if (body.conteudo === 'campanha') {
+      // Relatório da campanha: nasce pendente e conclui na consulta seguinte (exercita o polling). URL de exemplo, sem dado real.
+      const format = ['pdf', 'xlsx', 'csv'].includes(body.formato as string) ? body.formato : 'pdf'
+      exportsById.set(id, { id, status: 'pendente', urlDownload: null, polls: 0, format })
+      return { id, status: 'pendente', urlDownload: null }
+    }
     const result = { id, status: 'concluido', urlDownload: 'https://example.test/demo-relatorio.csv' }
     exportsById.set(id, result)
     return result
+  }
+  const pendingExport = path.startsWith('/relatorios/exportacoes/') ? exportsById.get(lastPart(path)) : undefined
+  if (pendingExport && 'polls' in pendingExport) {
+    const polls = Number(pendingExport.polls) + 1
+    pendingExport.polls = polls
+    if (polls < 2) return { id: pendingExport.id, status: 'pendente', urlDownload: null }
+    return { id: pendingExport.id, status: 'concluido', urlDownload: `https://example.test/demo-relatorio-campanha.${pendingExport.format as string}` }
   }
   if (path.startsWith('/relatorios/exportacoes/')) return exportsById.get(lastPart(path)) ?? { id: lastPart(path), status: 'concluido', urlDownload: 'https://example.test/demo-relatorio.csv' }
   if (path === '/importacoes' && method === 'post') return startDemoImport(body)
@@ -653,7 +666,8 @@ function demoImportState(id: string, tipo: string, polls: number) {
  * consulta do painel (1/3 dos equipamentos por vez) para exercitar o polling. Sem dado real.
  */
 type DemoPending = { equipamentoId: string; codigo: string; motivo: string }
-type DemoCampaignPlan = { total: number; geradas: number; puladas: number; pendencias: DemoPending[] }
+type DemoSkipped = { equipamentoId: string; codigo: string; motivo: string; otCodigo: string | null }
+type DemoCampaignPlan = { total: number; geradas: number; puladas: number; puladasDetalhe: DemoSkipped[]; pendencias: DemoPending[] }
 const campaignPlans = new Map<string, DemoCampaignPlan>()
 const campaignPolls = new Map<string, number>()
 const campaigns: RecordValue[] = []
@@ -668,6 +682,7 @@ function planCampaign(body: RecordValue) {
     && (categoryIds.length === 0 || categoryIds.includes(item.categoriaId as string))
     && item.statusCicloVida !== 'INATIVO')
   const pendencias: DemoPending[] = []
+  const puladasDetalhe: DemoSkipped[] = []
   let geradas = 0
   for (const item of eligible) {
     const category = categories.find((entry) => entry.id === item.categoriaId)
@@ -675,7 +690,7 @@ function planCampaign(body: RecordValue) {
     if (motivo) pendencias.push({ equipamentoId: item.id as string, codigo: item.codigo as string, motivo })
     else geradas += 1
   }
-  return { total: eligible.length, geradas, puladas: 0, pendencias }
+  return { total: eligible.length, geradas, puladas: puladasDetalhe.length, puladasDetalhe, pendencias }
 }
 
 function previewCampaign(body: RecordValue) {
@@ -689,13 +704,14 @@ function previewCampaign(body: RecordValue) {
     totalPendencias: plan.pendencias.length,
     pendenciasPorMotivo,
     pendencias: plan.pendencias,
+    puladasDetalhe: plan.puladasDetalhe,
     distribuicaoPorTecnico: body.modoAtribuicao === 'sem_responsavel' || plan.geradas === 0 ? [] : [{ tecnicoId: technician.id, nome: technician.nome, quantidade: plan.geradas }],
   }
 }
 
 function campaignView(campaign: RecordValue, detail: boolean): RecordValue {
   const plan = campaignPlans.get(campaign.id as string)
-  if (!plan) return { ...campaign, pendenciasDetalhe: [] }
+  if (!plan) return { ...campaign, pendenciasDetalhe: [], puladasDetalhe: [] }
   let { status } = campaign as { status: string }
   const polls = campaignPolls.get(campaign.id as string) ?? 0
   const step = Math.max(1, Math.ceil(plan.total / 3))
@@ -705,14 +721,17 @@ function campaignView(campaign: RecordValue, detail: boolean): RecordValue {
   const done = status === 'concluida'
   const generated = done ? plan.geradas : Math.floor(plan.geradas * (processadas / Math.max(1, plan.total)))
   Object.assign(campaign, { status, execucao: { totalEquipamentos: plan.total, processadas, geradas: generated, puladas: plan.puladas, pendencias: done ? plan.pendencias.length : 0 }, ots: { total: generated, agendadas: generated, emExecucao: 0, concluidas: 0, canceladas: 0, atrasadas: 0 } })
-  return { ...campaign, pendenciasDetalhe: detail && done ? plan.pendencias : [] }
+  return { ...campaign, pendenciasDetalhe: detail && done ? plan.pendencias : [], puladasDetalhe: detail && done ? plan.puladasDetalhe : [] }
 }
 
 function seedDemoCampaign() {
   const body = { hospitalId: hospitals[0].id, nome: 'Preventiva semestral UTI', setorIds: [sectors[0].id], categoriaIds: [], dataInicio: dayIso(-10), dataFim: null, recorrencia: 'meses', intervalo: 6, modoAtribuicao: 'equilibrado', tecnicoId: null }
   const id = 'campaign-demo-1'
   campaigns.push({ id, ...body, proximaData: dayIso(170), status: 'concluida', ativa: true, janelaAtual: dayIso(-10), criadaEm: now, canceladaEm: null, execucao: { totalEquipamentos: 0, processadas: 0, geradas: 0, puladas: 0, pendencias: 0 }, ots: { total: 0, agendadas: 0, emExecucao: 0, concluidas: 0, canceladas: 0, atrasadas: 0 } })
-  campaignPlans.set(id, planCampaign(body))
+  const plan = planCampaign(body)
+  // Uma pulada de exemplo (equipamento que já tem OT preventiva aberta) para exercitar a tabela de puladas no painel.
+  const skipped: DemoSkipped = { equipamentoId: equipment[1].id as string, codigo: equipment[1].codigo as string, motivo: 'JA_TEM_OT_PREVENTIVA_ABERTA', otCodigo: 'OT-2026-001' }
+  campaignPlans.set(id, { ...plan, total: plan.total + 1, puladas: 1, puladasDetalhe: [skipped] })
   campaignPolls.set(id, 99)
 }
 seedDemoCampaign()

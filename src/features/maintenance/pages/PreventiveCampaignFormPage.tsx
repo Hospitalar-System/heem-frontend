@@ -10,7 +10,7 @@ import { FormSelect } from '@/components/ui/FormSelect'
 import { Modal } from '@/components/ui/Modal'
 import { isoOf, todayCivil } from '@/components/ui/civil-date'
 import { useCampaignLookups, useCampaignPreview, useCreateCampaign } from '../api/preventive-campaigns'
-import { PendingBreakdown } from '../components/CampaignParts'
+import { PendingBreakdown, SkippedBreakdown } from '../components/CampaignParts'
 import { FieldHint } from '../components/FieldHint'
 import { campaignFormSchema, type CampaignFormValues } from '../schemas/preventive-campaigns.schema'
 import type { CampaignPreview } from '../types/campaigns'
@@ -62,6 +62,10 @@ function PreviewSummary({ preview }: { preview: CampaignPreview }) {
       <h4 className="mb-2 text-xs font-semibold text-text-primary">Pendências (não geram OT)</h4>
       <PendingBreakdown counts={preview.pendenciasPorMotivo} items={preview.pendencias} total={preview.totalPendencias} />
     </div>
+    {(preview.puladas > 0 || (preview.puladasDetalhe?.length ?? 0) > 0) && <div>
+      <h4 className="mb-2 text-xs font-semibold text-text-primary">Puladas (não geram OT)</h4>
+      <SkippedBreakdown items={preview.puladasDetalhe ?? []} total={preview.puladas} />
+    </div>}
   </div>
 }
 
