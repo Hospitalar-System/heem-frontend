@@ -1,6 +1,7 @@
 import { CalendarCheck } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { WorkOrdersTabs } from '../components/WorkOrdersTabs'
 import { Select } from '@/components/ui/Select'
@@ -18,10 +19,16 @@ const statusOptions = [{ value: '', label: 'Todos os status' }, ...(Object.keys(
 const linkClass = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
 
 export function PreventiveCampaignsPage() {
-  const [hospitalId, setHospitalId] = useState('')
-  const [status, setStatus] = useState('')
+  const [searchParams] = useSearchParams()
+  const pagination = usePaginationParams()
+  // Hospital e status filtram no servidor e ficam na URL junto com a página.
+  const hospitalId = searchParams.get('hospitalId') ?? ''
+  const rawStatus = searchParams.get('status') ?? ''
+  const status = rawStatus in campaignStatusLabels ? rawStatus : ''
   const hospitals = useHospitals()
-  const campaigns = useCampaigns({ hospitalId: hospitalId || undefined, status: (status || undefined) as CampaignStatus | undefined })
+  const campaigns = useCampaigns({ ...pagination.apiParams, hospitalId: hospitalId || undefined, status: (status || undefined) as CampaignStatus | undefined })
+  const total = campaigns.data?.total ?? 0
+  usePageClamp(pagination, campaigns.data?.total, !campaigns.isPlaceholderData)
   const hospitalById = useMemo(() => new Map((hospitals.data ?? []).map((item) => [item.id, item.nome])), [hospitals.data])
   const filtersActive = Boolean(hospitalId || status)
   const forbidden = campaigns.isError && campaignApiError(campaigns.error, '').status === 403
@@ -44,14 +51,15 @@ export function PreventiveCampaignsPage() {
       </section>
 
       <FilterBar label="Filtros de campanhas">
-        <Select size="sm" aria-label="Filtrar por hospital" value={hospitalId} onChange={setHospitalId} options={[{ value: '', label: 'Todos os hospitais' }, ...(hospitals.data ?? []).map((item) => ({ value: item.id, label: item.nome }))]} />
-        <Select size="sm" aria-label="Filtrar por status" value={status} onChange={setStatus} options={statusOptions} />
+        <Select size="sm" aria-label="Filtrar por hospital" value={hospitalId} onChange={(next) => pagination.setFilters({ hospitalId: next })} options={[{ value: '', label: 'Todos os hospitais' }, ...(hospitals.data ?? []).map((item) => ({ value: item.id, label: item.nome }))]} />
+        <Select size="sm" aria-label="Filtrar por status" value={status} onChange={(next) => pagination.setFilters({ status: next })} options={statusOptions} />
       </FilterBar>
 
       <DataTable
         label="Lista de campanhas"
         columns={campaignColumns}
-        rows={campaigns.data ?? []}
+        rows={campaigns.data?.items ?? []}
+        pagination={{ page: pagination.page, size: pagination.size, total, onPageChange: pagination.setPage, onSizeChange: pagination.setSize }}
         getRowId={(campaign) => campaign.id}
         minWidth="900px"
         rowHeightClass="h-14"
@@ -63,7 +71,7 @@ export function PreventiveCampaignsPage() {
           title: filtersActive ? 'Nenhuma campanha encontrada' : 'Nenhuma campanha criada',
           description: filtersActive ? 'Ajuste os filtros para consultar outras campanhas.' : 'Crie uma campanha para gerar as OTs preventivas do parque de um hospital.',
           action: filtersActive
-            ? <button type="button" onClick={() => { setHospitalId(''); setStatus('') }} className={`rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg ${linkClass}`}>Limpar filtros</button>
+            ? <button type="button" onClick={() => pagination.setFilters({ hospitalId: undefined, status: undefined })} className={`rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg ${linkClass}`}>Limpar filtros</button>
             : <PageAction to="/work-orders/campanhas/new" fullWidthMobile>Criar primeira campanha</PageAction>,
         } : undefined}
       />

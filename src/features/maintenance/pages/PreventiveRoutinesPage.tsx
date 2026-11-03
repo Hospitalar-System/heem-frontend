@@ -32,6 +32,8 @@ const statusOptions = [{ value: 'true', label: 'Ativas' }, { value: 'false', lab
 const statusFromUrl = (raw: string | null) => (raw === 'false' ? 'false' : raw === 'todos' ? '' : 'true')
 const statusToUrl = (value: string) => (value === 'true' ? undefined : value === '' ? 'todos' : value)
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+/** Teto de itens por requisição do backend: no escopo "Todos" cada fonte é lida inteira até esse limite. */
+const SOURCE_LIMIT = 200
 
 export function PreventiveRoutinesPage() {
   const [searchParams] = useSearchParams()
@@ -48,8 +50,14 @@ export function PreventiveRoutinesPage() {
   const sectors = useSectorsForHospitals(hospitals.data?.map(({ id }) => id) ?? [])
   const wantsPlans = scope === '' || scope === 'equipamento'
   const wantsCampaigns = scope !== 'equipamento'
-  const plans = usePreventivePlans({ ...pagination.apiParams, equipamentoId: equipmentFilter || undefined, ativo: status === '' ? undefined : status === 'true' }, wantsPlans)
-  const campaigns = useCampaigns({}, wantsCampaigns)
+  // Só o escopo "Equipamento" usa a paginação do servidor (planos). Em "Todos", "Setor" e "Hospital" o escopo e a situação das
+  // campanhas filtram aqui, então buscamos as fontes completas no teto do backend (200) e paginamos/ordenamos no cliente.
+  const serverPaged = scope === 'equipamento'
+  const activeFilter = status === '' ? undefined : status === 'true'
+  const plans = usePreventivePlans(serverPaged
+    ? { ...pagination.apiParams, equipamentoId: equipmentFilter || undefined, ativo: activeFilter }
+    : { pagina: 0, tamanho: SOURCE_LIMIT, ativo: activeFilter }, wantsPlans)
+  const campaigns = useCampaigns({ pagina: 0, tamanho: SOURCE_LIMIT }, wantsCampaigns)
   const deactivate = useDeactivatePreventivePlan()
 
   const equipmentById = useMemo(() => new Map(lookups.equipment.map((item) => [item.id, item])), [lookups.equipment])
@@ -58,24 +66,25 @@ export function PreventiveRoutinesPage() {
   const hospitalById = useMemo(() => new Map((hospitals.data ?? []).map((item) => [item.id, item.nome])), [hospitals.data])
   const sectorById = useMemo(() => new Map((sectors.data ?? []).map((item) => [item.id, item.nome])), [sectors.data])
 
-  // Planos: o servidor filtra e pagina (X-Total-Count). Campanhas: o endpoint não pagina; escopo e situação filtram aqui.
-  const campaignRoutines = useMemo(() => (campaigns.data ?? []).map(campaignToRoutine).filter((routine) =>
+  const campaignRoutines = useMemo(() => (campaigns.data?.items ?? []).map(campaignToRoutine).filter((routine) =>
     (scope === '' || routine.scope === scope) && (status === '' || isRoutineActive(routine.situation) === (status === 'true'))), [campaigns.data, scope, status])
   const planRoutines = useMemo(() => (plans.data?.items ?? []).map(planToRoutine), [plans.data])
   const merged = useMemo(() => sortByNextExecution([...(wantsPlans ? planRoutines : []), ...(wantsCampaigns ? campaignRoutines : [])]), [campaignRoutines, planRoutines, wantsCampaigns, wantsPlans])
 
-  // Setor/Hospital: só campanhas, paginadas aqui. Equipamento e Todos: a paginação é a dos planos (servidor).
-  const clientPaged = scope === 'setor' || scope === 'hospital'
-  const rows = clientPaged ? merged.slice((pagination.page - 1) * pagination.size, pagination.page * pagination.size) : merged
-  const total = clientPaged ? merged.length : (plans.data?.total ?? 0)
+  const rows = serverPaged ? merged : merged.slice((pagination.page - 1) * pagination.size, pagination.page * pagination.size)
+  const total = serverPaged ? (plans.data?.total ?? 0) : merged.length
   const queries = [wantsPlans ? plans : null, wantsCampaigns ? campaigns : null].filter((query) => query !== null)
   const isLoading = queries.some((query) => query.isLoading)
   const failed = queries.filter((query) => query.isError)
   const allLoaded = queries.every((query) => query.isSuccess)
-  usePageClamp(pagination, allLoaded ? total : undefined, clientPaged || !plans.isPlaceholderData)
+  usePageClamp(pagination, allLoaded ? total : undefined, !serverPaged || !plans.isPlaceholderData)
   const filtersActive = Boolean(scope) || Boolean(equipmentFilter) || status !== 'true'
   const forbidden = failed.some((query) => (planApiError(query.error, '').status ?? campaignApiError(query.error, '').status) === 403)
-  const planListPaged = scope === '' && (plans.data?.total ?? 0) > pagination.size
+  // Fonte que passou do teto de 200: a lista fica incompleta e a pessoa precisa saber.
+  const cappedSources = serverPaged ? [] : [
+    wantsPlans && (plans.data?.total ?? 0) > (plans.data?.items.length ?? 0) ? 'planos' : '',
+    wantsCampaigns && (campaigns.data?.total ?? 0) > (campaigns.data?.items.length ?? 0) ? 'campanhas' : '',
+  ].filter(Boolean)
 
   async function confirmDeactivate() {
     if (!toDeactivate) return
@@ -136,7 +145,7 @@ export function PreventiveRoutinesPage() {
         {scope === 'equipamento' && <Select size="sm" aria-label="Filtrar por equipamento" value={equipmentFilter} onChange={(next) => pagination.setFilters({ equipamento: next })} options={[{ value: '', label: 'Todos os equipamentos' }, ...lookups.equipment.map((item) => ({ value: item.id, label: `${item.codigo} · ${item.nome}` }))]} />}
       </FilterBar>
 
-      {planListPaged && <p role="note" className="text-[11px] text-text-muted">A paginação vale para os planos de equipamento; as campanhas aparecem em todas as páginas.</p>}
+      {cappedSources.length > 0 && <p role="note" className="text-[11px] text-text-muted">Mostrando apenas as primeiras {SOURCE_LIMIT} {cappedSources.join(" e ")}; use os filtros para ver as demais.</p>}
 
       <DataTable
         label="Lista de rotinas preventivas"

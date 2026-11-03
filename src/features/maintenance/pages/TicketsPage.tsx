@@ -18,6 +18,8 @@ import { Pagination } from '@/components/ui/Pagination'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
 import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
+import { DEFAULT_TICKET_SORT, orderingErrorMessage, ticketSortChoicesFor, ticketSortFromUrl } from '../utils/ordering'
+import { useOrderingFallback } from '../utils/useOrderingFallback'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const severityText: Record<string, string> = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }
@@ -53,8 +55,14 @@ export function TicketsPage() {
   const pagination = usePaginationParams()
   const statusFilter = searchParams.get('status') ?? ''
   const severityFilter = searchParams.get('severidade') ?? ''
-  // Status filtra no servidor; busca e severidade (que o backend não filtra) valem para a página carregada.
-  const tickets = useTicketsPage({ ...pagination.apiParams, status: statusFilter || undefined })
+  const sortChoices = useMemo(() => ticketSortChoicesFor(auth.user?.roles ?? []), [auth.user?.roles])
+  const sortValue = ticketSortFromUrl(searchParams.get('ordenar'), searchParams.get('direcao'), sortChoices)
+  const sortChoice = sortChoices.find((choice) => choice.value === sortValue) ?? sortChoices[0]
+  // Status e ordem vão para o servidor; busca e severidade (que o backend não filtra) valem para a página carregada.
+  const tickets = useTicketsPage({ ...pagination.apiParams, status: statusFilter || undefined, ordenar: sortChoice.field, direcao: sortChoice.direction })
+  const orderingFallback = useOrderingFallback(
+    tickets.error, sortValue !== DEFAULT_TICKET_SORT, () => pagination.setFilters({ ordenar: undefined, direcao: undefined }), sortValue,
+  )
   const urgent = useUrgentTicketCount()
   const equipment = useEquipments()
   const hospitals = useHospitals()
@@ -146,8 +154,11 @@ export function TicketsPage() {
           <input type="search" aria-label="Buscar chamados" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Chamado, equipamento ou hospital" className={`${inputClass} w-full pl-8`} />
         </label>
         <label className="min-w-0"><span className="sr-only">Filtrar por status</span><Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={(next) => pagination.setFilters({ status: next })} options={[{ value: '', label: 'Todos os status' }, { value: 'ABERTO', label: 'Aberto' }, { value: 'EM_ANDAMENTO', label: 'Em andamento' }, { value: 'AGUARDANDO_PECA', label: 'Aguardando peça' }, { value: 'RESOLVIDO', label: 'Resolvido' }, { value: 'CANCELADO', label: 'Cancelado' }]} /></label>
+        <label className="min-w-0"><span className="sr-only">Ordenar chamados</span><Select size="sm" aria-label="Ordenar chamados" value={sortValue} onChange={(next) => { orderingFallback.dismiss(); const [ordenar, direcao] = next.split(':'); pagination.setFilters(next === DEFAULT_TICKET_SORT ? { ordenar: undefined, direcao: undefined } : { ordenar, direcao }) }} options={sortChoices.map(({ value, label }) => ({ value, label }))} /></label>
         <label className="min-w-0"><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={(next) => pagination.setFilters({ severidade: next })} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
       </FilterBar>
+
+      {orderingFallback.message && <p role="alert" className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-text-primary">{orderingFallback.message}</p>}
 
       <DataTable
         label="Lista de chamados"
@@ -159,7 +170,7 @@ export function TicketsPage() {
         rowClassName={(ticket) => ticket.severidade === 'CRITICA' ? 'shadow-[inset_4px_0_0_var(--danger)]' : ticket.severidade === 'ALTA' ? 'shadow-[inset_4px_0_0_var(--warning)]' : ''}
         isLoading={tickets.isLoading}
         loadingLabel="Carregando chamados"
-        error={tickets.isError ? { message: 'Não foi possível carregar os chamados.', onRetry: () => void tickets.refetch() } : null}
+        error={tickets.isError ? { message: orderingErrorMessage(tickets.error) ?? 'Não foi possível carregar os chamados.', onRetry: () => void tickets.refetch() } : null}
         empty={{
           title: total > 0 || filtersActive ? 'Nenhum chamado encontrado' : 'Nenhum chamado registrado',
           description: total > 0 || filtersActive ? 'Ajuste a busca ou os filtros.' : 'Novos chamados aparecerão aqui quando forem abertos.',

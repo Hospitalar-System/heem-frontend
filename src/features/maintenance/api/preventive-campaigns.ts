@@ -4,6 +4,7 @@ import { useCategories } from '@/features/assets/api/categories'
 import { useHospitals, useSectors } from '@/features/assets/api/assets'
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
 import { apiClient } from '@/lib/axios'
+import { usePagedQuery } from '@/lib/pagination'
 import type { Campaign, CampaignCreated, CampaignFilters, CampaignInput, CampaignPreview } from '../types/campaigns'
 
 export const campaignsKey = ['preventive-campaigns'] as const
@@ -15,17 +16,9 @@ export const CAMPAIGN_POLL_MS = 2000
 /** Teto do polling (~10 min): depois disso o painel para de consultar sozinho e oferece atualização manual. */
 export const CAMPAIGN_POLL_MAX_UPDATES = 300
 
+/** Campanhas paginadas no servidor (`pagina` 0-based, total em X-Total-Count); hospital e status também filtram no servidor. */
 export function useCampaigns(filters: CampaignFilters, enabled = true) {
-  return useQuery({
-    enabled,
-    queryKey: [...campaignsKey, 'list', filters],
-    queryFn: async () => {
-      const params: Record<string, string> = {}
-      if (filters.hospitalId) params.hospitalId = filters.hospitalId
-      if (filters.status) params.status = filters.status
-      return (await apiClient.get<Campaign[]>('/campanhas-preventivas', { params })).data
-    },
-  })
+  return usePagedQuery<Campaign>([...campaignsKey, 'list'], '/campanhas-preventivas', { ...filters }, enabled)
 }
 
 /** Painel da campanha; consulta de novo a cada 2 s enquanto a execução está em andamento (e para ao concluir/falhar). */

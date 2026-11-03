@@ -54,4 +54,5 @@ export interface Campaign {
 }
 
 export interface CampaignCreated { id: string; status: CampaignStatus }
-export interface CampaignFilters { hospitalId?: string; status?: CampaignStatus }
+/** Filtros da lista; `pagina` (0-based) e `tamanho` pedem uma página do servidor (sem eles a lista vem completa). */
+export interface CampaignFilters { hospitalId?: string; status?: CampaignStatus; pagina?: number; tamanho?: number }

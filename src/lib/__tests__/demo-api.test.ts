@@ -137,7 +137,7 @@ describe('modo de demonstração', () => {
 })
 
 describe('modo de demonstração: paginação', () => {
-  it.each(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos'])('%s respeita pagina/tamanho e devolve X-Total-Count', async (path) => {
+  it.each(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos', '/campanhas-preventivas', '/checklists'])('%s respeita pagina/tamanho e devolve X-Total-Count', async (path) => {
     const all = await apiClient.get(path)
     const total = String((all.data as unknown[]).length)
     expect(all.headers['x-total-count']).toBe(total)
@@ -179,5 +179,31 @@ describe('modo de demonstração: rotinas preventivas dentro das OTs (Story F7.2
     const plans = (await apiClient.get('/planos-preventivos')).data as Array<{ id: string; otsGeradas: number; otsConcluidas: number; proximaExecucao: string }>
     expect(plans.find((plan) => plan.id === 'plan-demo-1')).toMatchObject({ otsGeradas: 2, otsConcluidas: 1, proximaExecucao: expect.any(String) })
     expect(plans.find((plan) => plan.id === 'plan-demo-2')).toMatchObject({ otsGeradas: 0, otsConcluidas: 0 })
+  })
+})
+
+describe('modo de demonstração: ordenação no servidor', () => {
+  const rank = { CRITICA: 0, ALTA: 1, MEDIA: 2, BAIXA: 3 } as Record<string, number>
+
+  it('ordena chamados por severidade (crítica primeiro) e inverte com direcao=desc', async () => {
+    const asc = (await apiClient.get('/chamados', { params: { ordenar: 'severidade', direcao: 'asc' } })).data as Array<{ severidade: string }>
+    const desc = (await apiClient.get('/chamados', { params: { ordenar: 'severidade', direcao: 'desc' } })).data as Array<{ severidade: string }>
+    const ranks = asc.map((ticket) => rank[ticket.severidade])
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b))
+    expect(desc.map((ticket) => rank[ticket.severidade])).toEqual([...ranks].reverse())
+  })
+
+  it('ordena chamados por abertoEm e OTs por código, mantendo o total e a paginação', async () => {
+    const recent = (await apiClient.get('/chamados', { params: { ordenar: 'abertoEm', direcao: 'desc' } })).data as Array<{ abertoEm: string }>
+    expect(recent.map((ticket) => ticket.abertoEm)).toEqual([...recent.map((ticket) => ticket.abertoEm)].sort().reverse())
+    const page = await apiClient.get('/ordens-de-trabalho', { params: { ordenar: 'codigo', direcao: 'desc', pagina: 0, tamanho: 2 } })
+    const codes = (page.data as Array<{ codigo: string }>).map((order) => order.codigo)
+    expect(codes).toHaveLength(2)
+    expect(codes).toEqual([...codes].sort().reverse())
+    expect(Number(page.headers['x-total-count'])).toBeGreaterThan(2)
+  })
+
+  it('rejeita campo desconhecido com ORDENACAO_INVALIDA', async () => {
+    await expect(apiClient.get('/chamados', { params: { ordenar: 'nome' } })).rejects.toMatchObject({ response: { status: 400, data: { code: 'ORDENACAO_INVALIDA' } } })
   })
 })

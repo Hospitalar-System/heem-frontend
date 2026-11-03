@@ -21,6 +21,8 @@ import { Pagination } from '@/components/ui/Pagination'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
 import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
+import { orderingErrorMessage, parseDirection, parseWorkOrderSort, sortDirectionOptions, workOrderSortFields } from '../utils/ordering'
+import { useOrderingFallback } from '../utils/useOrderingFallback'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const statusLabel: Record<string, string> = {
@@ -69,11 +71,17 @@ export function WorkOrdersPage() {
   const sectorFilter = hospitalFilter ? (searchParams.get('setorId') ?? '') : ''
   const planFilter = searchParams.get('planoPreventivoId') ?? ''
   const campaignFilter = searchParams.get('campanhaPreventivaId') ?? ''
+  // Ordem no servidor (e na URL): sem `ordenar` vale a ordem padrão do backend.
+  const sortField = parseWorkOrderSort(searchParams.get('ordenar'))
+  const sortDirection = parseDirection(searchParams.get('direcao'))
   const orders = useWorkOrdersPage({
-    ...pagination.apiParams, status: statusFilter || undefined, tipo: typeFilter || undefined, atrasadas: onlyOverdue,
+    ...pagination.apiParams, ordenar: sortField || undefined, direcao: sortField ? sortDirection : undefined, status: statusFilter || undefined, tipo: typeFilter || undefined, atrasadas: onlyOverdue,
     hospitalId: hospitalFilter || undefined, setorId: sectorFilter || undefined,
     planoPreventivoId: planFilter || undefined, campanhaPreventivaId: campaignFilter || undefined,
   })
+  const orderingFallback = useOrderingFallback(
+    orders.error, Boolean(sortField), () => pagination.setFilters({ ordenar: undefined, direcao: undefined }), `${sortField}:${sortDirection}`,
+  )
   const equipment = useEquipments()
   const hospitals = useHospitals()
   const filterSectors = useSectors(hospitalFilter)
@@ -191,6 +199,8 @@ export function WorkOrdersPage() {
         <Select size="sm" aria-label="Filtrar por técnico" value={technicianFilter} onChange={setTechnicianFilter} options={[{ value: '', label: 'Todos os técnicos' }, ...(users.data ?? []).filter((user) => user.role === 'tecnico').map((user) => ({ value: user.id, label: user.nome }))]} />
         <Select size="sm" aria-label="Filtrar por hospital" value={hospitalFilter} onChange={(next) => pagination.setFilters({ hospitalId: next, setorId: undefined })} options={[{ value: '', label: 'Todos os hospitais' }, ...(hospitals.data ?? []).map((item) => ({ value: item.id, label: item.nome }))]} />
         <Select size="sm" aria-label="Filtrar por setor" disabled={!hospitalFilter} value={sectorFilter} onChange={(next) => pagination.setFilters({ setorId: next })} options={[{ value: '', label: hospitalFilter ? 'Todos os setores' : 'Escolha um hospital' }, ...(filterSectors.data ?? []).map((item) => ({ value: item.id, label: item.nome }))]} />
+        <Select size="sm" aria-label="Ordenar por" value={sortField} onChange={(next) => { orderingFallback.dismiss(); pagination.setFilters({ ordenar: next || undefined, direcao: next ? searchParams.get('direcao') ?? undefined : undefined }) }} options={[{ value: '', label: 'Ordem padrão' }, ...workOrderSortFields]} />
+        <Select size="sm" aria-label="Direção da ordenação" disabled={!sortField} value={sortDirection} onChange={(next) => { orderingFallback.dismiss(); pagination.setFilters({ direcao: next === 'asc' ? undefined : next }) }} options={sortDirectionOptions} />
         <FilterRange from={<DatePicker size="sm" aria-label="Data inicial" value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} />} to={<DatePicker size="sm" aria-label="Data final" value={dateTo} min={dateFrom || undefined} onChange={setDateTo} />} />
       </FilterBar>
 
@@ -200,6 +210,8 @@ export function WorkOrdersPage() {
           <button type="button" aria-label="Remover filtro de rotina" onClick={() => pagination.setFilters({ planoPreventivoId: undefined, campanhaPreventivaId: undefined })} className="grid size-6 place-items-center rounded text-text-secondary hover:bg-bg hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><X aria-hidden="true" size={13} /></button>
         </span>
       </div>}
+
+      {orderingFallback.message && <p role="alert" className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-text-primary">{orderingFallback.message}</p>}
 
       <DataTable
         label="Lista de ordens de trabalho"
@@ -211,7 +223,7 @@ export function WorkOrdersPage() {
         minWidth="860px"
         isLoading={orders.isLoading}
         loadingLabel="Carregando ordens de trabalho"
-        error={orders.isError ? { message: 'Não foi possível carregar as ordens de trabalho.', onRetry: () => void orders.refetch() } : null}
+        error={orders.isError ? { message: orderingErrorMessage(orders.error) ?? 'Não foi possível carregar as ordens de trabalho.', onRetry: () => void orders.refetch() } : null}
         empty={{
           title: total > 0 || filtersActive ? 'Nenhuma OT encontrada' : 'Nenhuma ordem de trabalho registrada',
           description: total > 0 || filtersActive ? 'Ajuste os filtros para consultar outras ordens.' : 'As ordens criadas para este tenant aparecerão aqui.',
