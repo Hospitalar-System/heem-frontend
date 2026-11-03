@@ -70,6 +70,7 @@ export function AssetsPage() {
     })
   }, [equipment.data, search, status])
 
+  const hasEquipment = (equipment.data?.length ?? 0) > 0
   const clearFilters = () => { setHospitalId(''); setSectorId(''); setStatus(''); setCategoryFilter(''); changeDocumentsFilter(''); setSearch('') }
 
   return <AdminPageShell title="Equipamentos" subtitle="Ativos dos hospitais do tenant" action={isAdmin ? <PageAction to="/assets/new" collapseLabelOnMobile>Novo equipamento</PageAction> : undefined}>
@@ -102,15 +103,15 @@ export function AssetsPage() {
       </FilterBar>
 
     {hospitals.isError ? <ErrorState message="Não foi possível carregar os hospitais para os filtros." onRetry={() => void hospitals.refetch()} /> : null}
-    {equipment.isError ? <ErrorState message="Não foi possível carregar os equipamentos." onRetry={() => void equipment.refetch()} /> : null}
-    {equipment.isLoading ? <div aria-label="Carregando equipamentos" aria-busy="true" className="space-y-2 rounded-lg border border-border bg-surface p-4">{Array.from({ length: 7 }, (_, index) => <div key={index} className="h-10 animate-pulse rounded bg-bg" />)}</div> : null}
-    {!equipment.isLoading && !equipment.isError && visibleEquipment.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center">
-      <div><h2 className="text-base font-semibold">{(equipment.data?.length ?? 0) === 0 ? 'Nenhum equipamento cadastrado' : 'Nenhum equipamento encontrado'}</h2><p className="mt-1 max-w-md text-sm text-text-secondary">{(equipment.data?.length ?? 0) === 0 ? 'Cadastre um equipamento para começar a acompanhar os ativos.' : 'Ajuste os filtros ou a busca para ver outros equipamentos.'}</p>
-        {(equipment.data?.length ?? 0) === 0 && isAdmin ? <div className="mt-4 flex justify-center"><PageAction to="/assets/new" fullWidthMobile>Cadastrar equipamento</PageAction></div> : null}
-        {(equipment.data?.length ?? 0) > 0 ? <button type="button" onClick={clearFilters} className="mt-4 text-xs font-semibold text-primary underline">Limpar filtros</button> : null}
-      </div>
-    </section> : null}
-    {!equipment.isLoading && !equipment.isError && visibleEquipment.length > 0 ? <EquipmentListTable items={visibleEquipment} sectorNameById={sectorNameById} /> : null}
+    <EquipmentListTable
+      items={visibleEquipment}
+      sectorNameById={sectorNameById}
+      isLoading={equipment.isLoading}
+      error={equipment.isError ? { message: 'Não foi possível carregar os equipamentos.', onRetry: () => void equipment.refetch() } : null}
+      empty={hasEquipment
+        ? { title: 'Nenhum equipamento encontrado', description: 'Ajuste os filtros ou a busca para ver outros equipamentos.', action: <button type="button" onClick={clearFilters} className="text-xs font-semibold text-primary underline">Limpar filtros</button> }
+        : { title: 'Nenhum equipamento cadastrado', description: 'Cadastre um equipamento para começar a acompanhar os ativos.', action: isAdmin ? <PageAction to="/assets/new" fullWidthMobile>Cadastrar equipamento</PageAction> : undefined }}
+    />
   </AdminPageShell>
 }
 

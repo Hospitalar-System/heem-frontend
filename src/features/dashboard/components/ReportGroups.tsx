@@ -58,7 +58,7 @@ export function ReportGroups({ groups, grouping }: { groups: IndicatorGroup[]; g
             <table className="w-full text-xs">
               <caption className="sr-only">{title}</caption>
               <thead className="text-text-secondary">
-                <tr className="border-b border-border">
+                <tr className="table-head">
                   <SortableHeader label={singular} sortKey="grupoNome" sort={sort} onToggle={toggle} align="left" />
                   {columns.map(({ key, label }) => <SortableHeader key={key} label={label} sortKey={key} sort={sort} onToggle={toggle} />)}
                 </tr>

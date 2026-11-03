@@ -5,6 +5,7 @@ import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import type { UserRole } from '@/features/auth/types'
 import { routes } from '../router'
 
+vi.mock('@/components/layout/RouteContentFallback', () => ({ RouteContentFallback: () => <p>carregando-rota</p> }))
 vi.mock('@/features/assets/pages/HospitalsPage', () => ({ HospitalsPage: () => <p>pagina-hospitais</p> }))
 vi.mock('@/features/assets/pages/CategoriesPage', () => ({ CategoriesPage: () => <p>pagina-categorias</p> }))
 vi.mock('@/features/sla-policy/pages/SlaPolicyPage', () => ({ SlaPolicyPage: () => <p>pagina-sla</p> }))

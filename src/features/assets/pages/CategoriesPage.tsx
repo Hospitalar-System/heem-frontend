@@ -15,8 +15,8 @@ import { getCategoryErrorMessage, useCategories, useDeactivateCategory, useMarkC
 import { categorySchema, type CategoryFormValues } from '../schemas/assets.schema'
 import type { EquipmentCategory } from '../types'
 import { Checkbox } from '@/components/ui/Checkbox'
-import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
-import { Badge } from '@/components/ui/Badge'
+import { DataTable, type DataColumn } from '@/components/ui/DataTable'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 
 const inputClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const statusOptions = [
@@ -52,6 +52,15 @@ export function CategoriesPage() {
     }
   }
 
+  const needsReview = (category: EquipmentCategory) => category.origem === 'carga' && !category.revisada
+  const columns: DataColumn<EquipmentCategory>[] = [
+    { key: 'nome', header: 'Nome', cell: (category) => <span className="inline-flex items-center gap-2 text-sm font-medium text-text-primary">{category.nome}{needsReview(category) ? <StatusBadge tone="warning">Revisar</StatusBadge> : null}</span> },
+    { key: 'checklist', header: 'Checklist padrão', cell: (category) => <span className="text-text-secondary">{category.checklistPadraoId ? checklistName.get(category.checklistPadraoId) ?? 'Checklist indisponível' : '—'}</span> },
+    { key: 'origem', header: 'Origem', cell: (category) => <span className="text-text-secondary">{category.origem === 'carga' ? 'Carga inicial' : 'Manual'}</span> },
+    { key: 'equipamentos', header: 'Equipamentos', cell: (category) => <span className="tabular-nums text-text-secondary">{category.quantidadeEquipamentos ?? '—'}</span> },
+    { key: 'situacao', header: 'Situação', cell: (category) => <StatusBadge tone={category.ativa ? 'success' : 'neutral'}>{category.ativa ? 'Ativa' : 'Inativa'}</StatusBadge> },
+  ]
+
   const clearFilters = () => { setStatus(''); setOnlyReview(false); setSearch('') }
 
   return <AdminPageShell tabs={<SettingsNav />} title="Categorias de equipamento" subtitle="Tipos de equipamento e checklist padrão" action={<PageAction onClick={() => setCreating(true)} collapseLabelOnMobile>Nova categoria</PageAction>}>
@@ -61,29 +70,28 @@ export function CategoriesPage() {
       <label className="relative min-w-0 sm:col-span-2"><span className="sr-only">Buscar categoria</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input aria-label="Buscar categoria" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nome da categoria" className={`${filterInputClass} pl-8`} /></label>
     </FilterBar>
 
-    {categories.isError ? <section role="alert" className="rounded-lg border border-danger/40 bg-surface p-5 text-sm"><p>Não foi possível carregar as categorias.</p><button type="button" className="mt-2 text-xs font-semibold text-primary underline" onClick={() => void categories.refetch()}>Tentar novamente</button></section> : null}
-    {categories.isLoading ? <div aria-label="Carregando categorias" aria-busy="true" className="space-y-2 rounded-lg border border-border bg-surface p-4">{Array.from({ length: 6 }, (_, index) => <div key={index} className="h-10 animate-pulse rounded bg-bg" />)}</div> : null}
-    {!categories.isLoading && !categories.isError && visible.length === 0 ? <section className="grid min-h-64 place-items-center rounded-lg border border-dashed border-border bg-surface p-8 text-center"><div><Tags className="mx-auto text-text-muted" /><h2 className="mt-3 font-semibold">{hasFilters ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria cadastrada'}</h2><p className="mt-1 max-w-md text-sm text-text-secondary">{hasFilters ? 'Ajuste os filtros ou a busca para ver outras categorias.' : 'Cadastre a primeira categoria (tipo de equipamento, como Bomba ou Ventilador Pulmonar).'}</p>{hasFilters ? <button type="button" onClick={clearFilters} className="mt-4 text-xs font-semibold text-primary underline">Limpar filtros</button> : <div className="mt-4 flex justify-center"><PageAction onClick={() => setCreating(true)} fullWidthMobile>Criar categoria</PageAction></div>}</div></section> : null}
-    {!categories.isLoading && !categories.isError && visible.length > 0 ? <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-      <table className="w-full min-w-[900px] border-collapse text-left">
-        <thead><tr className="table-head h-12 text-[11px]">{['Nome', 'Checklist padrão', 'Origem', 'Equipamentos', 'Situação', ''].map((heading, index) => <th key={`${heading}${index}`} scope="col" className="px-4">{heading}</th>)}</tr></thead>
-        <tbody>{visible.map((category) => {
-          const needsReview = category.origem === 'carga' && !category.revisada
-          return <tr key={category.id} className="row-idle h-12 border-b border-border/70 text-xs last:border-0">
-            <td className="px-4 text-sm font-medium text-text-primary"><span className="inline-flex items-center gap-2">{category.nome}{needsReview ? <Badge variant="warning">Revisar</Badge> : null}</span></td>
-            <td className="px-4 text-text-secondary">{category.checklistPadraoId ? checklistName.get(category.checklistPadraoId) ?? 'Checklist indisponível' : '—'}</td>
-            <td className="px-4 text-text-secondary">{category.origem === 'carga' ? 'Carga inicial' : 'Manual'}</td>
-            <td className="px-4 tabular-nums text-text-secondary">{category.quantidadeEquipamentos ?? '—'}</td>
-            <td className="px-4"><Badge variant={category.ativa ? 'success' : 'neutral'}>{category.ativa ? 'Ativa' : 'Inativa'}</Badge></td>
-            <td className="px-4"><div className="flex justify-end"><RowActionsMenu label={category.nome} actions={[
-              ...(needsReview ? [{ label: 'Marcar como revisada', icon: <CheckCheck size={14} />, disabled: reviewed.isPending, onSelect: () => markReviewed(category) }] : []),
-              { label: 'Editar', icon: <Pencil size={14} />, onSelect: () => setEditing(category) },
-              ...(category.ativa ? [{ label: 'Mesclar outra categoria nesta', icon: <GitMerge size={14} />, onSelect: () => setMerging(category) }, { label: 'Desativar', icon: <PowerOff size={14} />, destructive: true, onSelect: () => setDeactivating(category) }] : []),
-            ]} /></div></td>
-          </tr>
-        })}</tbody>
-      </table>
-    </div> : null}
+    <DataTable
+      label="Categorias de equipamento"
+      columns={columns}
+      rows={visible}
+      getRowId={(category) => category.id}
+      rowLabel={(category) => category.nome}
+      rowActions={(category) => [
+        ...(needsReview(category) ? [{ label: 'Marcar como revisada', icon: <CheckCheck size={14} />, disabled: reviewed.isPending, onSelect: () => markReviewed(category) }] : []),
+        { label: 'Editar', icon: <Pencil size={14} />, onSelect: () => setEditing(category) },
+        ...(category.ativa ? [{ label: 'Mesclar outra categoria nesta', icon: <GitMerge size={14} />, onSelect: () => setMerging(category) }, { label: 'Desativar', icon: <PowerOff size={14} />, destructive: true, onSelect: () => setDeactivating(category) }] : []),
+      ]}
+      isLoading={categories.isLoading}
+      loadingLabel="Carregando categorias"
+      minWidth="900px"
+      error={categories.isError ? { message: 'Não foi possível carregar as categorias.', onRetry: () => void categories.refetch() } : null}
+      empty={{
+        icon: <Tags />,
+        title: hasFilters ? 'Nenhuma categoria encontrada' : 'Nenhuma categoria cadastrada',
+        description: hasFilters ? 'Ajuste os filtros ou a busca para ver outras categorias.' : 'Cadastre a primeira categoria (tipo de equipamento, como Bomba ou Ventilador Pulmonar).',
+        action: hasFilters ? <button type="button" onClick={clearFilters} className="text-xs font-semibold text-primary underline">Limpar filtros</button> : <PageAction onClick={() => setCreating(true)} fullWidthMobile>Criar categoria</PageAction>,
+      }}
+    />
     {checklists.isError ? <p role="alert" className="mt-3 text-xs text-text-muted">Não foi possível carregar os nomes dos checklists.</p> : null}
 
     {creating && <CategoryForm onClose={() => setCreating(false)} />}

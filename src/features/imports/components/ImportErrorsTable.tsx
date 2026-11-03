@@ -52,7 +52,7 @@ export function ImportErrorsTable({ errors, inProgress, truncated, totalWithErro
       <table className="w-full min-w-[560px] text-left text-xs">
         <caption className="sr-only">Erros por linha da importação</caption>
         <thead className="bg-bg text-[11px] text-text-secondary"><tr><th scope="col" className="px-3 py-2 font-medium">Linha</th><th scope="col" className="px-3 py-2 font-medium">Código</th><th scope="col" className="px-3 py-2 font-medium">Campo</th><th scope="col" className="px-3 py-2 font-medium">Motivo</th></tr></thead>
-        <tbody className="divide-y divide-border">{visible.map((error, index) => <tr key={`${error.linha}-${error.code}-${index}`}>
+        <tbody>{visible.map((error, index) => <tr key={`${error.linha}-${error.code}-${index}`} className="row-idle row-divider">
           <td className="px-3 py-2 tabular-nums text-text-primary">{error.linha}</td>
           <td className="px-3 py-2 text-text-primary">{error.codigo || '—'}</td>
           <td className="px-3 py-2 font-mono text-text-secondary">{extractRowErrorField(error.code, error.mensagem) || '—'}</td>

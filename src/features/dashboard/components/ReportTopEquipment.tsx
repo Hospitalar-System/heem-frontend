@@ -16,7 +16,7 @@ export function ReportTopEquipment({ items }: { items: TopEquipment[] }) {
           <table className="w-full text-xs">
             <caption className="sr-only">Equipamentos com mais chamados no período</caption>
             <thead className="text-text-secondary">
-              <tr className="border-b border-border">
+              <tr className="table-head">
                 <SortableHeader label="Equipamento" sortKey="nome" sort={sort} onToggle={toggle} align="left" />
                 <SortableHeader label="Chamados" sortKey="qtdChamados" sort={sort} onToggle={toggle} />
                 <SortableHeader label="MTBF" sortKey="mtbfHoras" sort={sort} onToggle={toggle} />
