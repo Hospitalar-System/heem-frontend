@@ -99,10 +99,34 @@ describe('PreventiveRoutinesPage: escopos, progresso e links para as OTs', () =>
     expect(within(equipment).getByRole('progressbar', { name: 'Progresso de Bomba de infusão' })).toHaveAttribute('aria-valuenow', '1')
   })
 
-  it('avisa quando a lista de planos está paginada em Todos', async () => {
-    planTotal = 60
+  it('em Todos busca as duas fontes inteiras (limite 200), pagina no cliente e não repete campanhas entre as páginas', async () => {
+    const user = userEvent.setup()
+    planItems = Array.from({ length: 30 }, (_, index) => plan(`plan-${index}`, 'equipment-1', { proximaExecucao: `2027-01-${String(index + 1).padStart(2, '0')}` }))
+    planTotal = 30
     renderAt()
-    expect(await screen.findByText(/A paginação vale para os planos de equipamento/)).toBeInTheDocument()
+    expect(await screen.findByText('Mostrando 1–25 de 32')).toBeInTheDocument()
+    expect(callsTo('/planos-preventivos')[0][1]).toEqual({ params: { pagina: 0, tamanho: 200, ativo: true } })
+    expect(callsTo('/campanhas-preventivas')[0][1]).toEqual({ params: { pagina: 0, tamanho: 200 } })
+    expect(screen.getAllByText('Preventiva da UTI')).toHaveLength(1)
+    expect(screen.getAllByText('Preventiva do parque')).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: 'Próxima página' }))
+    expect(await screen.findByText('Mostrando 26–32 de 32')).toBeInTheDocument()
+    expect(screen.queryByText('Preventiva da UTI')).not.toBeInTheDocument()
+    expect(screen.queryByText('Preventiva do parque')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('row')).toHaveLength(1 + 7)
+    expect(callsTo('/planos-preventivos')).toHaveLength(1) // trocar de página não refaz a busca
+  })
+
+  it('avisa quando uma das fontes passa do teto de 200 em Todos', async () => {
+    planTotal = 260
+    renderAt()
+    expect(await screen.findByText(/Mostrando apenas as primeiras 200 planos; use os filtros/)).toBeInTheDocument()
+  })
+
+  it('não mostra o aviso de teto quando as fontes cabem no limite', async () => {
+    renderAt()
+    await screen.findByText('Bomba de infusão')
+    expect(screen.queryByText(/Mostrando apenas as primeiras/)).not.toBeInTheDocument()
   })
 
   it('filtro de escopo Setor lista só campanhas de setor, sem consultar planos, e Hospital as de hospital', async () => {

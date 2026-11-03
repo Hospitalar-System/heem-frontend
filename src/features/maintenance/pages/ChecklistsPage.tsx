@@ -6,9 +6,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { PageAction } from '@/components/ui/PageAction'
-import { useAddChecklistItem, useChecklistItems, useChecklists, useCreateChecklist, useReorderChecklistItems, useUpdateChecklistItem } from '../api/work-orders'
+import { useAddChecklistItem, useChecklistItems, useChecklistsPage, useCreateChecklist, useReorderChecklistItems, useUpdateChecklistItem } from '../api/work-orders'
 import { checklistItemSchema, createChecklistSchema } from '../schemas/checklists.schema'
-import { checklistItemTypeChoices, checklistItemTypeLabel, normalizeChecklistItemType, type ChecklistItem } from '../types'
+import { checklistItemTypeChoices, checklistItemTypeLabel, normalizeChecklistItemType, type ChecklistItem, type ChecklistSummary } from '../types'
+import { Pagination } from '@/components/ui/Pagination'
+import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 import { Select } from '@/components/ui/Select'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Badge } from '@/components/ui/Badge'
@@ -26,9 +28,12 @@ function apiError(error: unknown, fallback: string) {
 }
 
 export function ChecklistsPage() {
-  const checklists = useChecklists()
+  const pagination = usePaginationParams()
+  const checklists = useChecklistsPage(pagination.apiParams)
+  const pageChecklists = checklists.data?.items
   const createChecklist = useCreateChecklist()
   const [selectedId, setSelectedId] = useState('')
+  const [pinned, setPinned] = useState<ChecklistSummary | null>(null)
   const [search, setSearch] = useState('')
   const [checklistCode, setChecklistCode] = useState('')
   const [checklistName, setChecklistName] = useState('')
@@ -38,25 +43,27 @@ export function ChecklistsPage() {
   const [draft, setDraft] = useState(initialItem)
   const [announcement, setAnnouncement] = useState('')
 
-  const currentChecklist = checklists.data?.find((item) => item.id === selectedId)
+  // O checklist aberto pode não estar na página atual (ex.: recém-criado): guardamos o último resumo conhecido.
+  const currentChecklist = pageChecklists?.find((item) => item.id === selectedId) ?? (pinned?.id === selectedId ? pinned : undefined)
   const itemsQuery = useChecklistItems(selectedId || undefined)
   const addItem = useAddChecklistItem(selectedId)
   const updateItem = useUpdateChecklistItem(selectedId)
   const reorderItems = useReorderChecklistItems(selectedId)
   const items = useMemo(() => [...(itemsQuery.data ?? [])].sort((a, b) => a.ordem - b.ordem), [itemsQuery.data])
+  usePageClamp(pagination, checklists.data?.total, !checklists.isPlaceholderData)
   const selectedItem = items.find((item) => item.id === selectedItemId)
   const visibleChecklists = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('pt-BR')
-    return (checklists.data ?? []).filter((item) => item.nome.toLocaleLowerCase('pt-BR').includes(term))
-  }, [checklists.data, search])
+    return (pageChecklists ?? []).filter((item) => item.nome.toLocaleLowerCase('pt-BR').includes(term))
+  }, [pageChecklists, search])
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
   useEffect(() => {
-    if (!showCreate && !selectedId && checklists.data?.length) setSelectedId(checklists.data[0].id)
-  }, [checklists.data, selectedId, showCreate])
+    if (!showCreate && !selectedId && pageChecklists?.length) { setSelectedId(pageChecklists[0].id); setPinned(pageChecklists[0]) }
+  }, [pageChecklists, selectedId, showCreate])
 
   useEffect(() => {
     if (!items.length) {
@@ -89,6 +96,7 @@ export function ChecklistsPage() {
     try {
       const created = await createChecklist.mutateAsync(input)
       setSelectedId(created.id)
+      setPinned(created)
       setShowCreate(false)
       setChecklistCode('')
       setChecklistName('')
@@ -153,7 +161,11 @@ export function ChecklistsPage() {
         {checklists.isLoading && <div aria-label="Carregando checklists" aria-busy="true" className="space-y-2 p-3">{[1, 2, 3, 4].map((row) => <div key={row} className="h-14 animate-pulse rounded-md bg-bg" />)}</div>}
         {checklists.isError && <div role="alert" className="p-4 text-xs text-text-secondary"><p>Não foi possível carregar os checklists.</p><button type="button" onClick={() => void checklists.refetch()} className="mt-2 text-primary underline">Tentar novamente</button></div>}
         {!checklists.isLoading && !checklists.isError && visibleChecklists.length === 0 && <div className="grid min-h-48 place-items-center p-5 text-center"><div><ClipboardCheck aria-hidden="true" className="mx-auto text-text-muted" size={22} /><p className="mt-3 text-sm font-medium text-text-primary">{search ? 'Nenhum checklist encontrado' : 'Nenhum checklist cadastrado'}</p><p className="mt-1 text-xs text-text-secondary">{search ? 'Ajuste a pesquisa.' : 'Crie um modelo para padronizar as verificações.'}</p></div></div>}
-        {!checklists.isLoading && !checklists.isError && visibleChecklists.length > 0 && <ul className="max-h-[calc(100vh-330px)] overflow-y-auto border-t border-border">{visibleChecklists.map((checklist) => <li key={checklist.id} className="row-divider"><button type="button" aria-current={selectedId === checklist.id ? 'page' : undefined} onClick={() => { setSelectedId(checklist.id); setShowCreate(false) }} className={`flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${selectedId === checklist.id ? 'row-selected' : 'hover:bg-bg/60'}`}><span className="min-w-0"><span className="block truncate text-xs font-semibold text-text-primary">{checklist.nome}</span><span className="mt-1 block text-[10px] text-text-muted">{checklist.ativo === false ? 'Inativo' : 'Ativo'}</span></span><span className="shrink-0 text-[10px] text-text-muted">{checklist.quantidadeItens ?? '—'} itens</span></button></li>)}</ul>}
+        {!checklists.isLoading && !checklists.isError && visibleChecklists.length > 0 && <ul className="max-h-[calc(100vh-330px)] overflow-y-auto border-t border-border">{visibleChecklists.map((checklist) => <li key={checklist.id} className="row-divider"><button type="button" aria-current={selectedId === checklist.id ? 'page' : undefined} onClick={() => { setSelectedId(checklist.id); setPinned(checklist); setShowCreate(false) }} className={`flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${selectedId === checklist.id ? 'row-selected' : 'hover:bg-bg/60'}`}><span className="min-w-0"><span className="block truncate text-xs font-semibold text-text-primary">{checklist.nome}</span><span className="mt-1 block text-[10px] text-text-muted">{checklist.ativo === false ? 'Inativo' : 'Ativo'}</span></span><span className="shrink-0 text-[10px] text-text-muted">{checklist.quantidadeItens ?? '—'} itens</span></button></li>)}</ul>}
+        {!checklists.isLoading && !checklists.isError && <>
+          {search && (checklists.data?.total ?? 0) > pagination.size && <p className="px-4 pb-2 text-[10px] text-text-muted">A pesquisa filtra apenas os checklists desta página.</p>}
+          <Pagination className="border-t border-border" page={pagination.page} size={pagination.size} total={checklists.data?.total ?? 0} onPageChange={pagination.setPage} onSizeChange={pagination.setSize} />
+        </>}
       </section>
 
       <section aria-label={showCreate ? 'Criar checklist' : 'Construtor de checklist'} className="min-w-0 rounded-lg border border-border bg-surface">

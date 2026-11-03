@@ -123,7 +123,7 @@ describe('Campanha de preventiva', () => {
       const other = rowOf('Avulsa UTI')
       expect(within(other).getByText('Falhou')).toBeInTheDocument()
       expect(within(other).getByText('Avulsa')).toBeInTheDocument()
-      expect(getCalls('/campanhas-preventivas')[0][1]).toEqual({ params: {} })
+      expect(getCalls('/campanhas-preventivas')[0][1]).toEqual({ params: { pagina: 0, tamanho: 25 } })
     })
 
     it('mantém a ação principal "Nova campanha" acessível como link para o formulário', async () => {
@@ -138,7 +138,7 @@ describe('Campanha de preventiva', () => {
       await screen.findByRole('link', { name: 'Preventiva semestral' })
       await chooseOption(user, 'Filtrar por hospital', 'Santa Casa')
       await chooseOption(user, 'Filtrar por status', 'Concluída')
-      await waitFor(() => expect(getCalls('/campanhas-preventivas').at(-1)![1]).toEqual({ params: { hospitalId: 'hospital-1', status: 'concluida' } }))
+      await waitFor(() => expect(getCalls('/campanhas-preventivas').at(-1)![1]).toEqual({ params: { pagina: 0, tamanho: 25, hospitalId: 'hospital-1', status: 'concluida' } }))
     })
 
     it('mostra skeleton, EmptyState (com e sem filtro), erro com nova tentativa e 403', async () => {
