@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/Modal'
 import { isoOf, todayCivil } from '@/components/ui/civil-date'
 import { useCampaignLookups, useCampaignPreview, useCreateCampaign } from '../api/preventive-campaigns'
 import { PendingBreakdown } from '../components/CampaignParts'
+import { FieldHint } from '../components/FieldHint'
 import { campaignFormSchema, type CampaignFormValues } from '../schemas/preventive-campaigns.schema'
 import type { CampaignPreview } from '../types/campaigns'
 import { assignmentModeLabels, campaignApiError, campaignBody } from '../utils/preventive-campaigns'
@@ -21,9 +22,13 @@ const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible
 const recurrenceOptions = [{ value: 'avulsa', label: 'Avulsa (uma vez)' }, { value: 'dias', label: 'A cada N dias' }, { value: 'meses', label: 'A cada N meses' }]
 const modeOptions = (Object.keys(assignmentModeLabels) as Array<keyof typeof assignmentModeLabels>).map((value) => ({ value, label: assignmentModeLabels[value] }))
 
-function Row({ id, label, error, hint, children }: { id: string; label: string; error?: string; hint?: ReactNode; children: ReactNode }) {
+/** `help` vira o ícone de ajuda ao lado do rótulo (FieldHint): o texto não ocupa linha própria e não desalinha a grade. */
+function Row({ id, label, error, hint, help, children }: { id: string; label: string; error?: string; hint?: ReactNode; help?: ReactNode; children: ReactNode }) {
   return <div className="grid gap-1.5">
-    <label id={`${id}-label`} htmlFor={id} className="text-xs font-medium text-text-secondary">{label}</label>
+    <div className="relative flex items-center gap-1.5">
+      <label id={`${id}-label`} htmlFor={id} className="text-xs font-medium text-text-secondary">{label}</label>
+      {help && <FieldHint label={label}>{help}</FieldHint>}
+    </div>
     {children}
     {hint}
     {error && <p id={`${id}-error`} role="alert" className="text-xs text-danger">{error}</p>}
@@ -154,11 +159,11 @@ export function PreventiveCampaignFormPage() {
             empty="Nenhuma categoria ativa cadastrada." />
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
+        <div role="group" aria-label="Período e recorrência" className="grid gap-3 md:grid-cols-3">
           <Row id={ids.inicio} label="Data de início" error={errors.dataInicio?.message}>
             <FormDatePicker control={form.control} name="dataInicio" id={ids.inicio} aria-labelledby={`${ids.inicio}-label`} min={today} placeholder="Selecione a data" {...invalid('dataInicio', ids.inicio)} />
           </Row>
-          <Row id={ids.fim} label="Data final (opcional)" error={errors.dataFim?.message} hint={<p className="text-[11px] text-text-muted">Define o período em que uma OT preventiva aberta faz o equipamento ser pulado. Sem data final, vale só o dia de início.</p>}>
+          <Row id={ids.fim} label="Data final (opcional)" error={errors.dataFim?.message} help="Define o período em que uma OT preventiva aberta faz o equipamento ser pulado. Sem data final, vale só o dia de início.">
             <FormDatePicker control={form.control} name="dataFim" id={ids.fim} aria-labelledby={`${ids.fim}-label`} min={values.dataInicio || today} placeholder="Sem data final" {...invalid('dataFim', ids.fim)} />
           </Row>
           <Row id={ids.recorrencia} label="Recorrência" error={errors.recorrencia?.message}>
@@ -175,7 +180,7 @@ export function PreventiveCampaignFormPage() {
 
         <div className="grid gap-3 md:grid-cols-2">
           <Row id={ids.modo} label="Atribuição das OTs" error={errors.modoAtribuicao?.message}
-            hint={<p className="text-[11px] text-text-muted">{values.modoAtribuicao === 'equilibrado' ? 'Divide entre os técnicos ativos do hospital, priorizando quem tem menos OTs abertas.' : values.modoAtribuicao === 'sem_responsavel' ? 'As OTs ficam sem responsável até um técnico assumir ou o administrador atribuir.' : 'Todas as OTs vão para o técnico escolhido.'}</p>}>
+            help={values.modoAtribuicao === 'equilibrado' ? 'Divide entre os técnicos ativos do hospital, priorizando quem tem menos OTs abertas.' : values.modoAtribuicao === 'sem_responsavel' ? 'As OTs ficam sem responsável até um técnico assumir ou o administrador atribuir.' : 'Todas as OTs vão para o técnico escolhido.'}>
             <FormSelect control={form.control} name="modoAtribuicao" id={ids.modo} aria-labelledby={`${ids.modo}-label`} options={modeOptions} {...invalid('modoAtribuicao', ids.modo)}
               onValueChange={() => form.clearErrors(['modoAtribuicao', 'tecnicoId'])} />
           </Row>

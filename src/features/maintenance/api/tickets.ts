@@ -7,6 +7,9 @@ export const ticketsKey = ['tickets'] as const
 
 export interface TicketListFilters {
   status?: string
+  /** Ordenação no servidor: `severidade`, `abertoEm` ou `slaResolucaoAte` (nulos por último). */
+  ordenar?: string
+  direcao?: 'asc' | 'desc'
   pagina: number
   tamanho: number
 }

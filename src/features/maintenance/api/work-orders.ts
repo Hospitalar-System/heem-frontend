@@ -14,6 +14,9 @@ export interface WorkOrderListFilters {
   setorId?: string
   planoPreventivoId?: string
   campanhaPreventivaId?: string
+  /** Ordenação no servidor: `dataAgendada`, `status`, `codigo` ou `concluidaEm`. */
+  ordenar?: string
+  direcao?: 'asc' | 'desc'
   pagina: number
   tamanho: number
 }
@@ -23,6 +26,12 @@ export function useWorkOrdersPage({ atrasadas, ...filters }: WorkOrderListFilter
   return usePagedQuery<WorkOrderListItem>([...workOrdersKey, 'list'], '/ordens-de-trabalho', { ...filters, atrasadas: atrasadas || undefined })
 }
 
+/** Checklists paginados no servidor (`pagina` 0-based, total em X-Total-Count) para a tela de Checklists. */
+export function useChecklistsPage(filters: { pagina: number; tamanho: number }) {
+  return usePagedQuery<ChecklistSummary>(['checklists', 'page'], '/checklists', { ...filters })
+}
+
+/** Lista COMPLETA (sem `pagina`/`tamanho`), usada para preencher selects e nomes em outras telas. */
 export function useChecklists() {
   return useQuery({
     queryKey: ['checklists'],

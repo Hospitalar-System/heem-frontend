@@ -109,16 +109,41 @@ export const demoApiAdapter: AxiosAdapter = async (config) => {
 }
 
 /** Rotas que o backend pagina (`pagina` 0-based + `tamanho`, total em X-Total-Count). */
-const PAGINATED_PATHS = new Set(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos'])
+const PAGINATED_PATHS = new Set(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos', '/campanhas-preventivas', '/checklists'])
+
+const SEVERITY_RANK: Record<string, number> = { CRITICA: 0, ALTA: 1, MEDIA: 2, BAIXA: 3 }
+const SORTABLE: Record<string, string[]> = {
+  '/chamados': ['severidade', 'abertoEm', 'slaResolucaoAte'],
+  '/ordens-de-trabalho': ['dataAgendada', 'status', 'codigo', 'concluidaEm'],
+}
+
+/** Espelha `ordenar`/`direcao` do backend (chamados e OTs); nulos vão por último e, em chamados, severidade desempata por abertoEm e id. */
+function sortRows(path: string, rows: RecordValue[], params?: Record<string, unknown>) {
+  const field = typeof params?.ordenar === 'string' ? params.ordenar : ''
+  if (!field || !SORTABLE[path]) return rows
+  if (!SORTABLE[path].includes(field)) throw Object.assign(new Error('Ordenação inválida'), { response: { status: 400, data: { code: 'ORDENACAO_INVALIDA' } } })
+  const sign = params?.direcao === 'desc' ? -1 : 1
+  const key = (row: RecordValue) => field === 'severidade' ? (SEVERITY_RANK[String(row.severidade)] ?? 9) : (row[field] as string | null | undefined)
+  const compare = (a: unknown, b: unknown) => (a === b ? 0 : (a as string | number) < (b as string | number) ? -1 : 1)
+  return [...rows].sort((a, b) => {
+    const ka = key(a)
+    const kb = key(b)
+    if ((ka == null) !== (kb == null)) return ka == null ? 1 : -1
+    const primary = compare(ka, kb) * sign
+    if (primary !== 0 || field !== 'severidade') return primary
+    return compare(a.abertoEm, b.abertoEm) || compare(a.id, b.id)
+  })
+}
 
 /** Espelha `Paginacao` do backend: o total sempre vai no header; sem `pagina`/`tamanho` a lista vem inteira. */
 function paginate(method: string, path: string, data: unknown, params?: Record<string, unknown>) {
   if (method !== 'get' || !PAGINATED_PATHS.has(path) || !Array.isArray(data)) return { data, headers: {} as Record<string, string> }
-  const headers = { 'x-total-count': String(data.length) }
-  if (params?.pagina === undefined && params?.tamanho === undefined) return { data, headers }
+  const sorted = sortRows(path, data as RecordValue[], params)
+  const headers = { 'x-total-count': String(sorted.length) }
+  if (params?.pagina === undefined && params?.tamanho === undefined) return { data: sorted, headers }
   const page = Math.max(0, Number(params?.pagina ?? 0))
   const size = Math.min(200, Math.max(1, Number(params?.tamanho ?? 50)))
-  return { data: data.slice(page * size, page * size + size), headers }
+  return { data: sorted.slice(page * size, page * size + size), headers }
 }
 
 const demoPreventive = { atrasadas: 2, concluidasNoPrazo: 19, concluidasForaDoPrazo: 3, percentualNoPrazo: 86.4, canceladas: 1 }
