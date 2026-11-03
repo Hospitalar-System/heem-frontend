@@ -54,7 +54,12 @@ beforeEach(() => {
       const data = all.filter((sector) => ativo === 'todos' || String(sector.ativo) === ativo)
       return { data, headers: { 'x-total-count': String(data.length) } } as never
     }
-    if (url === '/equipamentos') return { data: equipments } as never
+    if (url === '/equipamentos') {
+      const { setorId, ordenar, direcao } = (config as { params?: { setorId?: string; ordenar?: string; direcao?: string } } | undefined)?.params ?? {}
+      let data = equipments.filter((item) => !setorId || item.setorId === setorId)
+      if (ordenar === 'nome') data = [...data].sort((a, b) => a.nome.localeCompare(b.nome) * (direcao === 'desc' ? -1 : 1))
+      return { data, headers: { 'x-total-count': String(data.length) } } as never
+    }
     if (url === '/setores/sector-1') return { data: sectors[0] } as never
     return { data: [] } as never
   })
@@ -202,10 +207,29 @@ describe('HospitalDetailPage', () => {
     renderDetail('/hospitals/hospital-1?aba=equipamentos')
     const row = await screen.findByRole('link', { name: 'Abrir EQ-1, Ventilador' })
     expect(within(row).getByText('UTI Adulto')).toBeInTheDocument()
-    expect(vi.mocked(apiClient.get)).toHaveBeenCalledWith('/equipamentos', { params: { hospitalId: 'hospital-1' } })
+    expect(vi.mocked(apiClient.get)).toHaveBeenCalledWith('/equipamentos', { params: { hospitalId: 'hospital-1', pagina: 0, tamanho: 25 } })
     await chooseOption(user, 'Filtrar por setor', 'Radiologia')
-    expect(screen.queryByText('Ventilador')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Ventilador')).not.toBeInTheDocument())
+    expect(vi.mocked(apiClient.get)).toHaveBeenLastCalledWith('/equipamentos', { params: { hospitalId: 'hospital-1', setorId: 'sector-2', pagina: 0, tamanho: 25 } })
     expect(screen.getByText('Raio X')).toBeInTheDocument()
+  })
+
+  it('equipamentos: pagina no servidor, ordena pelo cabeçalho (aria-sort e URL) e volta para a página 1 ao ordenar', async () => {
+    const user = userEvent.setup()
+    renderDetail('/hospitals/hospital-1?aba=equipamentos&pagina=2')
+    await screen.findByRole('link', { name: 'Abrir EQ-1, Ventilador' })
+    expect(screen.getByText('Mostrando 1–3 de 3')).toBeInTheDocument()
+    const nameHeader = () => screen.getByRole('columnheader', { name: /Nome/ })
+    expect(nameHeader()).toHaveAttribute('aria-sort', 'none')
+    await user.click(within(nameHeader()).getByRole('button', { name: /Nome/ }))
+    await waitFor(() => expect(nameHeader()).toHaveAttribute('aria-sort', 'ascending'))
+    expect(screen.getByTestId('where')).toHaveTextContent('ordenar=nome')
+    expect(screen.getByTestId('where')).not.toHaveTextContent('pagina=')
+    expect(vi.mocked(apiClient.get)).toHaveBeenLastCalledWith('/equipamentos', { params: { hospitalId: 'hospital-1', pagina: 0, tamanho: 25, ordenar: 'nome', direcao: 'asc' } })
+    await user.click(within(nameHeader()).getByRole('button', { name: /Nome/ }))
+    await waitFor(() => expect(nameHeader()).toHaveAttribute('aria-sort', 'descending'))
+    expect(screen.getByTestId('where')).toHaveTextContent('direcao=desc')
+    expect(screen.getByRole('columnheader', { name: /Código/ })).toHaveAttribute('aria-sort', 'none')
   })
 
   it('aba inválida cai em Dados', async () => {

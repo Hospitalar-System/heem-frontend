@@ -117,11 +117,29 @@ export const demoApiAdapter: AxiosAdapter = async (config) => {
 }
 
 /** Rotas que o backend pagina (`pagina` 0-based + `tamanho`, total em X-Total-Count). */
-const PAGINATED_PATHS = new Set(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos'])
+const PAGINATED_PATHS = new Set(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos', '/equipamentos', '/categorias-equipamento'])
+const PAGINATED_PATTERNS = [/^\/hospitais\/[^/]+\/setores$/, /^\/equipamentos\/[^/]+\/documentos$/]
+
+const foldText = (value: unknown) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
+const SORT_FIELDS: Record<string, string> = { nome: 'nome', codigo: 'codigo', categoria: 'categoriaNome', criadoEm: 'criadoEm' }
+
+/** Ordenação de GET /equipamentos (`ordenar` + `direcao`): sem acento/caixa; sem categoria por último. */
+function sortEquipment(data: unknown[], params?: Record<string, unknown>) {
+  const field = SORT_FIELDS[String(params?.ordenar ?? '')]
+  if (!field) return data
+  const factor = params?.direcao === 'desc' ? -1 : 1
+  const read = (item: unknown) => (item as Record<string, unknown>)[field]
+  return [...data].sort((a, b) => {
+    const left = read(a), right = read(b)
+    if (field === 'categoriaNome' && (!left || !right)) return !left && !right ? 0 : !left ? 1 : -1
+    return foldText(left).localeCompare(foldText(right), 'pt-BR') * factor
+  })
+}
 
 /** Espelha `Paginacao` do backend: o total sempre vai no header; sem `pagina`/`tamanho` a lista vem inteira. */
-function paginate(method: string, path: string, data: unknown, params?: Record<string, unknown>) {
-  if (method !== 'get' || !(PAGINATED_PATHS.has(path) || /^\/hospitais\/[^/]+\/setores$/.test(path)) || !Array.isArray(data)) return { data, headers: {} as Record<string, string> }
+function paginate(method: string, path: string, source: unknown, params?: Record<string, unknown>) {
+  if (method !== 'get' || !(PAGINATED_PATHS.has(path) || PAGINATED_PATTERNS.some((pattern) => pattern.test(path))) || !Array.isArray(source)) return { data: source, headers: {} as Record<string, string> }
+  const data = path === '/equipamentos' ? sortEquipment(source, params) : source
   const headers = { 'x-total-count': String(data.length) }
   if (params?.pagina === undefined && params?.tamanho === undefined) return { data, headers }
   const page = Math.max(0, Number(params?.pagina ?? 0))

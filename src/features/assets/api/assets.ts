@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
 import { usePagedQuery } from '@/lib/pagination'
-import type { CreateEquipmentInput, Equipment, EquipmentFilters, Hospital, HospitalInput, Setor, SetorFilters, SetorInput, UpdateEquipmentInput, WorkOrderSummary } from '../types'
+import type { CreateEquipmentInput, Equipment, EquipmentFilters, EquipmentPageFilters, Hospital, HospitalInput, Setor, SetorFilters, SetorInput, UpdateEquipmentInput, WorkOrderSummary } from '../types'
 
 const hospitalKey = ['hospitals'] as const
 export function useHospitals() { return useQuery({ queryKey: hospitalKey, queryFn: async () => (await apiClient.get<Hospital[]>('/hospitais')).data }) }
@@ -49,6 +49,11 @@ export function useEquipments(filters: EquipmentFilters = {}) {
     queryKey: [...equipmentKey, filters],
     queryFn: async () => (await apiClient.get<Equipment[]>('/equipamentos', { params: filters })).data,
   })
+}
+
+/** Equipamentos paginados no servidor (total em X-Total-Count) com ordenação opcional. */
+export function useEquipmentsPage(filters: EquipmentPageFilters, enabled = true) {
+  return usePagedQuery<Equipment>([...equipmentKey, 'page'], '/equipamentos', { ...filters }, enabled)
 }
 
 export function useEquipment(id: string) {

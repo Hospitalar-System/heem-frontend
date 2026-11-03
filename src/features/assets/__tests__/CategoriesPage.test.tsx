@@ -25,9 +25,11 @@ const categories = [
 ]
 const checklists = [{ id: 'chk-1', nome: 'Inspeção de bomba', ativo: true }, { id: 'chk-2', nome: 'Inspeção de monitor', ativo: true }, { id: 'chk-old', nome: 'Checklist antigo', ativo: false }]
 
+let initialEntry = '/settings/categories'
+
 function TestProviders({ children }: PropsWithChildren) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
-  return <QueryClientProvider client={client}><MemoryRouter initialEntries={['/settings/categories']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Routes>
+  return <QueryClientProvider client={client}><MemoryRouter initialEntries={[initialEntry]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Routes>
     <Route path="/settings/categories" element={<RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied">{children}</RequireRole>} />
     <Route path="/access-denied" element={<h1>Acesso não permitido</h1>} />
   </Routes></MemoryRouter></QueryClientProvider>
@@ -36,8 +38,11 @@ function TestProviders({ children }: PropsWithChildren) {
 function mockApi() {
   vi.mocked(apiClient.get).mockImplementation(async (url, config) => {
     if (url === '/categorias-equipamento') {
-      const params = (config?.params ?? {}) as { ativa?: boolean; revisar?: boolean }
-      return { data: categories.filter((item) => (params.ativa === undefined || item.ativa === params.ativa) && (!params.revisar || (item.origem === 'carga' && !item.revisada))) } as never
+      const params = (config?.params ?? {}) as { ativa?: boolean; revisar?: boolean; pagina?: number; tamanho?: number }
+      const filtered = categories.filter((item) => (params.ativa === undefined || item.ativa === params.ativa) && (!params.revisar || (item.origem === 'carga' && !item.revisada)))
+      const size = params.tamanho ?? 50
+      const data = params.pagina === undefined && params.tamanho === undefined ? filtered : filtered.slice((params.pagina ?? 0) * size, ((params.pagina ?? 0) + 1) * size)
+      return { data, headers: { 'x-total-count': String(filtered.length) } } as never
     }
     if (url === '/checklists') return { data: checklists } as never
     return { data: [] } as never
@@ -51,6 +56,7 @@ function problem(code: string, status = 409) {
 describe('CategoriesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    initialEntry = '/settings/categories'
     clearAuthSession()
     setAuthSession('token', { id: 'admin-1', name: 'Clara', roles: ['admin_cliente'], tenantId: 'tenant-1' })
     mockApi()
@@ -76,12 +82,12 @@ describe('CategoriesPage', () => {
     render(<CategoriesPage />, { wrapper: TestProviders })
     await screen.findByText('Bomba de Infusão')
     await chooseOption(user, 'Filtrar por situação', 'Inativas')
-    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { ativa: false } }))
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { ativa: false, pagina: 0, tamanho: 25 } }))
     expect(await screen.findByText('Ventilador Pulmonar')).toBeInTheDocument()
     expect(screen.queryByText('Bomba de Infusão')).not.toBeInTheDocument()
     await chooseOption(user, 'Filtrar por situação', 'Todas')
     await user.click(screen.getByRole('checkbox', { name: 'A revisar' }))
-    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { revisar: true } }))
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { revisar: true, pagina: 0, tamanho: 25 } }))
     await waitFor(() => expect(screen.queryByText('Bomba de Infusão')).not.toBeInTheDocument())
     expect(screen.getByText('Monitor MX')).toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: 'A revisar' }))
@@ -191,6 +197,48 @@ describe('CategoriesPage', () => {
     await chooseOption(user, within(dialog).getByRole('combobox', { name: 'Categoria de origem' }), 'Monitor MX')
     await user.click(within(dialog).getByRole('button', { name: 'Mesclar categorias' }))
     expect(await within(dialog).findByText(/Não é possível mesclar/)).toBeInTheDocument()
+  })
+
+  it('pagina no servidor: envia pagina/tamanho, mostra total, troca página e tamanho e filtro volta para a página 0', async () => {
+    const user = userEvent.setup()
+    const many = Array.from({ length: 60 }, (_, i) => ({ id: `m${i}`, nome: `Categoria ${String(i + 1).padStart(2, '0')}`, ativa: true, checklistPadraoId: null, origem: 'manual', revisada: true, quantidadeEquipamentos: 1 }))
+    vi.mocked(apiClient.get).mockImplementation(async (url, config) => {
+      if (url !== '/categorias-equipamento') return { data: [] } as never
+      const { ativa, pagina, tamanho } = (config?.params ?? {}) as { ativa?: boolean; pagina?: number; tamanho?: number }
+      const filtered = ativa === false ? [] : many
+      const size = tamanho ?? 50
+      return { data: pagina === undefined ? filtered : filtered.slice(pagina * size, (pagina + 1) * size), headers: { 'x-total-count': String(filtered.length) } } as never
+    })
+    render(<CategoriesPage />, { wrapper: TestProviders })
+    expect(await screen.findByText('Mostrando 1–25 de 60')).toBeInTheDocument()
+    expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { pagina: 0, tamanho: 25 } })
+    await user.click(screen.getByRole('button', { name: 'Próxima página' }))
+    expect(await screen.findByText('Mostrando 26–50 de 60')).toBeInTheDocument()
+    expect(apiClient.get).toHaveBeenLastCalledWith('/categorias-equipamento', { params: { pagina: 1, tamanho: 25 } })
+    await chooseOption(user, 'Itens por página', '50')
+    expect(await screen.findByText('Mostrando 1–50 de 60')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Próxima página' }))
+    await screen.findByText('Mostrando 51–60 de 60')
+    await chooseOption(user, 'Filtrar por situação', 'Ativas')
+    await waitFor(() => expect(apiClient.get).toHaveBeenLastCalledWith('/categorias-equipamento', { params: { ativa: true, pagina: 0, tamanho: 50 } }))
+  })
+
+  it('a busca por nome é local, avisa que vale só para a página atual e a mesclagem usa a lista completa', async () => {
+    const user = userEvent.setup()
+    render(<CategoriesPage />, { wrapper: TestProviders })
+    await screen.findByText('Bomba de Infusão')
+    await user.type(screen.getByRole('searchbox', { name: 'Buscar categoria' }), 'bomba')
+    expect(await screen.findByRole('note')).toHaveTextContent('apenas as categorias da página atual')
+    await user.clear(screen.getByRole('searchbox', { name: 'Buscar categoria' }))
+    await chooseRowAction(user, 'Ações de Monitor MX', 'Mesclar outra categoria nesta')
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { ativa: true } }))
+  })
+
+  it('volta uma página quando a página atual esvazia', async () => {
+    initialEntry = '/settings/categories?pagina=3'
+    render(<CategoriesPage />, { wrapper: TestProviders })
+    expect(await screen.findByText('Mostrando 1–3 de 3')).toBeInTheDocument()
+    expect(apiClient.get).toHaveBeenLastCalledWith('/categorias-equipamento', { params: { pagina: 0, tamanho: 25 } })
   })
 
   it('shows loading, error with retry and empty states', async () => {

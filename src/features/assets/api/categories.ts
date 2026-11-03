@@ -1,20 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
+import { usePagedQuery } from '@/lib/pagination'
 import type { EquipmentCategory, EquipmentCategoryInput } from '../types'
 
 export interface CategoryFilters { ativa?: boolean; revisar?: boolean }
 
 const categoryKey = ['categories'] as const
 
-export function useCategories(filters: CategoryFilters = {}) {
-  const params = {
+function filterParams(filters: CategoryFilters) {
+  return {
     ...(filters.ativa === undefined ? {} : { ativa: filters.ativa }),
     ...(filters.revisar ? { revisar: true } : {}),
   }
+}
+
+/** Lista COMPLETA (sem `pagina`/`tamanho`): seletores, filtros e mesclagem. A tela de categorias usa `useCategoriesPage`. */
+export function useCategories(filters: CategoryFilters = {}) {
+  const params = filterParams(filters)
   return useQuery({
     queryKey: [...categoryKey, params],
     queryFn: async () => (await apiClient.get<EquipmentCategory[]>('/categorias-equipamento', { params })).data,
   })
+}
+
+/** Categorias paginadas no servidor (`pagina` 0-based, total em X-Total-Count). */
+export function useCategoriesPage(filters: CategoryFilters, page: { pagina: number; tamanho: number }) {
+  return usePagedQuery<EquipmentCategory>([...categoryKey, 'page'], '/categorias-equipamento', { ...filterParams(filters), ...page })
 }
 
 function useInvalidateCategories() {

@@ -11,7 +11,8 @@ import { Field, Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
 import { FormSelect } from '@/components/ui/FormSelect'
 import { useChecklists } from '@/features/maintenance/api/work-orders'
-import { getCategoryErrorMessage, useCategories, useDeactivateCategory, useMarkCategoryReviewed, useMergeCategory, useSaveCategory } from '../api/categories'
+import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
+import { getCategoryErrorMessage, useCategories, useCategoriesPage, useDeactivateCategory, useMarkCategoryReviewed, useMergeCategory, useSaveCategory } from '../api/categories'
 import { categorySchema, type CategoryFormValues } from '../schemas/assets.schema'
 import type { EquipmentCategory } from '../types'
 import { Checkbox } from '@/components/ui/Checkbox'
@@ -33,14 +34,17 @@ export function CategoriesPage() {
   const [editing, setEditing] = useState<EquipmentCategory | null>(null)
   const [deactivating, setDeactivating] = useState<EquipmentCategory | null>(null)
   const [merging, setMerging] = useState<EquipmentCategory | null>(null)
-  const categories = useCategories({ ativa: status === 'ativas' ? true : status === 'inativas' ? false : undefined, revisar: onlyReview })
+  const pagination = usePaginationParams()
+  // Tela paginada no servidor; seletores (mesclagem, formulários) usam `useCategories`, que traz a lista completa.
+  const categories = useCategoriesPage({ ativa: status === 'ativas' ? true : status === 'inativas' ? false : undefined, revisar: onlyReview }, pagination.apiParams)
+  usePageClamp(pagination, categories.data?.total, !categories.isPlaceholderData)
   const checklists = useChecklists()
   const reviewed = useMarkCategoryReviewed()
   const checklistName = useMemo(() => new Map((checklists.data ?? []).map((item) => [item.id, item.nome])), [checklists.data])
   const visible = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('pt-BR')
-    return (categories.data ?? []).filter((item) => !term || item.nome.toLocaleLowerCase('pt-BR').includes(term))
-  }, [categories.data, search])
+    return (categories.data?.items ?? []).filter((item) => !term || item.nome.toLocaleLowerCase('pt-BR').includes(term))
+  }, [categories.data?.items, search])
   const hasFilters = Boolean(status || onlyReview || search.trim())
 
   async function markReviewed(category: EquipmentCategory) {
@@ -61,14 +65,15 @@ export function CategoriesPage() {
     { key: 'situacao', header: 'Situação', cell: (category) => <StatusBadge tone={category.ativa ? 'success' : 'neutral'}>{category.ativa ? 'Ativa' : 'Inativa'}</StatusBadge> },
   ]
 
-  const clearFilters = () => { setStatus(''); setOnlyReview(false); setSearch('') }
+  const clearFilters = () => { setStatus(''); setOnlyReview(false); setSearch(''); pagination.resetPage() }
 
   return <AdminPageShell tabs={<SettingsNav />} title="Categorias de equipamento" subtitle="Tipos de equipamento e checklist padrão" action={<PageAction onClick={() => setCreating(true)} collapseLabelOnMobile>Nova categoria</PageAction>}>
     <FilterBar label="Filtros de categorias" className="mb-4">
-      <label className="min-w-0"><span className="sr-only">Filtrar por situação</span><Select size="sm" aria-label="Filtrar por situação" value={status} onChange={setStatus} options={statusOptions} /></label>
-      <Checkbox label="A revisar" checked={onlyReview} onCheckedChange={setOnlyReview} containerClassName="h-9 justify-center rounded-md border border-border bg-bg px-3 text-xs text-text-primary" />
-      <label className="relative min-w-0 sm:col-span-2"><span className="sr-only">Buscar categoria</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input aria-label="Buscar categoria" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nome da categoria" className={`${filterInputClass} pl-8`} /></label>
+      <label className="min-w-0"><span className="sr-only">Filtrar por situação</span><Select size="sm" aria-label="Filtrar por situação" value={status} onChange={(next) => { setStatus(next); pagination.resetPage() }} options={statusOptions} /></label>
+      <Checkbox label="A revisar" checked={onlyReview} onCheckedChange={(next) => { setOnlyReview(next); pagination.resetPage() }} containerClassName="h-9 justify-center rounded-md border border-border bg-bg px-3 text-xs text-text-primary" />
+      <label className="relative min-w-0 sm:col-span-2"><span className="sr-only">Buscar categoria</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input aria-label="Buscar categoria" type="search" value={search} onChange={(event) => { setSearch(event.target.value); pagination.resetPage() }} placeholder="Nome da categoria" title="A busca filtra apenas as categorias da página atual" className={`${filterInputClass} pl-8`} /></label>
     </FilterBar>
+    {search.trim() ? <p role="note" className="mb-3 text-xs text-text-muted">A busca por nome filtra apenas as categorias da página atual; situação e "A revisar" valem para todos os resultados.</p> : null}
 
     <DataTable
       label="Categorias de equipamento"
@@ -83,6 +88,7 @@ export function CategoriesPage() {
       ]}
       isLoading={categories.isLoading}
       loadingLabel="Carregando categorias"
+      pagination={{ page: pagination.page, size: pagination.size, total: categories.data?.total ?? 0, onPageChange: pagination.setPage, onSizeChange: pagination.setSize }}
       minWidth="900px"
       error={categories.isError ? { message: 'Não foi possível carregar as categorias.', onRetry: () => void categories.refetch() } : null}
       empty={{
