@@ -67,6 +67,16 @@ describe('modo de demonstração', () => {
     expect(response.data).toEqual([])
   })
 
+  it('simula a abertura de chamado pelo admin, com ou sem técnico', async () => {
+    const plain = await apiClient.post('/chamados', { equipamentoId: 'equipment-demo-1', descricao: 'Sem imagem', severidade: 'CRITICA' })
+    expect(plain.data).toEqual(expect.objectContaining({ status: 'ABERTO', severidade: 'CRITICA', hospitalId: 'hospital-demo-1', setorId: 'sector-demo-1', tecnicoResponsavelId: null, abertoPor: 'user-demo-1' }))
+    const assigned = await apiClient.post('/chamados', { equipamentoId: 'equipment-demo-3', descricao: 'Sem carga', severidade: 'BAIXA', tecnicoResponsavelId: 'user-demo-2' })
+    expect(assigned.data).toEqual(expect.objectContaining({ hospitalId: 'hospital-demo-2', tecnicoResponsavelId: 'user-demo-2' }))
+    const listed = (await apiClient.get('/chamados')).data as Array<{ id: string }>
+    expect(listed.map((ticket) => ticket.id)).toEqual(expect.arrayContaining([plain.data.id, assigned.data.id]))
+    await expect(apiClient.post('/chamados', { equipamentoId: 'inexistente', descricao: 'x', severidade: 'MEDIA' })).rejects.toMatchObject({ response: { status: 404 } })
+  })
+
   it('simula listar, criar, editar e desativar planos preventivos', async () => {
     const listed = await apiClient.get('/planos-preventivos', { params: { ativo: true } })
     expect(listed.data.length).toBeGreaterThanOrEqual(2)

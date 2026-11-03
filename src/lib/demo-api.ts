@@ -200,6 +200,18 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     const record = equipment.find((item) => item.id === equipmentUpdate[1])
     if (record) { Object.assign(record, categorizedBody(body)); return record }
   }
+  if (path === '/chamados' && method === 'post') {
+    const target = equipment.find((item) => item.id === body.equipamentoId)
+    if (!target) throw Object.assign(new Error('Equipamento não encontrado'), { response: { status: 404, data: { code: 'EQUIPAMENTO_NAO_ENCONTRADO' } } })
+    const sector = sectors.find((item) => item.id === target.setorId)
+    const created = {
+      id: (body.id as string | undefined) ?? makeId('ticket-demo'), hospitalId: sector?.hospitalId ?? hospitals[0].id, setorId: target.setorId, equipamentoId: target.id,
+      abertoPor: 'user-demo-1', descricao: body.descricao, severidade: body.severidade ?? 'MEDIA', status: 'ABERTO', abertoEm: now, slaStatus: 'no_prazo',
+      codigo: `CH-${String(tickets.length + 1).padStart(4, '0')}`, tecnicoResponsavelId: (body.tecnicoResponsavelId as string | undefined) ?? null, primeiraRespostaEm: null, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false,
+    }
+    tickets.unshift(created)
+    return created
+  }
   if (path === '/tenants' || path === '/hospitais' || path === '/equipamentos' || path === '/ordens-de-trabalho' || path === '/checklists' || path === '/chamados' || path === '/users' || path === '/platform-users') {
     const collection = routeCollection(path)
     if (method === 'get' && path === '/ordens-de-trabalho') return filterCollection(collection, path, params).map(workOrderListView)

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
 import { fetchPaged, usePagedQuery } from '@/lib/pagination'
-import type { ChangeTicketStatusInput, CorrectiveWorkOrder, CorrectiveWorkOrderInput, Ticket, TicketHistoryEvent } from '../types'
+import type { ChangeTicketStatusInput, CreateTicketInput, CorrectiveWorkOrder, CorrectiveWorkOrderInput, Ticket, TicketHistoryEvent } from '../types'
 
 export const ticketsKey = ['tickets'] as const
 
@@ -73,6 +73,15 @@ function useInvalidateTicket() {
   }
 }
 
+/** Admin do cliente registra um chamado; com `tecnicoResponsavelId` o chamado já nasce atribuído. */
+export function useCreateTicket() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: CreateTicketInput) => (await apiClient.post<Ticket>('/chamados', input)).data,
+    onSuccess: () => client.invalidateQueries({ queryKey: ticketsKey }),
+  })
+}
+
 export function useAssumeTicket() {
   const invalidate = useInvalidateTicket()
   return useMutation({
@@ -125,4 +134,24 @@ export function ticketActionErrorMessage(error: unknown, fallback = 'Não foi po
     : undefined
   if (data?.code && data.code !== 'OT_ABERTA' && ticketErrorMessages[data.code]) return ticketErrorMessages[data.code]
   return data?.detail ?? fallback
+}
+
+const createTicketErrorMessages: Record<string, string> = {
+  PAPEL_INVALIDO: 'O usuário escolhido não é técnico.',
+  TECNICO_FORA_DO_HOSPITAL: 'O técnico precisa estar ativo e vinculado ao hospital do equipamento.',
+}
+
+/** Mensagem pt-BR da abertura de chamado por status/code do ProblemDetail; a descrição digitada nunca entra na mensagem. */
+export function createTicketErrorMessage(error: unknown) {
+  const response = typeof error === 'object' && error !== null && 'response' in error
+    ? (error as { response?: { status?: number; data?: { detail?: string; code?: string } } }).response
+    : undefined
+  if (!response) return 'Sem conexão com o servidor. Verifique a rede e tente novamente; os dados foram mantidos.'
+  const { status, data } = response
+  if (data?.code && createTicketErrorMessages[data.code]) return createTicketErrorMessages[data.code]
+  if (status === 404) return 'Equipamento não encontrado. Escolha outro equipamento.'
+  if (status === 403) return 'Você não tem permissão para abrir chamados.'
+  if (status === 400) return data?.detail ?? 'Dados inválidos. Revise os campos e tente novamente.'
+  if (status && status >= 500) return 'O servidor não conseguiu abrir o chamado. Tente novamente em instantes.'
+  return data?.detail ?? 'Não foi possível abrir o chamado. Tente novamente.'
 }

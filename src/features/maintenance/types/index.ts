@@ -55,6 +55,15 @@ export interface TicketHistoryEvent {
   ocorridoEm: string
 }
 
+/** Corpo de POST /chamados (Story 18.1); `tecnicoResponsavelId` só para admin_cliente. */
+export interface CreateTicketInput {
+  id: string
+  equipamentoId: string
+  descricao: string
+  severidade: 'CRITICA' | 'ALTA' | 'MEDIA' | 'BAIXA'
+  tecnicoResponsavelId?: string
+}
+
 export interface CorrectiveWorkOrderInput {
   codigo: string
   chamadoId: string
