@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren, type ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -38,8 +38,8 @@ function TestProviders({ children }: PropsWithChildren) {
 function mockApi() {
   vi.mocked(apiClient.get).mockImplementation(async (url, config) => {
     if (url === '/categorias-equipamento') {
-      const params = (config?.params ?? {}) as { ativa?: boolean; revisar?: boolean; pagina?: number; tamanho?: number }
-      const filtered = categories.filter((item) => (params.ativa === undefined || item.ativa === params.ativa) && (!params.revisar || (item.origem === 'carga' && !item.revisada)))
+      const params = (config?.params ?? {}) as { ativa?: boolean; revisar?: boolean; q?: string; pagina?: number; tamanho?: number }
+      const filtered = categories.filter((item) => (params.ativa === undefined || item.ativa === params.ativa) && (!params.revisar || (item.origem === 'carga' && !item.revisada)) && (!params.q || item.nome.toLowerCase().includes(params.q.toLowerCase())))
       const size = params.tamanho ?? 50
       const data = params.pagina === undefined && params.tamanho === undefined ? filtered : filtered.slice((params.pagina ?? 0) * size, ((params.pagina ?? 0) + 1) * size)
       return { data, headers: { 'x-total-count': String(filtered.length) } } as never
@@ -77,7 +77,7 @@ describe('CategoriesPage', () => {
     expect(within(screen.getByRole('row', { name: /Ventilador Pulmonar/ })).getByText('Inativa')).toBeInTheDocument()
   })
 
-  it('sends ativa and revisar filters to the API and searches by name', async () => {
+  it('sends ativa and revisar filters to the API', async () => {
     const user = userEvent.setup()
     render(<CategoriesPage />, { wrapper: TestProviders })
     await screen.findByText('Bomba de Infusão')
@@ -90,10 +90,21 @@ describe('CategoriesPage', () => {
     await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { revisar: true, pagina: 0, tamanho: 25 } }))
     await waitFor(() => expect(screen.queryByText('Bomba de Infusão')).not.toBeInTheDocument())
     expect(screen.getByText('Monitor MX')).toBeInTheDocument()
-    await user.click(screen.getByRole('checkbox', { name: 'A revisar' }))
-    await user.type(screen.getByRole('searchbox', { name: 'Buscar categoria' }), 'ventilador')
-    expect(await screen.findByText('Ventilador Pulmonar')).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByText('Monitor MX')).not.toBeInTheDocument())
+  })
+
+  it('envia a busca por nome ao servidor com debounce e o total reflete o filtro', async () => {
+    render(<CategoriesPage />, { wrapper: TestProviders })
+    await screen.findByText('Bomba de Infusão')
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar categoria' }), { target: { value: 'ventilador' } })
+      expect(apiClient.get).not.toHaveBeenCalledWith('/categorias-equipamento', { params: { q: 'ventilador', pagina: 0, tamanho: 25 } })
+      await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+    } finally { vi.useRealTimers() }
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { q: 'ventilador', pagina: 0, tamanho: 25 } }))
+    expect(await screen.findByText('Mostrando 1–1 de 1')).toBeInTheDocument()
+    expect(screen.queryByText('Monitor MX')).not.toBeInTheDocument()
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 
   it('creates a category with name and default checklist (only active checklists offered)', async () => {
@@ -223,13 +234,10 @@ describe('CategoriesPage', () => {
     await waitFor(() => expect(apiClient.get).toHaveBeenLastCalledWith('/categorias-equipamento', { params: { ativa: true, pagina: 0, tamanho: 50 } }))
   })
 
-  it('a busca por nome é local, avisa que vale só para a página atual e a mesclagem usa a lista completa', async () => {
+  it('a mesclagem usa a lista completa de categorias', async () => {
     const user = userEvent.setup()
     render(<CategoriesPage />, { wrapper: TestProviders })
     await screen.findByText('Bomba de Infusão')
-    await user.type(screen.getByRole('searchbox', { name: 'Buscar categoria' }), 'bomba')
-    expect(await screen.findByRole('note')).toHaveTextContent('apenas as categorias da página atual')
-    await user.clear(screen.getByRole('searchbox', { name: 'Buscar categoria' }))
     await chooseRowAction(user, 'Ações de Monitor MX', 'Mesclar outra categoria nesta')
     await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { ativa: true } }))
   })

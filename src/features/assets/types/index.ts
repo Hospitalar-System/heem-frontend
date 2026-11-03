@@ -137,6 +137,10 @@ export interface EquipmentFilters {
   /** Data ISO yyyy-MM-dd (inclusive): ao menos um documento vigente com validade até ela. */
   vencendoEm?: string
   documentoVencido?: boolean
+  /** Busca no servidor (código, nome, modelo, série, categoria), sem acento/caixa. */
+  q?: string
+  /** Ciclo de vida em minúsculas: ativo, em_manutencao, inativo ou descartado. */
+  status?: string
 }
 
 export type EquipmentSortField = 'nome' | 'codigo' | 'categoria' | 'criadoEm'

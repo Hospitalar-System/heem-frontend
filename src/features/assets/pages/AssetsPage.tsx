@@ -6,23 +6,24 @@ import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { EquipmentListTable } from '../components/EquipmentListTable'
 import { useEquipmentsPage, useHospitals, useSectorsForHospitals } from '../api/assets'
 import { useCategories } from '../api/categories'
-import type { EquipmentLifecycle } from '../types'
 import { Select } from '@/components/ui/Select'
 import { PageAction } from '@/components/ui/PageAction'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { addDays, isoOf, todayCivil } from '@/components/ui/civil-date'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 import { useSortParams } from '@/hooks/useSortParams'
+import { useServerSearch } from '@/hooks/useServerSearch'
 
 const inputClass = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
-const lifecycleOptions: Array<{ value: EquipmentLifecycle | ''; label: string }> = [
+/** Valores de `status` aceitos por GET /equipamentos (minúsculas). */
+const lifecycleOptions = [
   { value: '', label: 'Todos os status' },
-  { value: 'ATIVO', label: 'Ativo' },
-  { value: 'EM_MANUTENCAO', label: 'Em manutenção' },
-  { value: 'INATIVO', label: 'Inativo' },
-  { value: 'DESATIVADO', label: 'Desativado' },
-  { value: 'DESCARTADO', label: 'Descartado' },
+  { value: 'ativo', label: 'Ativo' },
+  { value: 'em_manutencao', label: 'Em manutenção' },
+  { value: 'inativo', label: 'Inativo' },
+  { value: 'descartado', label: 'Descartado' },
 ]
+const parseStatus = (value: string | null) => (lifecycleOptions.some((option) => option.value && option.value === value) ? (value as string) : '')
 
 const NO_CATEGORY = '__sem_categoria__'
 /** Janela de "vencendo" do painel (documentosVencendo30d). */
@@ -44,11 +45,11 @@ export function AssetsPage() {
   const { sort, apiParams: sortParams, onSortChange } = useSortParams(sortFields)
   const [hospitalId, setHospitalId] = useState('')
   const [sectorId, setSectorId] = useState('')
-  const [status, setStatus] = useState<EquipmentLifecycle | ''>('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const categories = useCategories()
-  const [search, setSearch] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
+  const status = parseStatus(searchParams.get('status'))
+  const search = useServerSearch(pagination)
   const [documentsFilter, setDocumentsFilter] = useState<DocumentsFilter>(() => parseDocumentsFilter(searchParams.get('documentos')))
   const changeDocumentsFilter = (next: DocumentsFilter) => {
     setDocumentsFilter(next)
@@ -62,26 +63,18 @@ export function AssetsPage() {
     setorId: sectorId || undefined,
     categoriaId: categoryFilter && categoryFilter !== NO_CATEGORY ? categoryFilter : undefined,
     semCategoria: categoryFilter === NO_CATEGORY ? true : undefined,
+    q: search.term,
+    status: status || undefined,
     vencendoEm: expiringUntil,
     documentoVencido: documentsFilter === 'vencido' ? true : undefined,
   })
   const sectors = useSectorsForHospitals(hospitals.data?.map(({ id }) => id) ?? [])
   const sectorNameById = useMemo(() => new Map((sectors.data ?? []).map((sector) => [sector.id, sector.nome])), [sectors.data])
-  const visibleEquipment = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase('pt-BR')
-    return (equipment.data?.items ?? []).filter((item) => {
-      if (status && item.statusCicloVida !== status) return false
-      if (!term) return true
-      return [item.codigo, item.nome, item.modelo, item.numeroSerie, item.categoriaNome]
-        .some((value) => value?.toLocaleLowerCase('pt-BR').includes(term))
-    })
-  }, [equipment.data, search, status])
-
   const total = equipment.data?.total ?? 0
   usePageClamp(pagination, equipment.data?.total, !equipment.isPlaceholderData)
-  const hasEquipment = (equipment.data?.items.length ?? 0) > 0
-  const pageOnlyFilters = Boolean(status || search.trim())
-  const clearFilters = () => { setHospitalId(''); setSectorId(''); setStatus(''); setCategoryFilter(''); setSearch(''); setSearchParams((current) => { const params = new URLSearchParams(current); params.delete('documentos'); params.delete('pagina'); return params }, { replace: true }); setDocumentsFilter('') }
+  // Com filtro ativo, lista vazia significa "nada encontrado" (o filtro agora é do servidor), não "nada cadastrado".
+  const hasEquipment = (equipment.data?.items.length ?? 0) > 0 || Boolean(status || search.term || hospitalId || sectorId || categoryFilter || documentsFilter)
+  const clearFilters = () => { setHospitalId(''); setSectorId(''); setCategoryFilter(''); search.clear(); setSearchParams((current) => { const params = new URLSearchParams(current); params.delete('documentos'); params.delete('status'); params.delete('q'); params.delete('pagina'); return params }, { replace: true }); setDocumentsFilter('') }
 
   return <AdminPageShell title="Equipamentos" subtitle="Ativos dos hospitais do tenant" action={isAdmin ? <PageAction to="/assets/new" collapseLabelOnMobile>Novo equipamento</PageAction> : undefined}>
     <FilterBar label="Filtros de equipamentos" className="mb-4">
@@ -95,7 +88,7 @@ export function AssetsPage() {
         </label>
         <label className="min-w-0">
           <span className="sr-only">Filtrar por status</span>
-          <Select size="sm" aria-label="Filtrar por status" value={status} onChange={(next) => { setStatus(next as EquipmentLifecycle | ''); pagination.resetPage() }} options={lifecycleOptions} />
+          <Select size="sm" aria-label="Filtrar por status" value={status} onChange={(next) => pagination.setFilters({ status: next })} options={lifecycleOptions} />
         </label>
         <label className="min-w-0">
           <span className="sr-only">Filtrar por categoria</span>
@@ -108,14 +101,13 @@ export function AssetsPage() {
         <label className="relative min-w-0 sm:col-span-2">
           <span className="sr-only">Buscar equipamento</span>
           <Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-          <input aria-label="Buscar equipamento" type="search" value={search} onChange={(event) => { setSearch(event.target.value); pagination.resetPage() }} placeholder="Código, nome, modelo, série…" title="Busca por código, nome, modelo, série ou categoria" className={`${inputClass} truncate pl-8`} />
+          <input aria-label="Buscar equipamento" type="search" value={search.input} onChange={(event) => search.setInput(event.target.value)} placeholder="Código, nome, modelo, série…" title="Busca por código, nome, modelo, série ou categoria" className={`${inputClass} truncate pl-8`} />
         </label>
       </FilterBar>
 
     {hospitals.isError ? <ErrorState message="Não foi possível carregar os hospitais para os filtros." onRetry={() => void hospitals.refetch()} /> : null}
-    {pageOnlyFilters ? <p role="note" className="mb-3 text-xs text-text-muted">Status e busca filtram apenas os equipamentos da página atual; hospital, setor, categoria, documentos e ordenação valem para todos os resultados.</p> : null}
     <EquipmentListTable
-      items={visibleEquipment}
+      items={equipment.data?.items ?? []}
       sort={sort}
       onSortChange={onSortChange}
       pagination={{ page: pagination.page, size: pagination.size, total, onPageChange: pagination.setPage, onSizeChange: pagination.setSize }}
