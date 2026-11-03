@@ -88,6 +88,9 @@ export const exportRequestSchema = z.object({
 
 export type ExportRequest = z.infer<typeof exportRequestSchema>
 
+export type CampaignExportFormat = 'pdf' | 'xlsx' | 'csv'
+export interface CampaignExportRequest { campanhaId: string; formato: CampaignExportFormat }
+
 export const exportStatusSchema = z.object({
   id: z.string().min(1),
   status: z.enum(['pendente', 'concluido', 'falhou']),
@@ -142,12 +145,32 @@ export function useRequestReportExport() {
   })
 }
 
+/** Relatório de uma campanha (Story 18.4): sem período; o backend cobre todas as OTs da campanha. Mesmo fluxo assíncrono das demais exportações. */
+export function useRequestCampaignExport() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ campanhaId, formato }: CampaignExportRequest) => {
+      const { data } = await apiClient.post<unknown>('/relatorios/exportacoes', { conteudo: 'campanha', formato, campanhaId })
+      return exportStatusSchema.parse(data)
+    },
+    onSuccess: (exportation) => queryClient.setQueryData(['report-export', exportation.id], exportation),
+  })
+}
+
+export const EXPORT_POLL_MS = 2000
+/** Teto do polling (~10 min): depois disso para de consultar sozinho e deixa a atualização manual. */
+export const EXPORT_POLL_MAX_UPDATES = 300
+
 export function useReportExport(id: string | null) {
-  return useQuery({
-    queryKey: ['report-export', id],
+  const client = useQueryClient()
+  const queryKey = ['report-export', id]
+  const query = useQuery({
+    queryKey,
     queryFn: async () => exportStatusSchema.parse((await apiClient.get<unknown>(`/relatorios/exportacoes/${id}`)).data),
     enabled: Boolean(id),
-    refetchInterval: (query) => query.state.data?.status === 'pendente' ? 2000 : false,
+    refetchInterval: (state) => state.state.data?.status === 'pendente' && state.state.dataUpdateCount < EXPORT_POLL_MAX_UPDATES ? EXPORT_POLL_MS : false,
     retry: false,
   })
+  const pollStopped = query.data?.status === 'pendente' && (client.getQueryState(queryKey)?.dataUpdateCount ?? 0) >= EXPORT_POLL_MAX_UPDATES
+  return { ...query, pollStopped }
 }

@@ -1,12 +1,14 @@
 import { ArrowLeft, Ban } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { Modal } from '@/components/ui/Modal'
 import { useHospitals } from '@/features/assets/api/assets'
+import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { isCampaignRunning, useCampaign, useCancelCampaign } from '../api/preventive-campaigns'
-import { CampaignStatusBadge, Metric, PendingBreakdown } from '../components/CampaignParts'
+import { CampaignExport } from '../components/CampaignExport'
+import { CampaignStatusBadge, CampaignSummary, Metric, PendingBreakdown, SkippedBreakdown } from '../components/CampaignParts'
 import type { CampaignPendingReason } from '../types/campaigns'
 import { formatPlanDate } from '../utils/preventive-plans'
 import { assignmentModeLabels, campaignApiError, recurrenceLabel } from '../utils/preventive-campaigns'
@@ -18,6 +20,8 @@ export function PreventiveCampaignDetailPage() {
   const campaign = useCampaign(id)
   const hospitals = useHospitals()
   const cancel = useCancelCampaign()
+  const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
+  const isAdmin = auth.user?.roles.includes('admin_cliente') ?? false
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [cancelError, setCancelError] = useState('')
   const data = campaign.data
@@ -66,7 +70,10 @@ export function PreventiveCampaignDetailPage() {
               <p className="mt-1 text-xs text-text-secondary">{hospitals.data?.find((item) => item.id === data.hospitalId)?.nome ?? '—'} · {recurrenceLabel(data.recorrencia, data.intervalo)} · {assignmentModeLabels[data.modoAtribuicao]}</p>
               <p className="mt-0.5 text-xs text-text-secondary">Início {formatPlanDate(data.dataInicio)}{data.dataFim ? ` · fim ${formatPlanDate(data.dataFim)}` : ''}{data.ativa && data.proximaData ? ` · próxima execução ${formatPlanDate(data.proximaData)}` : ''}</p>
             </div>
-            {data.ativa && <button type="button" onClick={() => { setCancelError(''); setConfirmCancel(true) }} className={`inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-danger hover:bg-bg ${focusRing}`}><Ban aria-hidden="true" size={14} />Cancelar campanha</button>}
+            <div className="flex flex-wrap items-start gap-2">
+              {isAdmin && <CampaignExport campaignId={data.id} />}
+              {data.ativa && <button type="button" onClick={() => { setCancelError(''); setConfirmCancel(true) }} className={`inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-danger hover:bg-bg ${focusRing}`}><Ban aria-hidden="true" size={14} />Cancelar campanha</button>}
+            </div>
           </div>
         </section>
 
@@ -80,6 +87,8 @@ export function PreventiveCampaignDetailPage() {
           {pollStopped && <p className="mt-2 text-xs text-warning">A atualização automática foi pausada. <button type="button" onClick={() => void campaign.refetch()} className={`rounded font-medium text-primary underline ${focusRing}`}>Atualizar agora</button></p>}
         </section>
 
+        <CampaignSummary campaign={data} pendingCounts={pendingCounts} />
+
         <section aria-label="Situação das OTs" className="rounded-lg border border-border bg-surface p-4 md:p-5">
           <h2 className="text-sm font-semibold text-text-primary">Ordens de trabalho da campanha</h2>
           <dl className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-6">
@@ -91,6 +100,11 @@ export function PreventiveCampaignDetailPage() {
         <section aria-label="Pendências da campanha" className="rounded-lg border border-border bg-surface p-4 md:p-5">
           <h2 className="mb-3 text-sm font-semibold text-text-primary">Pendências</h2>
           <PendingBreakdown counts={pendingCounts} items={data.pendenciasDetalhe} total={pendingTotal} />
+        </section>
+
+        <section aria-label="Puladas da campanha" className="rounded-lg border border-border bg-surface p-4 md:p-5">
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">Puladas</h2>
+          <SkippedBreakdown items={data.puladasDetalhe ?? []} total={data.execucao.puladas} />
         </section>
       </>}
     </div>
