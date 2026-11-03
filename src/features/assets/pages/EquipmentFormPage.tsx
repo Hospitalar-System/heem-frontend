@@ -115,7 +115,7 @@ export function EquipmentFormPage() {
             <Field label="Modelo"><input className={inputClass} {...form.register('modelo')} /></Field>
             <Field label="Número de série"><input className={inputClass} {...form.register('numeroSerie')} /></Field>
             <Field label="Fabricante"><input className={inputClass} {...form.register('marca')} /></Field>
-            {editing ? <Field label="Setor e hospital"><input value={`${currentSector.data?.nome ?? '—'} · ${hospitals.data?.find((hospital) => hospital.id === currentSector.data?.hospitalId)?.nome ?? '—'}`} disabled className={inputClass} /></Field> : <>
+            {editing ? <Field label="Setor e hospital"><input value={`${currentSector.data?.nome ?? '—'}${currentSector.data?.ativo === false ? ' (desativado)' : ''} · ${hospitals.data?.find((hospital) => hospital.id === currentSector.data?.hospitalId)?.nome ?? '—'}`} disabled className={inputClass} /></Field> : <>
               <Field label="Hospital" error={hospitals.isError ? 'Não foi possível carregar hospitais.' : undefined}><Select value={hospitalId} onChange={(next) => { setHospitalId(next); form.setValue('setorId', '') }} placeholder="Selecione um hospital" options={(hospitals.data ?? []).map((hospital) => ({ value: hospital.id, label: hospital.nome }))} /></Field>
               <Field label="Setor" error={form.formState.errors.setorId?.message}><FormSelect control={form.control} name="setorId" disabled={!hospitalId || sectors.isLoading} placeholder={hospitalId ? 'Selecione um setor' : 'Selecione primeiro um hospital'} aria-invalid={Boolean(form.formState.errors.setorId)} options={(sectors.data ?? []).map((sector) => ({ value: sector.id, label: `${sector.codigo} · ${sector.nome}` }))} /></Field>
             </>}
@@ -178,6 +178,7 @@ function getEquipmentError(error: unknown) {
   if (categoryMessage) return categoryMessage
   if (typeof error === 'object' && error !== null && 'response' in error) {
     const response = (error as { response?: { data?: { detail?: string; code?: string } } }).response
+    if (response?.data?.code === 'SETOR_DESATIVADO') return 'Este setor está desativado. Reative o setor ou escolha outro para cadastrar o equipamento.'
     if (response?.data?.detail) return response.data.detail
     if (response?.data?.code) return response.data.code
   }

@@ -3,8 +3,16 @@ export type GrupoInstalacao = 'GRUPO_0' | 'GRUPO_1' | 'GRUPO_2'
 
 export interface Hospital { id: string; nome: string; cnpj: string }
 export interface HospitalInput { nome: string; cnpj: string }
-export interface Setor { id: string; hospitalId: string; codigo: string; nome: string; andar?: string | null; classificacaoRisco: RiscoSetor; grupoInstalacao: GrupoInstalacao }
-export type SetorInput = Omit<Setor, 'id' | 'hospitalId'>
+export interface Setor {
+  id: string; hospitalId: string; codigo: string; nome: string; andar?: string | null; classificacaoRisco: RiscoSetor; grupoInstalacao: GrupoInstalacao
+  /** Campos do servidor; ausentes em respostas antigas (tratar como ativo, sem contagem). */
+  ativo?: boolean
+  equipamentosAtivos?: number
+  equipamentosTotal?: number
+}
+export type SetorInput = Omit<Setor, 'id' | 'hospitalId' | 'ativo' | 'equipamentosAtivos' | 'equipamentosTotal'>
+export type SetorAtivoFiltro = 'true' | 'false' | 'todos'
+export interface SetorFilters { ativo?: SetorAtivoFiltro; pagina?: number; tamanho?: number }
 export interface HospitalMetrics { setores: number; equipamentos: number; ordensDevidas: number | null }
 export interface EquipamentoResumo { id: string }
 export interface OrdemResumo { equipamentoId: string; dataAgendada: string; status: 'AGENDADA' | 'EM_EXECUCAO' }
