@@ -3,7 +3,7 @@ import { apiClient } from '@/lib/axios'
 import { usePagedQuery } from '@/lib/pagination'
 import type { EquipmentCategory, EquipmentCategoryInput } from '../types'
 
-export interface CategoryFilters { ativa?: boolean; revisar?: boolean }
+export interface CategoryFilters { ativa?: boolean; revisar?: boolean; q?: string }
 
 const categoryKey = ['categories'] as const
 
@@ -11,6 +11,7 @@ function filterParams(filters: CategoryFilters) {
   return {
     ...(filters.ativa === undefined ? {} : { ativa: filters.ativa }),
     ...(filters.revisar ? { revisar: true } : {}),
+    ...(filters.q ? { q: filters.q } : {}),
   }
 }
 

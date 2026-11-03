@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { useState, type PropsWithChildren, type ReactNode } from 'react'
@@ -43,15 +43,18 @@ describe('AssetsPage: paginação e ordenação no servidor', () => {
     clearAuthSession()
     setAuthSession('token', { id: 'user-1', name: 'Ana', roles: ['admin_cliente'], tenantId: 'tenant-1' })
     vi.mocked(apiClient.get).mockImplementation(async (url, config) => {
-      const params = ((config as { params?: Record<string, unknown> } | undefined)?.params ?? {}) as { pagina?: number; tamanho?: number; ordenar?: string; direcao?: string }
+      const params = ((config as { params?: Record<string, unknown> } | undefined)?.params ?? {}) as { pagina?: number; tamanho?: number; ordenar?: string; direcao?: string; q?: string; status?: string }
       if (url === '/hospitais') return { data: [{ id: 'hospital-1', nome: 'Santa Casa', cnpj: '' }] } as never
       if (url === '/categorias-equipamento') return { data: categories } as never
       if (url === '/hospitais/hospital-1/setores') return { data: [{ id: 'sector-1', hospitalId: 'hospital-1', codigo: 'ST-01', nome: 'UTI Adulto' }] } as never
       if (url === '/equipamentos') {
-        const sorted = params.ordenar === 'nome' && params.direcao === 'desc' ? [...all].reverse() : all
+        const filtered = all
+          .filter((item) => !params.q || item.nome.toLowerCase().includes(params.q.toLowerCase()))
+          .filter((item) => !params.status || item.statusCicloVida.toLowerCase() === params.status)
+        const sorted = params.ordenar === 'nome' && params.direcao === 'desc' ? [...filtered].reverse() : filtered
         const size = params.tamanho ?? 50
         const page = params.pagina ?? 0
-        return { data: sorted.slice(page * size, (page + 1) * size), headers: { 'x-total-count': String(all.length) } } as never
+        return { data: sorted.slice(page * size, (page + 1) * size), headers: { 'x-total-count': String(filtered.length) } } as never
       }
       return { data: [] } as never
     })
@@ -114,14 +117,27 @@ describe('AssetsPage: paginação e ordenação no servidor', () => {
     expect(equipmentCalls().at(-1)).toEqual({ pagina: 0, tamanho: 25, ordenar: 'categoria', direcao: 'asc' })
   })
 
-  it('status e busca continuam locais e avisam que valem só para a página atual', async () => {
+  it('status e busca vão ao servidor, voltam à página 1, ficam na URL e o total reflete o filtro', async () => {
+    entry = '/assets?pagina=2'
     const user = userEvent.setup()
     render(<AssetsPage />, { wrapper: Providers })
-    await screen.findByText('Mostrando 1–25 de 60')
-    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+    await screen.findByText('Mostrando 26–50 de 60')
     await chooseOption(user, 'Filtrar por status', 'Inativo')
-    expect(await screen.findByRole('note')).toHaveTextContent('apenas os equipamentos da página atual')
-    expect(equipmentCalls().at(-1)).toEqual({ pagina: 0, tamanho: 25 })
+    expect(await screen.findByText('Mostrando 1–25 de 30')).toBeInTheDocument()
+    expect(equipmentCalls().at(-1)).toEqual({ pagina: 0, tamanho: 25, status: 'inativo' })
+    expect(screen.getByTestId('where')).toHaveTextContent('status=inativo')
+    expect(screen.getByTestId('where')).not.toHaveTextContent('pagina=')
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const callsBefore = equipmentCalls().length
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar equipamento' }), { target: { value: 'equipamento 01' } })
+      expect(equipmentCalls()).toHaveLength(callsBefore)
+      await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+    } finally { vi.useRealTimers() }
+    expect(await screen.findByText('Mostrando 1–5 de 5')).toBeInTheDocument()
+    expect(equipmentCalls().at(-1)).toEqual({ pagina: 0, tamanho: 25, status: 'inativo', q: 'equipamento 01' })
+    expect(screen.getByTestId('where')).toHaveTextContent('q=equipamento+01')
   })
 
   it('volta uma página quando a página atual esvazia', async () => {

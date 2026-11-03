@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { useState, type PropsWithChildren, type ReactNode } from 'react'
@@ -64,14 +64,32 @@ describe('AssetsPage', () => {
     expect(await screen.findByTestId('current-route')).toHaveTextContent('/assets/new')
   })
 
-  it('applies text and lifecycle filters to the equipment list', async () => {
-    render(<AssetsPage />, { wrapper: TestProviders })
-    const search = await screen.findByRole('searchbox', { name: 'Buscar equipamento' })
-    fireEvent.change(search, { target: { value: 'not found' } })
-    expect(await screen.findByText('Nenhum equipamento encontrado')).toBeInTheDocument()
-    await chooseOption(userEvent.setup(), 'Filtrar por status', 'Ativo')
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Limpar filtros' }))
-    expect(await screen.findByText('Ventilador VentPro')).toBeInTheDocument()
+  it('envia busca e status ao servidor (busca com debounce) e limpa os filtros', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      vi.mocked(apiClient.get).mockImplementation(async (url, config) => {
+        const params = ((config as { params?: { q?: string; status?: string } } | undefined)?.params ?? {})
+        if (url === '/hospitais') return { data: [{ id: 'hospital-1', nome: 'Santa Casa', cnpj: '' }] } as never
+        if (url === '/equipamentos') return { data: params.q === 'not found' ? [] : [equipment], headers: { 'x-total-count': params.q === 'not found' ? '0' : '1' } } as never
+        return { data: [] } as never
+      })
+      render(<AssetsPage />, { wrapper: TestProviders })
+      const search = await screen.findByRole('searchbox', { name: 'Buscar equipamento' })
+      await screen.findByText('Ventilador VentPro')
+      const equipmentParams = () => vi.mocked(apiClient.get).mock.calls.filter(([url]) => url === '/equipamentos').map(([, config]) => (config as { params: Record<string, unknown> }).params)
+      fireEvent.change(search, { target: { value: 'not found' } })
+      expect(equipmentParams().some((params) => 'q' in params)).toBe(false)
+      await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+      expect(await screen.findByText('Nenhum equipamento encontrado')).toBeInTheDocument()
+      expect(equipmentParams().at(-1)).toMatchObject({ q: 'not found', pagina: 0 })
+      expect(screen.queryByRole('note')).not.toBeInTheDocument()
+      await chooseOption(userEvent.setup({ advanceTimers: vi.advanceTimersByTime }), 'Filtrar por status', 'Em manutenção')
+      expect(equipmentParams().at(-1)).toMatchObject({ q: 'not found', status: 'em_manutencao', pagina: 0 })
+      await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(screen.getByRole('button', { name: 'Limpar filtros' }))
+      expect(await screen.findByText('Ventilador VentPro')).toBeInTheDocument()
+      expect(equipmentParams().at(-1)).not.toHaveProperty('status')
+      expect(equipmentParams().at(-1)).not.toHaveProperty('q')
+    } finally { vi.useRealTimers() }
   })
 
   it('loads the list thumbnail lazily, only for equipment with a photo and only once the row is visible', async () => {

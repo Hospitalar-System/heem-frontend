@@ -504,6 +504,7 @@ function handleCategories(method: string, path: string, body: RecordValue, param
       return categories
         .filter((item) => params?.ativa === undefined || item.ativa === params.ativa)
         .filter((item) => !params?.revisar || (item.origem === 'carga' && !item.revisada))
+        .filter((item) => typeof params?.q !== 'string' || !params.q.trim() || foldText(item.nome).includes(foldText(params.q.trim())))
         .map(withCount)
     }
     if (method === 'post') {
@@ -533,6 +534,14 @@ function handleCategories(method: string, path: string, body: RecordValue, param
 }
 
 function filterCollection(collection: RecordValue[], path: string, params?: Record<string, unknown>) {
+  if (path === '/equipamentos' && typeof params?.q === 'string' && params.q.trim()) {
+    const term = foldText(params.q.trim())
+    collection = collection.filter((item) => [item.codigo, item.nome, item.modelo, item.numeroSerie, item.categoriaNome].some((value) => foldText(value).includes(term)))
+  }
+  if (path === '/equipamentos' && typeof params?.status === 'string' && params.status) {
+    const status = params.status.toLowerCase()
+    collection = collection.filter((item) => String(item.statusCicloVida ?? '').toLowerCase() === status)
+  }
   if (path === '/equipamentos' && (params?.categoriaId || params?.semCategoria)) {
     collection = collection.filter((item) => params.semCategoria ? !item.categoriaId : item.categoriaId === params.categoriaId)
   }
