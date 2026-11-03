@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
-import type { CreateEquipmentInput, Equipment, EquipmentFilters, Hospital, HospitalInput, Setor, SetorInput, UpdateEquipmentInput, WorkOrderSummary } from '../types'
+import { usePagedQuery } from '@/lib/pagination'
+import type { CreateEquipmentInput, Equipment, EquipmentFilters, Hospital, HospitalInput, Setor, SetorFilters, SetorInput, UpdateEquipmentInput, WorkOrderSummary } from '../types'
 
 const hospitalKey = ['hospitals'] as const
 export function useHospitals() { return useQuery({ queryKey: hospitalKey, queryFn: async () => (await apiClient.get<Hospital[]>('/hospitais')).data }) }
@@ -9,7 +10,26 @@ export function useSaveHospital() {
   const client = useQueryClient()
   return useMutation({ mutationFn: async ({ id, data }: { id?: string; data: HospitalInput }) => id ? (await apiClient.put<Hospital>(`/hospitais/${id}`, data)).data : (await apiClient.post<Hospital>('/hospitais', data)).data, onSuccess: () => client.invalidateQueries({ queryKey: hospitalKey }) })
 }
-export function useSectors(hospitalId: string) { return useQuery({ queryKey: ['sectors', hospitalId], queryFn: async () => (await apiClient.get<Setor[]>(`/hospitais/${hospitalId}/setores`)).data, enabled: Boolean(hospitalId) }) }
+/** Setores do hospital (lista completa). Sem `ativo` o backend devolve só os ativos; `todos` inclui os desativados. */
+export function useSectors(hospitalId: string, filters: SetorFilters = {}, enabled = true) {
+  return useQuery({ queryKey: ['sectors', hospitalId, 'list', filters], queryFn: async () => (await apiClient.get<Setor[]>(`/hospitais/${hospitalId}/setores`, { params: filters })).data, enabled: enabled && Boolean(hospitalId) })
+}
+/** Setores paginados no servidor (`pagina` 0-based, total em X-Total-Count) com filtro `ativo`. */
+export function useSectorsPage(hospitalId: string, filters: SetorFilters, enabled = true) {
+  return usePagedQuery<Setor>(['sectors', hospitalId, 'page'], `/hospitais/${hospitalId}/setores`, { ...filters }, enabled && Boolean(hospitalId))
+}
+/** Desativa/reativa o setor (idempotente; só admin_cliente). */
+export function useSetSectorActive() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ativo }: { id: string; hospitalId: string; ativo: boolean }) => (await apiClient.patch<Setor>(`/setores/${id}`, { ativo })).data,
+    onSuccess: (_data, variables) => {
+      client.invalidateQueries({ queryKey: ['sectors', variables.hospitalId] })
+      client.invalidateQueries({ queryKey: ['sector', variables.id] })
+      client.invalidateQueries({ queryKey: ['hospital-metrics'] })
+    },
+  })
+}
 export function useSectorsForHospitals(hospitalIds: string[]) {
   return useQuery({
     queryKey: ['sectors', 'directory', hospitalIds],

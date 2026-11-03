@@ -164,6 +164,25 @@ describe('EquipmentFormPage category', () => {
     expect((await screen.findAllByText(/A categoria escolhida não existe ou está desativada/)).length).toBeGreaterThan(0)
   })
 
+  it('maps SETOR_DESATIVADO to a pt-BR message when registering', async () => {
+    const user = userEvent.setup()
+    vi.mocked(apiClient.post).mockRejectedValue(problem('SETOR_DESATIVADO', 409))
+    render(<EquipmentFormPage />, { wrapper: Providers({ path: '/assets/new', entry: '/assets/new' }) })
+    await fillNewEquipment(user)
+    await chooseOption(user, screen.getByRole('combobox', { name: /Categoria/ }), 'Monitor MX')
+    await user.click(screen.getByRole('button', { name: 'Cadastrar equipamento' }))
+    expect((await screen.findAllByText(/Este setor está desativado/)).length).toBeGreaterThan(0)
+  })
+
+  it('shows the current sector even when it is deactivated while editing', async () => {
+    const baseGet = vi.mocked(apiClient.get).getMockImplementation()!
+    vi.mocked(apiClient.get).mockImplementation(async (url, config) => (url === '/setores/sector-1'
+      ? ({ data: { id: 'sector-1', hospitalId: 'hospital-1', codigo: 'ST-01', nome: 'UTI Adulto', ativo: false } } as never)
+      : baseGet(url, config)))
+    render(<EquipmentFormPage />, { wrapper: Providers({ path: '/assets/:id/edit', entry: '/assets/eq-1/edit' }) })
+    expect(await screen.findByDisplayValue(/UTI Adulto \(desativado\)/)).toBeInTheDocument()
+  })
+
   it('preloads the current category when editing and sends it back', async () => {
     const user = userEvent.setup()
     vi.mocked(apiClient.put).mockResolvedValue({ data: { id: 'eq-1' } } as never)

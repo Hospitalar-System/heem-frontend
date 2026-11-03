@@ -57,6 +57,14 @@ const documents: RecordValue[] = [
   { id: 'doc-demo-2', equipamentoId: 'equipment-demo-1', tipoDocumento: 'LAUDO_SEGURANCA', nomeArquivo: 'laudo-60601.pdf', uploadedEm: now, validadeAte: dayIso(12) },
   { id: 'doc-demo-3', equipamentoId: 'equipment-demo-1', tipoDocumento: 'MANUAL', nomeArquivo: 'manual-mx500.pdf', uploadedEm: now, validadeAte: null },
 ]
+/** Setor com a situação e as contagens que o servidor calcula (ativos = ATIVO ou EM_MANUTENCAO). */
+function sectorView(sector: RecordValue) {
+  const items = equipment.filter((item) => item.setorId === sector.id && item.ativo !== false)
+  return { ativo: true, ...sector, equipamentosAtivos: items.filter((item) => item.statusCicloVida === 'ATIVO' || item.statusCicloVida === 'EM_MANUTENCAO').length, equipamentosTotal: items.length }
+}
+function demoProblem(status: number, data: Record<string, unknown>) {
+  return Object.assign(new Error(String(data.code)), { response: { status, data } })
+}
 function documentView(item: RecordValue) {
   const validade = item.validadeAte as string | null
   const days = validade ? Math.round((Date.parse(validade) - Date.parse(dayIso(0))) / 86400000) : null
@@ -113,7 +121,7 @@ const PAGINATED_PATHS = new Set(['/chamados', '/ordens-de-trabalho', '/users', '
 
 /** Espelha `Paginacao` do backend: o total sempre vai no header; sem `pagina`/`tamanho` a lista vem inteira. */
 function paginate(method: string, path: string, data: unknown, params?: Record<string, unknown>) {
-  if (method !== 'get' || !PAGINATED_PATHS.has(path) || !Array.isArray(data)) return { data, headers: {} as Record<string, string> }
+  if (method !== 'get' || !(PAGINATED_PATHS.has(path) || /^\/hospitais\/[^/]+\/setores$/.test(path)) || !Array.isArray(data)) return { data, headers: {} as Record<string, string> }
   const headers = { 'x-total-count': String(data.length) }
   if (params?.pagina === undefined && params?.tamanho === undefined) return { data, headers }
   const page = Math.max(0, Number(params?.pagina ?? 0))
@@ -281,8 +289,15 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   }
   const hospitalSectors = path.match(/^\/hospitais\/([^/]+)\/setores$/)
   if (hospitalSectors) {
-    if (method === 'get') return sectors.filter((sector) => sector.hospitalId === hospitalSectors[1])
-    if (method === 'post') return createRecord(sectors, { ...body, hospitalId: hospitalSectors[1] })
+    if (method === 'get') {
+      const filtro = params?.ativo === undefined ? 'true' : String(params.ativo)
+      if (!['true', 'false', 'todos'].includes(filtro)) throw demoProblem(400, { code: 'VALIDACAO_FALHOU' })
+      return sectors.filter((sector) => sector.hospitalId === hospitalSectors[1]).map(sectorView).filter((sector) => filtro === 'todos' || String(sector.ativo) === filtro)
+    }
+    if (method === 'post') {
+      if (sectors.some((sector) => sector.hospitalId === hospitalSectors[1] && sector.codigo === body.codigo)) throw demoProblem(409, { code: 'CODIGO_JA_CADASTRADO' })
+      return sectorView(createRecord(sectors, { ...body, hospitalId: hospitalSectors[1], ativo: true }))
+    }
   }
   if (path === '/equipamentos/foto-upload-url' && method === 'post') {
     return { url: 'https://example.test/upload', chave: `demo/${body.nomeArquivo ?? 'foto'}`, expiraEm: now }
@@ -306,6 +321,18 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     }
     if (ticketAction[2] === 'reabrir') Object.assign(record, { status: 'EM_ANDAMENTO', reaberturas: Number(record.reaberturas ?? 0) + 1 })
     return record
+  }
+  const sectorRoute = path.match(/^\/setores\/([^/]+)$/)
+  if (sectorRoute && ['get', 'put', 'patch'].includes(method)) {
+    const sector = sectors.find((item) => item.id === sectorRoute[1])
+    if (!sector) throw demoProblem(404, { code: 'NAO_ENCONTRADO' })
+    if (method === 'put') Object.assign(sector, body)
+    if (method === 'patch') {
+      const view = sectorView(sector)
+      if (body.ativo === false && view.equipamentosAtivos > 0) throw demoProblem(409, { code: 'SETOR_COM_EQUIPAMENTOS_ATIVOS', equipamentosAtivos: view.equipamentosAtivos })
+      sector.ativo = body.ativo !== false
+    }
+    return sectorView(sector)
   }
   const detailRoutes = [
     ['/hospitais/', hospitals], ['/setores/', sectors], ['/equipamentos/', equipment], ['/ordens-de-trabalho/', workOrders], ['/chamados/', tickets], ['/users/', users], ['/platform-users/', platformUsers], ['/tenants/', tenants],

@@ -8,18 +8,22 @@ import { apiClient } from '@/lib/axios'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { HospitalDetailPage } from '../pages/HospitalDetailPage'
 import { HospitalsPage } from '../pages/HospitalsPage'
-import { chooseOption } from '@/test/select-helpers'
+import { toast } from 'sonner'
+import { chooseOption, listOptions } from '@/test/select-helpers'
 
-vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
   AdminPageShell: ({ title, action, children }: PropsWithChildren<{ title: string; action?: ReactNode }>) => <main><h1>{title}</h1>{action}{children}</main>,
 }))
 
 const hospital = { id: 'hospital-1', nome: 'Santa Casa', cnpj: '12345678000190' }
 const sectors = [
-  { id: 'sector-1', hospitalId: 'hospital-1', codigo: 'ST-01', nome: 'UTI Adulto', andar: '2', classificacaoRisco: 'CRITICO', grupoInstalacao: 'GRUPO_2' },
-  { id: 'sector-2', hospitalId: 'hospital-1', codigo: 'ST-02', nome: 'Radiologia', andar: null, classificacaoRisco: 'NAO_CRITICO', grupoInstalacao: 'GRUPO_0' },
+  { id: 'sector-1', hospitalId: 'hospital-1', codigo: 'ST-01', nome: 'UTI Adulto', andar: '2', classificacaoRisco: 'CRITICO', grupoInstalacao: 'GRUPO_2', ativo: true, equipamentosAtivos: 2, equipamentosTotal: 3 },
+  { id: 'sector-2', hospitalId: 'hospital-1', codigo: 'ST-02', nome: 'Radiologia', andar: null, classificacaoRisco: 'NAO_CRITICO', grupoInstalacao: 'GRUPO_0', ativo: true, equipamentosAtivos: 0, equipamentosTotal: 0 },
 ]
+const inactiveSector = { id: 'sector-3', hospitalId: 'hospital-1', codigo: 'ST-03', nome: 'Almoxarifado', andar: null, classificacaoRisco: 'NAO_CRITICO', grupoInstalacao: 'GRUPO_0', ativo: false, equipamentosAtivos: 0, equipamentosTotal: 1 }
+const problem = (status: number, data: Record<string, unknown>) => Object.assign(new Error(String(data.code)), { response: { status, data } })
 const equipment = (id: string, setorId: string, nome: string) => ({ id, setorId, codigo: `EQ-${id}`, nome, modelo: 'X', numeroSerie: id, statusCicloVida: 'ATIVO', categoriaNome: null })
 const equipments = [equipment('1', 'sector-1', 'Ventilador'), equipment('2', 'sector-1', 'Monitor'), equipment('3', 'sector-2', 'Raio X')]
 
@@ -41,16 +45,22 @@ beforeEach(() => {
   vi.clearAllMocks()
   clearAuthSession()
   setAuthSession('token', { id: 'user-1', name: 'Ana', roles: ['admin_cliente'], tenantId: 'tenant-1' })
-  vi.mocked(apiClient.get).mockImplementation(async (url) => {
+  vi.mocked(apiClient.get).mockImplementation(async (url, config) => {
     if (url === '/hospitais') return { data: [hospital] } as never
     if (url === '/hospitais/hospital-1') return { data: hospital } as never
-    if (url === '/hospitais/hospital-1/setores') return { data: sectors } as never
+    if (url === '/hospitais/hospital-1/setores') {
+      const ativo = (config as { params?: { ativo?: string } } | undefined)?.params?.ativo ?? 'true'
+      const all = [...sectors, inactiveSector]
+      const data = all.filter((sector) => ativo === 'todos' || String(sector.ativo) === ativo)
+      return { data, headers: { 'x-total-count': String(data.length) } } as never
+    }
     if (url === '/equipamentos') return { data: equipments } as never
     if (url === '/setores/sector-1') return { data: sectors[0] } as never
     return { data: [] } as never
   })
   vi.mocked(apiClient.post).mockResolvedValue({ data: sectors[0] } as never)
   vi.mocked(apiClient.put).mockResolvedValue({ data: sectors[0] } as never)
+  vi.mocked(apiClient.patch).mockResolvedValue({ data: { ...sectors[0], ativo: false } } as never)
 })
 
 describe('HospitalsPage', () => {
@@ -89,14 +99,28 @@ describe('HospitalDetailPage', () => {
     expect(screen.getByRole('tab', { name: 'Equipamentos' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('lista os setores com a contagem de equipamentos calculada de uma única chamada', async () => {
+  it('mostra a situação e a contagem de equipamentos do servidor, sem calcular no cliente', async () => {
     renderDetail('/hospitals/hospital-1?aba=setores')
     expect(await screen.findByText('UTI Adulto')).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByTestId('sector-count-sector-1')).toHaveTextContent('2'))
-    expect(screen.getByTestId('sector-count-sector-2')).toHaveTextContent('1')
-    const equipmentCalls = vi.mocked(apiClient.get).mock.calls.filter(([url]) => url === '/equipamentos')
-    expect(equipmentCalls).toHaveLength(1)
-    expect(equipmentCalls[0][1]).toEqual({ params: { hospitalId: 'hospital-1' } })
+    expect(screen.getByTestId('sector-count-sector-1')).toHaveTextContent('2 ativos / 3')
+    expect(screen.getByTestId('sector-count-sector-2')).toHaveTextContent('0 ativos / 0')
+    expect(screen.getAllByText('Ativo').length).toBeGreaterThanOrEqual(2)
+    expect(screen.queryByText('Almoxarifado')).not.toBeInTheDocument()
+    expect(vi.mocked(apiClient.get)).toHaveBeenCalledWith('/hospitais/hospital-1/setores', { params: expect.objectContaining({ ativo: 'true', pagina: 0, tamanho: 25 }) })
+  })
+
+  it('o filtro Inativos/Todos envia ?ativo= ao servidor', async () => {
+    const user = userEvent.setup()
+    renderDetail('/hospitals/hospital-1?aba=setores')
+    await screen.findByText('UTI Adulto')
+    await chooseOption(user, 'Filtrar setores por situação', 'Inativos')
+    expect(await screen.findByText('Almoxarifado')).toBeInTheDocument()
+    expect(screen.getByText('Inativo')).toBeInTheDocument()
+    expect(screen.queryByText('UTI Adulto')).not.toBeInTheDocument()
+    expect(vi.mocked(apiClient.get)).toHaveBeenCalledWith('/hospitais/hospital-1/setores', { params: expect.objectContaining({ ativo: 'false' }) })
+    await chooseOption(user, 'Filtrar setores por situação', 'Todos')
+    expect(await screen.findByText('UTI Adulto')).toBeInTheDocument()
+    expect(vi.mocked(apiClient.get)).toHaveBeenCalledWith('/hospitais/hospital-1/setores', { params: expect.objectContaining({ ativo: 'todos' }) })
   })
 
   it('cria um setor no hospital', async () => {
@@ -124,11 +148,53 @@ describe('HospitalDetailPage', () => {
     await waitFor(() => expect(apiClient.put).toHaveBeenCalledWith('/setores/sector-1', expect.objectContaining({ nome: 'UTI Geral' })))
   })
 
-  it('não oferece desativar setor: a API não expõe essa operação', async () => {
+  it('desativa o setor depois de confirmar', async () => {
     const user = userEvent.setup()
     renderDetail('/hospitals/hospital-1?aba=setores')
+    await user.click(await screen.findByRole('button', { name: 'Ações de Radiologia' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Desativar' }))
+    const dialog = await screen.findByRole('dialog', { name: /Desativar o setor Radiologia/ })
+    expect(apiClient.patch).not.toHaveBeenCalled()
+    await user.click(within(dialog).getByRole('button', { name: 'Desativar' }))
+    await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/setores/sector-2', { ativo: false }))
+  })
+
+  it('mostra quantos equipamentos ativos impedem a desativação (409)', async () => {
+    const user = userEvent.setup()
+    vi.mocked(apiClient.patch).mockRejectedValue(problem(409, { code: 'SETOR_COM_EQUIPAMENTOS_ATIVOS', equipamentosAtivos: 2 }))
+    renderDetail('/hospitals/hospital-1?aba=setores')
     await user.click(await screen.findByRole('button', { name: 'Ações de UTI Adulto' }))
-    expect(screen.queryByRole('menuitem', { name: /desativar/i })).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('menuitem', { name: 'Desativar' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Desativar' }))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Este setor tem 2 equipamentos ativos. Transfira ou desative os equipamentos antes.'))
+  })
+
+  it('reativa um setor inativo e trata hospital desativado', async () => {
+    const user = userEvent.setup()
+    vi.mocked(apiClient.patch).mockRejectedValueOnce(problem(409, { code: 'HOSPITAL_DESATIVADO' }))
+    renderDetail('/hospitals/hospital-1?aba=setores&ativo=false')
+    await user.click(await screen.findByRole('button', { name: 'Ações de Almoxarifado' }))
+    expect(screen.queryByRole('menuitem', { name: 'Desativar' })).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('menuitem', { name: 'Reativar' }))
+    await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/setores/sector-3', { ativo: true }))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/hospital deste setor está desativado/)))
+  })
+
+  it('quem não é admin_cliente não vê desativar nem reativar', async () => {
+    const user = userEvent.setup()
+    setAuthSession('token', { id: 'user-2', name: 'Téc', roles: ['tecnico'], tenantId: 'tenant-1' })
+    renderDetail('/hospitals/hospital-1?aba=setores')
+    await user.click(await screen.findByRole('button', { name: 'Ações de UTI Adulto' }))
+    expect(await screen.findByRole('menuitem', { name: 'Editar' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /desativar|reativar/i })).not.toBeInTheDocument()
+  })
+
+  it('na aba Equipamentos o filtro de setor lista só setores ativos', async () => {
+    const user = userEvent.setup()
+    renderDetail('/hospitals/hospital-1?aba=equipamentos')
+    await screen.findByRole('link', { name: 'Abrir EQ-1, Ventilador' })
+    const labels = await listOptions(user, 'Filtrar por setor')
+    expect(labels).toEqual(['Todos os setores', 'UTI Adulto', 'Radiologia'])
   })
 
   it('lista só os equipamentos do hospital, com filtro por setor e link para a ficha', async () => {

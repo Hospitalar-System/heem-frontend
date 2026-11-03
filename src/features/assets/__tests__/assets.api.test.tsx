@@ -28,7 +28,7 @@ describe('asset queries', () => {
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: [] })
     const { result } = renderHook(() => useSectors('hospital-1'), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(apiClient.get).toHaveBeenCalledWith('/hospitais/hospital-1/setores')
+    expect(apiClient.get).toHaveBeenCalledWith('/hospitais/hospital-1/setores', { params: {} })
   })
 
   it('passes the supported hospital and sector filters to the equipment endpoint', async () => {
