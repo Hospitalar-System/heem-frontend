@@ -90,6 +90,24 @@ const history: Record<string, RecordValue[]> = {
   [tickets[0].id as string]: [{ acao: 'Chamado aberto', atorId: 'user-demo-1', ocorridoEm: now }],
   [tickets[1].id as string]: [{ acao: 'Chamado atribuído à equipe técnica', atorId: 'user-demo-1', ocorridoEm: now }],
 }
+/** Execuções de checklist de exemplo (mais recente primeiro) para a ficha do equipamento. */
+function checklistExecutionsFor(equipmentId: string): RecordValue[] {
+  if (equipmentId !== 'equipment-demo-1') return []
+  return [
+    { otId: 'order-demo-10', otCodigo: 'OT-2026-010', concluidaEm: '2026-10-20T14:30:00Z', tecnicoNome: 'Técnico Demo', parecerTecnico: 'Equipamento operando dentro do esperado após a inspeção funcional. Recomenda-se nova verificação do alarme na próxima preventiva, pois houve oscilação leve durante os testes de bancada e o cabo de alimentação apresenta desgaste visível.', itens: [
+      { itemId: 'check-item-demo-2', descricao: 'Verificar alarmes sonoros', tipo: 'BOOLEANO', valor: true, unidade: null, conforme: true, faixaMin: null, faixaMax: null, valorReferencia: null },
+      { itemId: 'check-item-demo-4', descricao: 'Tensão de saída', tipo: 'NUMERICO', valor: 14.2, unidade: 'V', conforme: false, faixaMin: 11, faixaMax: 13, valorReferencia: null },
+      { itemId: 'check-item-demo-3', descricao: 'Registrar resultado do autoteste', tipo: 'NUMERICO', valor: null, unidade: 'resultado', conforme: null, faixaMin: null, faixaMax: null, valorReferencia: null },
+    ] },
+    { otId: 'order-demo-11', otCodigo: 'OT-2026-007', concluidaEm: '2026-07-18T10:00:00Z', tecnicoNome: 'Técnico Demo', parecerTecnico: null, itens: [
+      { itemId: 'check-item-demo-2', descricao: 'Verificar alarmes sonoros', tipo: 'BOOLEANO', valor: true, unidade: null, conforme: true, faixaMin: null, faixaMax: null, valorReferencia: null },
+      { itemId: 'check-item-demo-4', descricao: 'Tensão de saída', tipo: 'NUMERICO', valor: 12.1, unidade: 'V', conforme: true, faixaMin: 11, faixaMax: 13, valorReferencia: null },
+    ] },
+    { otId: 'order-demo-12', otCodigo: 'OT-2026-003', concluidaEm: '2026-04-02T09:15:00Z', tecnicoNome: 'Outro Técnico', parecerTecnico: 'Sem observações.', itens: [
+      { itemId: 'check-item-demo-5', descricao: 'Modo de operação', tipo: 'SELECAO', valor: 'Contínuo', unidade: null, conforme: true, faixaMin: null, faixaMax: null, valorReferencia: 'Contínuo' },
+    ] },
+  ]
+}
 const checklistItemsById = new Map<string, RecordValue[]>([[checklists[0].id as string, checklistItems]])
 const userHospitals = new Map<string, string[]>(users.map((user) => [user.id as string, [hospitals[0].id as string]]))
 const exportsById = new Map<string, RecordValue>()
@@ -118,7 +136,7 @@ export const demoApiAdapter: AxiosAdapter = async (config) => {
 
 /** Rotas que o backend pagina (`pagina` 0-based + `tamanho`, total em X-Total-Count). */
 const PAGINATED_PATHS = new Set(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos', '/campanhas-preventivas', '/checklists', '/equipamentos', '/categorias-equipamento'])
-const PAGINATED_PATTERNS = [/^\/hospitais\/[^/]+\/setores$/, /^\/equipamentos\/[^/]+\/documentos$/]
+const PAGINATED_PATTERNS = [/^\/hospitais\/[^/]+\/setores$/, /^\/equipamentos\/[^/]+\/documentos$/, /^\/equipamentos\/[^/]+\/execucoes-checklist$/]
 
 const SEVERITY_RANK: Record<string, number> = { CRITICA: 0, ALTA: 1, MEDIA: 2, BAIXA: 3 }
 const SORTABLE: Record<string, string[]> = {
@@ -290,6 +308,8 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   }
   if (path === '/hospitais' && method === 'post') return createRecord(hospitals, body)
 
+  const checklistExecutions = path.match(/^\/equipamentos\/([^/]+)\/execucoes-checklist$/)
+  if (checklistExecutions && method === 'get') return checklistExecutionsFor(checklistExecutions[1])
   const equipmentDocuments = path.match(/^\/equipamentos\/([^/]+)\/documentos(?:\/([^/]+))?(?:\/(download-url|validade))?$/)
   if (equipmentDocuments) {
     const [, equipmentId, documentId, action] = equipmentDocuments

@@ -173,3 +173,29 @@ export interface UploadEquipmentDocumentInput {
   validadeAte: string | null
   onProgress?: (percent: number) => void
 }
+
+export type ChecklistExecutionItemType = 'NUMERICO' | 'BOOLEANO' | 'TEXTO' | 'SELECAO'
+
+export interface ChecklistExecutionItem {
+  itemId: string
+  descricao: string
+  tipo: ChecklistExecutionItemType
+  /** Número, booleano ou texto; nulo quando o item não teve medição. */
+  valor: number | boolean | string | null
+  unidade: string | null
+  /** Gravado na época da medição; nulo quando não houve medição. */
+  conforme: boolean | null
+  /** Faixa e referência são as do item atual do checklist (podem divergir se o item foi editado). */
+  faixaMin: number | null
+  faixaMax: number | null
+  valorReferencia: string | number | null
+}
+
+export interface ChecklistExecution {
+  otId: string
+  otCodigo: string
+  concluidaEm: string | null
+  tecnicoNome: string | null
+  parecerTecnico: string | null
+  itens: ChecklistExecutionItem[]
+}
