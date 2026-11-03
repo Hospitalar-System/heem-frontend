@@ -27,13 +27,13 @@ const docs = [
   { ...base, id: 'd4', tipoDocumento: 'MANUAL', nomeArquivo: 'manual.pdf', validadeAte: null, vencido: false, vencendo: false },
 ]
 
-function Providers({ children }: PropsWithChildren) {
+function Providers({ children, entry = '/' }: PropsWithChildren<{ entry?: string }>) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  return <QueryClientProvider client={client}><MemoryRouter initialEntries={[entry]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>{children}</MemoryRouter></QueryClientProvider>
 }
 
-function renderSection(canWrite = true, canManage = true) {
-  return render(<EquipmentDocumentsSection equipmentId="equipment-1" canWrite={canWrite} canManage={canManage} />, { wrapper: Providers })
+function renderSection(canWrite = true, canManage = true, entry = '/') {
+  return render(<EquipmentDocumentsSection equipmentId="equipment-1" canWrite={canWrite} canManage={canManage} />, { wrapper: ({ children }: PropsWithChildren) => <Providers entry={entry}>{children}</Providers> })
 }
 
 describe('EquipmentDocumentsSection', () => {
@@ -50,7 +50,7 @@ describe('EquipmentDocumentsSection', () => {
     expect(within(await row('nota.pdf')).getByText('Válido')).toBeInTheDocument()
     expect(within(await row('manual.pdf')).getByText('Sem validade')).toBeInTheDocument()
     expect(within(await row('laudo.pdf')).getByText('10/11/2026')).toBeInTheDocument()
-    expect(apiClient.get).toHaveBeenCalledWith('/equipamentos/equipment-1/documentos')
+    expect(apiClient.get).toHaveBeenCalledWith('/equipamentos/equipment-1/documentos', { params: { pagina: 0, tamanho: 25 } })
   })
 
   it('shows empty and error states', async () => {
@@ -158,6 +158,36 @@ describe('EquipmentDocumentsSection', () => {
   })
 })
 
+describe('EquipmentDocumentsSection paginação', () => {
+  const many = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => ({ ...base, id: `p${from + i}`, tipoDocumento: 'MANUAL', nomeArquivo: `doc-${from + i}.pdf`, validadeAte: null, vencido: false, vencendo: false }))
+
+  it('envia pagina/tamanho, mostra total e intervalo e troca de página e de tamanho', async () => {
+    const user = userEvent.setup()
+    vi.mocked(apiClient.get).mockImplementation(async (_url, config) => {
+      const { pagina, tamanho } = (config as { params: { pagina: number; tamanho: number } }).params
+      return { data: many(pagina * tamanho + 1, Math.min(60, (pagina + 1) * tamanho)), headers: { 'x-total-count': '60' } } as never
+    })
+    renderSection()
+    expect(await screen.findByText('Mostrando 1–25 de 60')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Próxima página' }))
+    expect(await screen.findByText('Mostrando 26–50 de 60')).toBeInTheDocument()
+    expect(apiClient.get).toHaveBeenLastCalledWith('/equipamentos/equipment-1/documentos', { params: { pagina: 1, tamanho: 25 } })
+    await chooseOption(user, 'Itens por página', '50')
+    expect(await screen.findByText('Mostrando 1–50 de 60')).toBeInTheDocument()
+    expect(apiClient.get).toHaveBeenLastCalledWith('/equipamentos/equipment-1/documentos', { params: { pagina: 0, tamanho: 50 } })
+  })
+
+  it('volta uma página quando a página atual esvazia', async () => {
+    vi.mocked(apiClient.get).mockImplementation(async (_url, config) => {
+      const { pagina } = (config as { params: { pagina: number } }).params
+      return pagina === 1 ? { data: [], headers: { 'x-total-count': '25' } } as never : { data: many(1, 25), headers: { 'x-total-count': '25' } } as never
+    })
+    renderSection(true, true, '/?pagina=2')
+    expect(await screen.findByText('Mostrando 1–25 de 25')).toBeInTheDocument()
+    expect(apiClient.get).toHaveBeenLastCalledWith('/equipamentos/equipment-1/documentos', { params: { pagina: 0, tamanho: 25 } })
+  })
+})
+
 describe('EquipmentDetailPage documents tab access', () => {
   function PageProviders({ children }: PropsWithChildren) {
     const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
@@ -186,7 +216,7 @@ describe('EquipmentDetailPage documents tab access', () => {
     render(<EquipmentDetailPage />, { wrapper: PageProviders })
     await user.click(await screen.findByRole('tab', { name: 'Documentos' }))
     expect(await screen.findByText('Nenhum documento anexado')).toBeInTheDocument()
-    expect(apiClient.get).toHaveBeenCalledWith('/equipamentos/equipment-1/documentos')
+    expect(apiClient.get).toHaveBeenCalledWith('/equipamentos/equipment-1/documentos', { params: { pagina: 0, tamanho: 25 } })
     clearAuthSession()
   })
 })

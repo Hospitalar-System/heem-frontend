@@ -139,6 +139,15 @@ export interface EquipmentFilters {
   documentoVencido?: boolean
 }
 
+export type EquipmentSortField = 'nome' | 'codigo' | 'categoria' | 'criadoEm'
+/** Filtros de GET /equipamentos paginado: `pagina` é 0-based; a ordenação é opcional (`direcao` só vale com `ordenar`). */
+export interface EquipmentPageFilters extends EquipmentFilters {
+  pagina?: number
+  tamanho?: number
+  ordenar?: EquipmentSortField
+  direcao?: 'asc' | 'desc'
+}
+
 export type DocumentType = 'MANUAL' | 'CERTIFICADO_CALIBRACAO' | 'LAUDO_SEGURANCA' | 'NOTA_FISCAL' | 'OUTRO'
 
 export interface EquipmentDocument {

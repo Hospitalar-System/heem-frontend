@@ -8,8 +8,9 @@ import { DataTable, type DataColumn } from '@/components/ui/DataTable'
 import { Select } from '@/components/ui/Select'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
+import { useSortParams } from '@/hooks/useSortParams'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
-import { useEquipments, useHospital, useSectors, useSectorsPage, useSetSectorActive } from '../api/assets'
+import { useEquipmentsPage, useHospital, useSectors, useSectorsPage, useSetSectorActive } from '../api/assets'
 import { EquipmentListTable } from '../components/EquipmentListTable'
 import { HospitalForm, formatCnpj } from '../components/HospitalForm'
 import { SectorForm } from '../components/SectorForm'
@@ -43,6 +44,8 @@ function sectorActiveError(error: unknown, activating: boolean) {
 }
 const parseTab = (value: string | null): HospitalTab => (tabs.some((tab) => tab.id === value) ? (value as HospitalTab) : 'dados')
 
+const equipmentSortFields = ['nome', 'codigo', 'categoria'] as const
+
 export function HospitalDetailPage() {
   const { id = '' } = useParams()
   const [params, setParams] = useSearchParams()
@@ -56,14 +59,18 @@ export function HospitalDetailPage() {
   const sectorsPage = useSectorsPage(id, { ...pagination.apiParams, ativo: activeFilter }, activeTab === 'setores')
   const allSectors = useSectors(id, { ativo: 'todos' }, activeTab !== 'setores')
   const setSectorActive = useSetSectorActive()
-  const equipment = useEquipments({ hospitalId: id })
+  const { sort, apiParams: sortParams, onSortChange } = useSortParams(equipmentSortFields)
   const [editingHospital, setEditingHospital] = useState(false)
   const [creatingSector, setCreatingSector] = useState(false)
   const [editingSector, setEditingSector] = useState<Setor | null>(null)
   const [sectorFilter, setSectorFilter] = useState('')
   const [search, setSearch] = useState('')
+  // Aba Equipamentos: paginação, ordenação e filtro de setor no servidor; a busca por texto é local (página atual).
+  const equipment = useEquipmentsPage({ hospitalId: id, setorId: sectorFilter || undefined, ...pagination.apiParams, ...sortParams }, activeTab === 'equipamentos')
+  const equipmentCount = useEquipmentsPage({ hospitalId: id, pagina: 0, tamanho: 1 }, activeTab !== 'equipamentos')
+  const equipmentTotal = (activeTab === 'equipamentos' ? equipment.data : equipmentCount.data)?.total
 
-  const setTab = (tab: HospitalTab) => setParams((current) => { const next = new URLSearchParams(current); next.set('aba', tab); return next }, { replace: true })
+  const setTab = (tab: HospitalTab) => setParams((current) => { const next = new URLSearchParams(current); next.set('aba', tab); next.delete('pagina'); next.delete('ordenar'); next.delete('direcao'); return next }, { replace: true })
   const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
     event.preventDefault()
@@ -76,6 +83,7 @@ export function HospitalDetailPage() {
   const selectableSectors = useMemo(() => (allSectors.data ?? []).filter((sector) => sector.ativo !== false), [allSectors.data])
   const sectorTotal = sectorsPage.data?.total ?? 0
   usePageClamp(pagination, sectorsPage.data?.total, activeTab === 'setores' && !sectorsPage.isPlaceholderData)
+  usePageClamp(pagination, equipment.data?.total, activeTab === 'equipamentos' && !equipment.isPlaceholderData)
   const changeActive = async (sector: Setor, ativo: boolean) => {
     try {
       await setSectorActive.mutateAsync({ id: sector.id, hospitalId: id, ativo })
@@ -84,12 +92,11 @@ export function HospitalDetailPage() {
   }
   const visibleEquipment = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('pt-BR')
-    return (equipment.data ?? []).filter((item) => {
-      if (sectorFilter && item.setorId !== sectorFilter) return false
+    return (equipment.data?.items ?? []).filter((item) => {
       if (!term) return true
       return [item.codigo, item.nome, item.modelo, item.numeroSerie, item.categoriaNome].some((value) => value?.toLocaleLowerCase('pt-BR').includes(term))
     })
-  }, [equipment.data, search, sectorFilter])
+  }, [equipment.data, search])
 
   const sectorColumns: DataColumn<Setor>[] = [
     { key: 'codigo', header: 'Código', cell: (sector) => <span className="font-semibold">{sector.codigo}</span> },
@@ -112,7 +119,7 @@ export function HospitalDetailPage() {
       <section role="tabpanel" id="hospital-tab-panel" aria-labelledby={`hospital-tab-${activeTab}`} className="mt-4">
         {activeTab === 'dados' ? <div className="max-w-xl rounded-lg border border-border bg-surface p-5">
           {hospital.isLoading ? <div aria-label="Carregando hospital" aria-busy="true" className="h-24 animate-pulse rounded bg-bg" /> : <>
-            <dl className="grid gap-4 sm:grid-cols-2"><div><dt className="text-[11px] uppercase text-text-muted">Nome</dt><dd className="mt-1 text-sm font-medium">{hospital.data?.nome}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">CNPJ</dt><dd className="mt-1 text-sm">{formatCnpj(hospital.data?.cnpj ?? '') || '—'}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">Setores</dt><dd className="mt-1 text-sm tabular-nums">{allSectors.data ? selectableSectors.length : '—'}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">Equipamentos</dt><dd className="mt-1 text-sm tabular-nums">{equipment.data?.length ?? '—'}</dd></div></dl>
+            <dl className="grid gap-4 sm:grid-cols-2"><div><dt className="text-[11px] uppercase text-text-muted">Nome</dt><dd className="mt-1 text-sm font-medium">{hospital.data?.nome}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">CNPJ</dt><dd className="mt-1 text-sm">{formatCnpj(hospital.data?.cnpj ?? '') || '—'}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">Setores</dt><dd className="mt-1 text-sm tabular-nums">{allSectors.data ? selectableSectors.length : '—'}</dd></div><div><dt className="text-[11px] uppercase text-text-muted">Equipamentos</dt><dd className="mt-1 text-sm tabular-nums">{equipmentTotal ?? '—'}</dd></div></dl>
             <div className="mt-5 flex justify-end border-t border-border pt-4"><button type="button" onClick={() => setEditingHospital(true)} className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium hover:bg-bg"><Pencil size={14} /> Editar hospital</button></div>
           </>}
         </div> : null}
@@ -142,15 +149,18 @@ export function HospitalDetailPage() {
 
         {activeTab === 'equipamentos' ? <>
           <div className="mb-4 grid gap-2 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-            <Select size="sm" aria-label="Filtrar por setor" value={sectorFilter} onChange={setSectorFilter} options={[{ value: '', label: 'Todos os setores' }, ...selectableSectors.map((sector) => ({ value: sector.id, label: sector.nome }))]} />
-            <input aria-label="Buscar equipamento" type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, nome, modelo, série…" className={inputClass} />
+            <Select size="sm" aria-label="Filtrar por setor" value={sectorFilter} onChange={(next) => { setSectorFilter(next); pagination.resetPage() }} options={[{ value: '', label: 'Todos os setores' }, ...selectableSectors.map((sector) => ({ value: sector.id, label: sector.nome }))]} />
+            <input aria-label="Buscar equipamento" type="search" value={search} onChange={(event) => { setSearch(event.target.value); pagination.resetPage() }} placeholder="Código, nome, modelo, série…" title="A busca filtra apenas os equipamentos da página atual" className={inputClass} />
           </div>
           <EquipmentListTable
             items={visibleEquipment}
+            sort={sort}
+            onSortChange={onSortChange}
+            pagination={{ page: pagination.page, size: pagination.size, total: equipment.data?.total ?? 0, onPageChange: pagination.setPage, onSizeChange: pagination.setSize }}
             sectorNameById={sectorNameById}
             isLoading={equipment.isLoading}
             error={equipment.isError ? { message: 'Não foi possível carregar os equipamentos.', onRetry: () => void equipment.refetch() } : null}
-            empty={{ title: (equipment.data?.length ?? 0) === 0 ? 'Nenhum equipamento neste hospital' : 'Nenhum equipamento encontrado' }}
+            empty={{ title: (equipment.data?.items.length ?? 0) === 0 ? 'Nenhum equipamento neste hospital' : 'Nenhum equipamento encontrado' }}
           />
         </> : null}
       </section>

@@ -117,20 +117,36 @@ export const demoApiAdapter: AxiosAdapter = async (config) => {
 }
 
 /** Rotas que o backend pagina (`pagina` 0-based + `tamanho`, total em X-Total-Count). */
-const PAGINATED_PATHS = new Set(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos', '/campanhas-preventivas', '/checklists'])
+const PAGINATED_PATHS = new Set(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos', '/campanhas-preventivas', '/checklists', '/equipamentos', '/categorias-equipamento'])
+const PAGINATED_PATTERNS = [/^\/hospitais\/[^/]+\/setores$/, /^\/equipamentos\/[^/]+\/documentos$/]
 
 const SEVERITY_RANK: Record<string, number> = { CRITICA: 0, ALTA: 1, MEDIA: 2, BAIXA: 3 }
 const SORTABLE: Record<string, string[]> = {
   '/chamados': ['severidade', 'abertoEm', 'slaResolucaoAte'],
   '/ordens-de-trabalho': ['dataAgendada', 'status', 'codigo', 'concluidaEm'],
+  '/equipamentos': ['nome', 'codigo', 'categoria', 'criadoEm'],
+}
+const EQUIPMENT_SORT_FIELDS: Record<string, string> = { nome: 'nome', codigo: 'codigo', categoria: 'categoriaNome', criadoEm: 'criadoEm' }
+const foldText = (value: unknown) => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
+
+/** GET /equipamentos: texto sem acento/caixa; sem categoria por último (mesmo com direcao=desc). */
+function sortEquipment(rows: RecordValue[], field: string, sign: number) {
+  const column = EQUIPMENT_SORT_FIELDS[field]
+  return [...rows].sort((a, b) => {
+    const left = a[column]
+    const right = b[column]
+    if (column === 'categoriaNome' && (!left || !right)) return !left && !right ? 0 : !left ? 1 : -1
+    return foldText(left).localeCompare(foldText(right), 'pt-BR') * sign
+  })
 }
 
-/** Espelha `ordenar`/`direcao` do backend (chamados e OTs); nulos vão por último e, em chamados, severidade desempata por abertoEm e id. */
+/** Espelha `ordenar`/`direcao` do backend (chamados, OTs e equipamentos); nulos vão por último e, em chamados, severidade desempata por abertoEm e id. */
 function sortRows(path: string, rows: RecordValue[], params?: Record<string, unknown>) {
   const field = typeof params?.ordenar === 'string' ? params.ordenar : ''
   if (!field || !SORTABLE[path]) return rows
   if (!SORTABLE[path].includes(field)) throw Object.assign(new Error('Ordenação inválida'), { response: { status: 400, data: { code: 'ORDENACAO_INVALIDA' } } })
   const sign = params?.direcao === 'desc' ? -1 : 1
+  if (path === '/equipamentos') return sortEquipment(rows, field, sign)
   const key = (row: RecordValue) => field === 'severidade' ? (SEVERITY_RANK[String(row.severidade)] ?? 9) : (row[field] as string | null | undefined)
   const compare = (a: unknown, b: unknown) => (a === b ? 0 : (a as string | number) < (b as string | number) ? -1 : 1)
   return [...rows].sort((a, b) => {
@@ -145,7 +161,7 @@ function sortRows(path: string, rows: RecordValue[], params?: Record<string, unk
 
 /** Espelha `Paginacao` do backend: o total sempre vai no header; sem `pagina`/`tamanho` a lista vem inteira. */
 function paginate(method: string, path: string, data: unknown, params?: Record<string, unknown>) {
-  if (method !== 'get' || !(PAGINATED_PATHS.has(path) || /^\/hospitais\/[^/]+\/setores$/.test(path)) || !Array.isArray(data)) return { data, headers: {} as Record<string, string> }
+  if (method !== 'get' || !(PAGINATED_PATHS.has(path) || PAGINATED_PATTERNS.some((pattern) => pattern.test(path))) || !Array.isArray(data)) return { data, headers: {} as Record<string, string> }
   const sorted = sortRows(path, data as RecordValue[], params)
   const headers = { 'x-total-count': String(sorted.length) }
   if (params?.pagina === undefined && params?.tamanho === undefined) return { data: sorted, headers }

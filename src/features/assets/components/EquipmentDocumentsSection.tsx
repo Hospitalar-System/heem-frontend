@@ -12,6 +12,8 @@ import { fetchDocumentDownloadUrl, useDeleteEquipmentDocument, useEquipmentDocum
 import type { DocumentType, EquipmentDocument } from '../types'
 import { RowActionsMenu } from '@/components/ui/RowActionsMenu'
 import { Badge } from '@/components/ui/Badge'
+import { Pagination } from '@/components/ui/Pagination'
+import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 
 const documentTypeNames: Record<DocumentType, string> = {
   MANUAL: 'Manual', CERTIFICADO_CALIBRACAO: 'Certificado de calibração', LAUDO_SEGURANCA: 'Laudo de segurança', NOTA_FISCAL: 'Nota fiscal', OUTRO: 'Outro',
@@ -23,7 +25,10 @@ const primaryButton = 'h-9 rounded-md bg-primary px-3 text-xs font-semibold text
 
 /** canWrite: enviar (admin_cliente e tecnico); canManage: alterar validade e excluir (somente admin_cliente). */
 export function EquipmentDocumentsSection({ equipmentId, canWrite, canManage }: { equipmentId: string; canWrite: boolean; canManage: boolean }) {
-  const documents = useEquipmentDocuments(equipmentId)
+  const pagination = usePaginationParams()
+  const documents = useEquipmentDocuments(equipmentId, pagination.apiParams)
+  // Depois de excluir o último documento da página, volta para a última página válida.
+  usePageClamp(pagination, documents.data?.total, !documents.isPlaceholderData)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [validityTarget, setValidityTarget] = useState<EquipmentDocument | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<EquipmentDocument | null>(null)
@@ -49,7 +54,8 @@ export function EquipmentDocumentsSection({ equipmentId, canWrite, canManage }: 
     }
   }
 
-  const list = documents.data ?? []
+  const list = documents.data?.items ?? []
+  const total = documents.data?.total ?? 0
   return <section aria-labelledby="equipment-documents-title" className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div><h3 id="equipment-documents-title" className="text-sm font-semibold text-text-primary">Documentos</h3><p className="mt-1 text-xs text-text-secondary">Manuais, laudos e certificados com controle de validade.</p></div>
@@ -58,8 +64,8 @@ export function EquipmentDocumentsSection({ equipmentId, canWrite, canManage }: 
 
     {documents.isLoading ? <div aria-label="Carregando documentos" aria-busy="true" className="space-y-2">{[0, 1].map((item) => <div key={item} className="h-16 animate-pulse rounded-md border border-border bg-surface" />)}</div> : null}
     {documents.isError ? <div role="alert" className="rounded-md border border-danger/30 bg-surface p-4 text-xs text-text-secondary"><p>Não foi possível carregar os documentos.</p><button type="button" onClick={() => void documents.refetch()} className="mt-2 text-primary underline">Tentar novamente</button></div> : null}
-    {!documents.isLoading && !documents.isError && list.length === 0 ? <div className="grid min-h-36 place-items-center rounded-md border border-dashed border-border bg-surface p-5 text-center"><div><FileText aria-hidden="true" className="mx-auto text-text-muted" size={20} /><p className="mt-2 text-xs font-medium text-text-primary">Nenhum documento anexado</p><p className="mt-1 text-[11px] text-text-secondary">{canWrite ? 'Envie manuais, laudos ou certificados deste equipamento.' : 'Ainda não há documentos para este equipamento.'}</p></div></div> : null}
-    {!documents.isLoading && !documents.isError && list.length > 0 ? <div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[720px] border-collapse text-left">
+    {!documents.isLoading && !documents.isError && list.length === 0 && total === 0 ? <div className="grid min-h-36 place-items-center rounded-md border border-dashed border-border bg-surface p-5 text-center"><div><FileText aria-hidden="true" className="mx-auto text-text-muted" size={20} /><p className="mt-2 text-xs font-medium text-text-primary">Nenhum documento anexado</p><p className="mt-1 text-[11px] text-text-secondary">{canWrite ? 'Envie manuais, laudos ou certificados deste equipamento.' : 'Ainda não há documentos para este equipamento.'}</p></div></div> : null}
+    {!documents.isLoading && !documents.isError && list.length > 0 ? <div><div className="overflow-x-auto rounded-lg border border-border bg-surface"><table className="w-full min-w-[720px] border-collapse text-left">
       <thead><tr className="table-head h-11 text-[11px]"><th scope="col" className="px-4">Documento</th><th scope="col" className="px-4">Tipo</th><th scope="col" className="px-4">Enviado em</th><th scope="col" className="px-4">Validade</th><th scope="col" className="px-4">Situação</th><th scope="col" className="px-4 text-right">Ações</th></tr></thead>
       <tbody>{list.map((document) => <tr key={document.id} className="row-idle row-divider h-12 text-xs">
         <td className="break-all px-4 font-medium">{document.nomeArquivo}</td>
@@ -74,7 +80,7 @@ export function EquipmentDocumentsSection({ equipmentId, canWrite, canManage }: 
             { label: 'Excluir', icon: <Trash2 size={14} />, destructive: true, onSelect: () => { remove.reset(); setDeleteTarget(document) } },
           ] : []),
         ]} /></div></td>
-      </tr>)}</tbody></table></div> : null}
+      </tr>)}</tbody></table></div><Pagination page={pagination.page} size={pagination.size} total={total} onPageChange={pagination.setPage} onSizeChange={pagination.setSize} className="mt-2 rounded-lg border border-border bg-surface" /></div> : null}
 
     {uploadOpen ? <UploadModal equipmentId={equipmentId} onClose={() => setUploadOpen(false)} /> : null}
     {validityTarget ? <ValidityModal equipmentId={equipmentId} document={validityTarget} onClose={() => setValidityTarget(null)} /> : null}

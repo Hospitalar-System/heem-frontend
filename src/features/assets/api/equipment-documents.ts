@@ -1,16 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { apiClient } from '@/lib/axios'
+import { usePagedQuery } from '@/lib/pagination'
 import type { DocumentUrlResponse, EquipmentDocument, UploadEquipmentDocumentInput } from '../types'
 
 const documentsKey = (equipmentId: string) => ['equipment-documents', equipmentId] as const
 
-export function useEquipmentDocuments(equipmentId: string) {
-  return useQuery({
-    queryKey: documentsKey(equipmentId),
-    queryFn: async () => (await apiClient.get<EquipmentDocument[]>(`/equipamentos/${equipmentId}/documentos`)).data,
-    enabled: Boolean(equipmentId),
-  })
+/** Documentos do equipamento paginados no servidor (`pagina` 0-based, total em X-Total-Count). */
+export function useEquipmentDocuments(equipmentId: string, page: { pagina: number; tamanho: number }) {
+  return usePagedQuery<EquipmentDocument>(documentsKey(equipmentId), `/equipamentos/${equipmentId}/documentos`, { ...page }, Boolean(equipmentId))
 }
 
 /**
