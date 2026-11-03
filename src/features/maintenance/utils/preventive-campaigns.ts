@@ -31,6 +31,19 @@ export const pendingReasonInfo: Record<CampaignPendingReason, { title: string; h
   SEM_TECNICO_DISPONIVEL: { title: 'Sem técnico disponível', help: 'Vincule um técnico ativo ao hospital ou escolha outro modo de atribuição.' },
 }
 
+/** Motivo da pulada em pt-BR; códigos desconhecidos aparecem crus para não esconder a informação. */
+const skippedReasonLabels: Record<string, string> = {
+  JA_TEM_OT_PREVENTIVA_ABERTA: 'Já tem OT preventiva aberta',
+}
+export const skippedReasonLabel = (motivo: string) => skippedReasonLabels[motivo] ?? motivo
+
+/** Opções de formato do relatório da campanha (valores aceitos pelo backend). */
+export const campaignExportFormats = [
+  { value: 'pdf', label: 'PDF' },
+  { value: 'xlsx', label: 'Planilha (XLSX)' },
+  { value: 'csv', label: 'CSV' },
+]
+
 /** Corpo EXATO enviado ao backend (prévia e criação), a partir dos valores do formulário. */
 export function campaignBody(values: CampaignFormValues): CampaignInput {
   return {

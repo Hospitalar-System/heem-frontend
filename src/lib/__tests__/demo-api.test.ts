@@ -207,3 +207,19 @@ describe('modo de demonstração: ordenação no servidor', () => {
     await expect(apiClient.get('/chamados', { params: { ordenar: 'nome' } })).rejects.toMatchObject({ response: { status: 400, data: { code: 'ORDENACAO_INVALIDA' } } })
   })
 })
+
+describe('modo de demonstração: relatório da campanha', () => {
+  it('aceita o pedido, evolui para concluído com URL de exemplo e traz puladasDetalhe', async () => {
+    const created = await apiClient.post('/relatorios/exportacoes', { conteudo: 'campanha', formato: 'xlsx', campanhaId: 'campaign-demo-1' })
+    expect(created.status).toBe(202)
+    const { id, status } = created.data as { id: string; status: string }
+    expect(status).toBe('pendente')
+    const first = (await apiClient.get(`/relatorios/exportacoes/${id}`)).data as { status: string; urlDownload: string | null }
+    expect(first).toEqual(expect.objectContaining({ status: 'pendente', urlDownload: null }))
+    const done = (await apiClient.get(`/relatorios/exportacoes/${id}`)).data as { status: string; urlDownload: string }
+    expect(done.status).toBe('concluido')
+    expect(done.urlDownload).toBe('https://example.test/demo-relatorio-campanha.xlsx')
+    const detail = (await apiClient.get('/campanhas-preventivas/campaign-demo-1')).data as { puladasDetalhe: Array<{ motivo: string; otCodigo: string }> }
+    expect(detail.puladasDetalhe[0]).toEqual(expect.objectContaining({ motivo: 'JA_TEM_OT_PREVENTIVA_ABERTA', otCodigo: 'OT-2026-001' }))
+  })
+})
