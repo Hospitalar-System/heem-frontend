@@ -1,5 +1,5 @@
 import { Download, FileDown, RotateCw } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Select } from '@/components/ui/Select'
 import { useReportExport, useRequestCampaignExport, type CampaignExportFormat } from '@/features/dashboard/api/reports'
 import { campaignApiError, campaignExportFormats } from '../utils/preventive-campaigns'
@@ -14,7 +14,7 @@ const safeUrl = (url: string | null | undefined) => (url && /^https?:\/\//i.test
  * acompanha o andamento e, quando o arquivo fica pronto, INICIA o download sozinho (uma vez por exportação) e oferece
  * baixar de novo. Nada fica guardado no navegador.
  */
-export function CampaignExport({ campaignId }: { campaignId: string }) {
+export function CampaignExport({ campaignId, children }: { campaignId: string; children?: ReactNode }) {
   const [formato, setFormato] = useState<CampaignExportFormat>('pdf')
   const [exportId, setExportId] = useState<string | null>(null)
   const request = useRequestCampaignExport()
@@ -62,12 +62,15 @@ export function CampaignExport({ campaignId }: { campaignId: string }) {
         : status.pollStopped ? 'Atualização pausada.'
           : ''
 
-  return <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
-    <Select size="sm" aria-label="Formato do relatório" value={formato} onChange={(next) => setFormato(next as CampaignExportFormat)} options={campaignExportFormats} disabled={busy} />
-    <button type="button" disabled={busy} onClick={() => void submit()} className={`inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover ${focusRing} disabled:cursor-not-allowed disabled:opacity-50`}>
-      <FileDown aria-hidden="true" size={14} />Exportar relatório
-    </button>
-    <div aria-live="polite" aria-atomic="true" className={message ? 'flex items-center gap-2 text-xs text-text-secondary' : 'sr-only'}>
+  return <div className="flex min-w-0 flex-col items-end gap-1.5">
+    <div data-testid="campaign-controls" className="flex flex-row flex-wrap items-center justify-end gap-2">
+      <div className="w-24"><Select aria-label="Formato do relatório" value={formato} onChange={(next) => setFormato(next as CampaignExportFormat)} options={campaignExportFormats} disabled={busy} /></div>
+      <button type="button" disabled={busy} onClick={() => void submit()} className={`inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover ${focusRing} disabled:cursor-not-allowed disabled:opacity-50`}>
+        <FileDown aria-hidden="true" size={14} />Exportar relatório
+      </button>
+      {children}
+    </div>
+    <div aria-live="polite" aria-atomic="true" className={message ? 'flex min-h-4 items-center justify-end gap-2 text-xs text-text-secondary' : 'sr-only'}>
       {(request.isPending || processing) && <RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />}
       {message && <span>{message}</span>}
       {downloaded && downloadUrl && <a href={downloadUrl} rel="noopener noreferrer" className={`inline-flex items-center gap-1 rounded font-medium text-primary hover:underline ${focusRing}`}><Download aria-hidden="true" size={14} />Baixar novamente</a>}
