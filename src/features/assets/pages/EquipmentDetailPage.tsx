@@ -7,6 +7,7 @@ import { EquipmentStatusBadge } from '../components/EquipmentStatusBadge'
 import { EquipmentDocumentsSection } from '../components/EquipmentDocumentsSection'
 import { EquipmentPhotoSection } from '../components/EquipmentPhotoSection'
 import { EquipmentChecklistSection } from '../components/EquipmentChecklistSection'
+import { EquipmentMeasurementsSection } from '../components/EquipmentMeasurementsSection'
 import { EquipmentLabelsSection } from '../components/EquipmentLabelsSection'
 import { useEquipment, useEquipmentWorkOrders, useHospital, useSector } from '../api/assets'
 import type { Equipment } from '../types'
@@ -57,7 +58,7 @@ export function EquipmentDetailPage() {
 
       <section id="equipment-tab-panel" role="tabpanel" aria-labelledby={`equipment-tab-${activeTab}`} className="mt-4 outline-none">
         {activeTab === 'dados' ? <EquipmentData equipment={equipment.data} canWritePhoto={canReadDocuments} order={nextPreventive} ordersLoading={orders.isLoading} isAdmin={isAdmin} /> : null}
-        {activeTab === 'medicoes' ? <UnavailablePanel title="Histórico de medições indisponível" detail="A API ainda não fornece uma rota de consulta de medições por equipamento." /> : null}
+        {activeTab === 'medicoes' ? <EquipmentMeasurementsSection equipmentId={id} isAdmin={isAdmin} /> : null}
         {activeTab === 'checklists' ? <EquipmentChecklistSection equipment={equipment.data} isAdmin={isAdmin} /> : null}
         {activeTab === 'ots' ? <WorkOrdersPanel orders={orders.data ?? []} loading={orders.isLoading} error={orders.isError} retry={() => void orders.refetch()} /> : null}
         {activeTab === 'documentos' && canReadDocuments ? <EquipmentDocumentsSection equipmentId={id} canWrite={canReadDocuments} canManage={isAdmin} /> : null}
@@ -106,10 +107,6 @@ function WorkOrdersPanel({ orders, loading, error, retry }: { orders: Array<{ id
 
 function EmptyPanel({ title, detail }: { title: string; detail: string }) {
   return <section className="grid min-h-48 place-items-center rounded-lg border border-dashed border-border bg-surface p-6 text-center"><div><h3 className="text-sm font-semibold">{title}</h3><p className="mt-1 text-xs text-text-secondary">{detail}</p></div></section>
-}
-
-function UnavailablePanel({ title, detail }: { title: string; detail: string }) {
-  return <section className="rounded-lg border border-border bg-surface p-5"><h3 className="text-sm font-semibold">{title}</h3><p className="mt-2 text-xs text-text-secondary">{detail}</p></section>
 }
 
 function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, current: number, setActive: (tab: EquipmentTab) => void, availableTabs: typeof tabs) {

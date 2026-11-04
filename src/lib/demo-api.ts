@@ -106,6 +106,12 @@ function checklistExecutionsFor(equipmentId: string): RecordValue[] {
     { otId: 'order-demo-12', otCodigo: 'OT-2026-003', concluidaEm: '2026-04-02T09:15:00Z', tecnicoNome: 'Outro Técnico', parecerTecnico: 'Sem observações.', itens: [
       { itemId: 'check-item-demo-5', descricao: 'Modo de operação', tipo: 'SELECAO', valor: 'Contínuo', unidade: null, conforme: true, faixaMin: null, faixaMax: null, valorReferencia: 'Contínuo' },
     ] },
+    { otId: 'order-demo-13', otCodigo: 'OT-2026-001', concluidaEm: '2026-01-12T11:00:00Z', tecnicoNome: 'Técnico Demo', parecerTecnico: null, itens: [
+      { itemId: 'check-item-demo-4', descricao: 'Tensão de saída', tipo: 'NUMERICO', valor: 12.6, unidade: 'V', conforme: true, faixaMin: 11, faixaMax: 13, valorReferencia: null },
+    ] },
+    { otId: 'order-demo-14', otCodigo: 'OT-2025-044', concluidaEm: '2025-10-05T08:45:00Z', tecnicoNome: 'Outro Técnico', parecerTecnico: null, itens: [
+      { itemId: 'check-item-demo-4', descricao: 'Tensão de saída', tipo: 'NUMERICO', valor: 11.8, unidade: 'V', conforme: true, faixaMin: 11, faixaMax: 13, valorReferencia: null },
+    ] },
   ]
 }
 const checklistItemsById = new Map<string, RecordValue[]>([[checklists[0].id as string, checklistItems]])
