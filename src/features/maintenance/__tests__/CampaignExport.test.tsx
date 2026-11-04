@@ -81,7 +81,8 @@ describe('Exportar relatório da campanha (F4.10)', () => {
     expect(exportPosts()[0][1]).toEqual({ conteudo: 'campanha', formato, campanhaId: 'camp-1' })
   })
 
-  it('acompanha até concluir, oferece o download e para de consultar', async () => {
+  it('acompanha até concluir, baixa sozinho uma vez, oferece baixar de novo e para de consultar', async () => {
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     const steps = [{ id: 'exp-1', status: 'pendente', urlDownload: null }, { id: 'exp-1', status: 'concluido', urlDownload: exportUrl }]
@@ -89,13 +90,15 @@ describe('Exportar relatório da campanha (F4.10)', () => {
     exportGet = async () => ({ data: steps[Math.min(call++, steps.length - 1)] } as never)
     renderDetail()
     await user.click(await exportButton())
-    expect(await screen.findByText(/Gerando o relatório/)).toBeInTheDocument()
+    expect(await screen.findByText(/Gerando…/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Exportar relatório' })).toBeDisabled()
     await act(async () => { await vi.advanceTimersByTimeAsync(2100) })
-    const link = await screen.findByRole('link', { name: 'Baixar relatório' })
+    const link = await screen.findByRole('link', { name: 'Baixar novamente' })
     expect(link).toHaveAttribute('href', exportUrl)
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
-    expect(screen.getByText('Relatório pronto para download.')).toBeInTheDocument()
+    expect(screen.getByText('Relatório baixado')).toBeInTheDocument()
+    expect(clickSpy).toHaveBeenCalledTimes(1)
+    expect(clickSpy.mock.instances[0]).toHaveProperty('href', exportUrl)
     const calls = exportGets().length
     await act(async () => { await vi.advanceTimersByTimeAsync(10000) })
     expect(exportGets()).toHaveLength(calls)
@@ -106,7 +109,7 @@ describe('Exportar relatório da campanha (F4.10)', () => {
     const user = userEvent.setup()
     renderDetail()
     await user.click(await exportButton())
-    await screen.findByRole('link', { name: 'Baixar relatório' })
+    await screen.findByRole('link', { name: 'Baixar novamente' })
     await user.click(screen.getByRole('button', { name: 'Exportar relatório' }))
     await waitFor(() => expect(exportPosts()).toHaveLength(2))
   })
@@ -117,7 +120,7 @@ describe('Exportar relatório da campanha (F4.10)', () => {
     renderDetail()
     await user.click(await exportButton())
     expect(await screen.findByText('Não foi possível gerar o relatório.')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Baixar relatório' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Baixar novamente' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Tentar de novo' }))
     await waitFor(() => expect(exportPosts()).toHaveLength(2))
     expect(exportPosts()[1][1]).toEqual({ conteudo: 'campanha', formato: 'pdf', campanhaId: 'camp-1' })
@@ -133,9 +136,9 @@ describe('Exportar relatório da campanha (F4.10)', () => {
     await user.click(button)
     expect(exportPosts()).toHaveLength(1)
     expect(button).toBeDisabled()
-    expect(screen.getByText('Solicitando o relatório…')).toBeInTheDocument()
+    expect(screen.getByText('Solicitando…')).toBeInTheDocument()
     await act(async () => { resolve({ data: { id: 'exp-1', status: 'pendente', urlDownload: null } } as never) })
-    await screen.findByRole('link', { name: 'Baixar relatório' })
+    await screen.findByRole('link', { name: 'Baixar novamente' })
   })
 
   it.each([
@@ -166,7 +169,7 @@ describe('Exportar relatório da campanha (F4.10)', () => {
     expect(await screen.findByText('Não foi possível consultar o andamento do relatório.')).toBeInTheDocument()
     fail = false
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
-    expect(await screen.findByRole('link', { name: 'Baixar relatório' })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Baixar novamente' })).toBeInTheDocument()
   })
 
   it('não oferece download com esquema diferente de http(s)', async () => {
@@ -174,8 +177,8 @@ describe('Exportar relatório da campanha (F4.10)', () => {
     exportGet = async () => ({ data: { id: 'exp-1', status: 'concluido', urlDownload: 'javascript:alert(1)' } } as never)
     renderDetail()
     await user.click(await exportButton())
-    expect(await screen.findByText(/link de download não foi fornecido/)).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Baixar relatório' })).not.toBeInTheDocument()
+    expect(await screen.findByText(/Link de download indisponível/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Baixar novamente' })).not.toBeInTheDocument()
   })
 })
 

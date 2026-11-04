@@ -1,5 +1,5 @@
 import { Download, FileDown, RotateCw } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Select } from '@/components/ui/Select'
 import { useReportExport, useRequestCampaignExport, type CampaignExportFormat } from '@/features/dashboard/api/reports'
 import { campaignApiError, campaignExportFormats } from '../utils/preventive-campaigns'
@@ -11,7 +11,8 @@ const safeUrl = (url: string | null | undefined) => (url && /^https?:\/\//i.test
 
 /**
  * "Exportar relatório" da campanha (Story F4.10): escolhe o formato, solicita a exportação assíncrona,
- * acompanha o andamento e oferece o download quando o arquivo fica pronto. Nada fica guardado no navegador.
+ * acompanha o andamento e, quando o arquivo fica pronto, INICIA o download sozinho (uma vez por exportação) e oferece
+ * baixar de novo. Nada fica guardado no navegador.
  */
 export function CampaignExport({ campaignId }: { campaignId: string }) {
   const [formato, setFormato] = useState<CampaignExportFormat>('pdf')
@@ -19,6 +20,8 @@ export function CampaignExport({ campaignId }: { campaignId: string }) {
   const request = useRequestCampaignExport()
   const status = useReportExport(exportId)
   const submitting = useRef(false)
+  const downloadedFor = useRef<string | null>(null)
+  const [downloaded, setDownloaded] = useState(false)
   const processing = status.data?.status === 'pendente' && !status.pollStopped
   const busy = request.isPending || processing
 
@@ -26,6 +29,7 @@ export function CampaignExport({ campaignId }: { campaignId: string }) {
     if (submitting.current || busy) return
     submitting.current = true
     setExportId(null)
+    setDownloaded(false)
     try {
       const result = await request.mutateAsync({ campanhaId: campaignId, formato })
       setExportId(result.id)
@@ -38,24 +42,36 @@ export function CampaignExport({ campaignId }: { campaignId: string }) {
 
   const requestError = request.isError ? campaignApiError(request.error, 'Não foi possível solicitar o relatório. Tente novamente.') : undefined
   const downloadUrl = status.data?.status === 'concluido' ? safeUrl(status.data.urlDownload) : null
-  const message = request.isPending ? 'Solicitando o relatório…'
-    : processing ? 'Gerando o relatório. Isso pode levar alguns instantes…'
-      : status.data?.status === 'concluido' ? (downloadUrl ? 'Relatório pronto para download.' : 'Relatório concluído, mas o link de download não foi fornecido. Tente novamente.')
-        : status.pollStopped ? 'A atualização automática foi pausada.'
+
+  // Download automático ao concluir: um único clique programático por exportação (sem nova aba).
+  useEffect(() => {
+    if (!downloadUrl || !exportId || downloadedFor.current === exportId) return
+    downloadedFor.current = exportId
+    const anchor = document.createElement('a')
+    anchor.href = downloadUrl
+    anchor.rel = 'noopener noreferrer'
+    anchor.hidden = true
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    setDownloaded(true)
+  }, [downloadUrl, exportId])
+  const message = request.isPending ? 'Solicitando…'
+    : processing ? 'Gerando…'
+      : status.data?.status === 'concluido' ? (downloadUrl ? 'Relatório baixado' : 'Link de download indisponível. Tente de novo.')
+        : status.pollStopped ? 'Atualização pausada.'
           : ''
 
-  return <div className="flex min-w-0 flex-col items-stretch gap-2 sm:items-end">
-    <div className="flex flex-wrap items-center gap-2">
-      <Select size="sm" aria-label="Formato do relatório" value={formato} onChange={(next) => setFormato(next as CampaignExportFormat)} options={campaignExportFormats} disabled={busy} />
-      <button type="button" disabled={busy} onClick={() => void submit()} className={`inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover ${focusRing} disabled:cursor-not-allowed disabled:opacity-50`}>
-        <FileDown aria-hidden="true" size={14} />Exportar relatório
-      </button>
-    </div>
-    <div aria-live="polite" aria-atomic="true" className={message ? 'flex flex-wrap items-center gap-2 text-xs text-text-secondary' : 'sr-only'}>
-      {message && <span>{message}</span>}
+  return <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+    <Select size="sm" aria-label="Formato do relatório" value={formato} onChange={(next) => setFormato(next as CampaignExportFormat)} options={campaignExportFormats} disabled={busy} />
+    <button type="button" disabled={busy} onClick={() => void submit()} className={`inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover ${focusRing} disabled:cursor-not-allowed disabled:opacity-50`}>
+      <FileDown aria-hidden="true" size={14} />Exportar relatório
+    </button>
+    <div aria-live="polite" aria-atomic="true" className={message ? 'flex items-center gap-2 text-xs text-text-secondary' : 'sr-only'}>
       {(request.isPending || processing) && <RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />}
-      {downloadUrl && <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 rounded font-medium text-primary hover:underline ${focusRing}`}><Download aria-hidden="true" size={14} />Baixar relatório</a>}
-      {status.pollStopped && <button type="button" onClick={() => void status.refetch()} className={`rounded font-medium text-primary underline ${focusRing}`}>Atualizar agora</button>}
+      {message && <span>{message}</span>}
+      {downloaded && downloadUrl && <a href={downloadUrl} rel="noopener noreferrer" className={`inline-flex items-center gap-1 rounded font-medium text-primary hover:underline ${focusRing}`}><Download aria-hidden="true" size={14} />Baixar novamente</a>}
+      {status.pollStopped && <button type="button" onClick={() => void status.refetch()} className={`rounded font-medium text-primary underline ${focusRing}`}>Atualizar</button>}
     </div>
     {requestError && <p role="alert" className="text-xs text-danger">{requestError.message}</p>}
     {status.data?.status === 'falhou' && <div role="alert" className="flex flex-wrap items-center gap-2 text-xs text-danger">
