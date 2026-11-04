@@ -10,6 +10,7 @@ export interface UserProfileDTO {
   email?: string
   roles: UserRole[]
   tenantId?: string | null
+  tenantName?: string | null
 }
 
 export interface CurrentUserResponse {
@@ -18,11 +19,13 @@ export interface CurrentUserResponse {
   sub?: string
   subject?: string
   name?: string
+  nome?: string
   displayName?: string
   email?: string
   roles?: unknown[]
   papeis?: unknown[]
   tenantId?: string | null
+  tenantNome?: string | null
   tenant_id?: string | null
   'https://heem.app/roles'?: unknown[]
   'https://heem.app/tenant_id'?: string | null
