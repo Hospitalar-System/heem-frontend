@@ -11,6 +11,8 @@ import { SettingsIndexRedirect } from '@/features/settings/components/SettingsIn
 const LandingPage = lazy(() => import('@/features/landing/pages/LandingPage').then((module) => ({ default: module.LandingPage })))
 const PoliticaPrivacidadePage = lazy(() => import('@/features/landing/pages/PaginasLegais').then((module) => ({ default: module.PoliticaPrivacidadePage })))
 const TermosDeUsoPage = lazy(() => import('@/features/landing/pages/PaginasLegais').then((module) => ({ default: module.TermosDeUsoPage })))
+const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswordPage').then((module) => ({ default: module.ForgotPasswordPage })))
+const ResetPasswordPage = lazy(() => import('@/features/auth/pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })))
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
 const HospitalsPage = lazy(() => import('@/features/assets/pages/HospitalsPage').then((module) => ({ default: module.HospitalsPage })))
 const HospitalDetailPage = lazy(() => import('@/features/assets/pages/HospitalDetailPage').then((module) => ({ default: module.HospitalDetailPage })))
@@ -44,6 +46,8 @@ export const routes = [
   { path: '/privacidade', element: <Suspense fallback={<DashboardRouteLoading />}><PoliticaPrivacidadePage /></Suspense> },
   { path: '/termos', element: <Suspense fallback={<DashboardRouteLoading />}><TermosDeUsoPage /></Suspense> },
   { path: '/login', element: <LoginPage /> },
+  { path: '/esqueci-senha', element: <Suspense fallback={<DashboardRouteLoading />}><ForgotPasswordPage /></Suspense> },
+  { path: '/redefinir-senha', element: <Suspense fallback={<DashboardRouteLoading />}><ResetPasswordPage /></Suspense> },
   { path: '/platform/clients', element: <RequireRole role="super_admin"><Suspense fallback={<RouteContentFallback />}><ClientsPage /></Suspense></RequireRole> },
   { path: '/platform/users', element: <RequireRole role="super_admin"><Suspense fallback={<RouteContentFallback />}><PlatformUsersPage /></Suspense></RequireRole> },
   { path: '/hospitals', element: <RequireRole><Suspense fallback={<RouteContentFallback />}><HospitalsPage /></Suspense></RequireRole> },

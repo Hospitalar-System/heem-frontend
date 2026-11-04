@@ -1,26 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { LoaderCircle, LogIn } from 'lucide-react'
-import type { ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
+import { Link } from 'react-router-dom'
 import { isDemoMode } from '@/lib/demo-mode'
+import { getAuthProvider } from '../api/auth-provider'
 import { AccessBlockedError, getLoginErrorMessage, useLogin } from '../hooks/useLogin'
 import { loginSchema, type LoginFormInput, type LoginFormValues } from '../schemas/login.schema'
 import { AccessBlockedScreen } from './AccessBlockedScreen'
+import { buttonClass, FormField, inputClass } from './AuthFormParts'
 import { Checkbox } from '@/components/ui/Checkbox'
-
-const inputClass = 'h-[45px] w-full rounded-[8px] border border-border bg-bg px-3 text-sm text-text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 aria-[invalid=true]:border-danger disabled:opacity-60'
-const buttonClass = 'flex h-[45px] w-full items-center justify-center gap-2 rounded-[8px] bg-primary px-4 text-sm font-medium text-bg-brand outline-none transition hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg-login disabled:cursor-wait disabled:opacity-70'
-
-// Rótulo e mensagem de erro ficam fora do <label> para o nome acessível do campo continuar só "E-mail"/"Senha".
-function FormField({ id, label, error, children }: { id: string; label: string; error?: string; children: ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-xs font-medium text-text-secondary">{label}</label>
-      {children}
-      {error && <p id={`${id}-error`} role="alert" className="text-xs text-danger">{error}</p>}
-    </div>
-  )
-}
 
 export function LoginForm() {
   const mutation = useLogin()
@@ -30,6 +18,7 @@ export function LoginForm() {
   })
   const { errors } = form.formState
   const pending = mutation.isPending
+  const canResetPassword = getAuthProvider().supportsPasswordReset
 
   if (mutation.error instanceof AccessBlockedError) {
     return <AccessBlockedScreen reason={mutation.error.reason} onBack={() => mutation.reset()} />
@@ -101,6 +90,11 @@ export function LoginForm() {
         {submitIcon}
         {submitLabel}
       </button>
+      {canResetPassword && (
+        <p className="text-center">
+          <Link to="/esqueci-senha" className="rounded-md text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary">Esqueci minha senha</Link>
+        </p>
+      )}
     </form>
   )
 }
