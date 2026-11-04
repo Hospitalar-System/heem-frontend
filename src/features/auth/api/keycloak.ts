@@ -1,33 +1,20 @@
 import { oidcConfig } from '@/lib/oidc-config'
+import { AuthError } from './auth-error'
+import type { AuthTokens } from './auth-types'
 
 // Cliente do Keycloak (login direto, seção 1.5 do guia de autenticação).
 // Usa fetch puro, e não o apiClient, para que o corpo com a senha nunca passe
 // por interceptors do axios nem por qualquer log de requisição.
 
-export interface KeycloakTokens {
-  accessToken: string
-  refreshToken: string
-  /** Instante (ms desde a epoch) em que o access token expira. */
-  expiresAt: number
-}
+export type KeycloakTokens = AuthTokens
 
 export type KeycloakAuthErrorKind = 'invalid_credentials' | 'account_locked' | 'network' | 'unknown'
 
-const messages: Record<KeycloakAuthErrorKind, string> = {
-  invalid_credentials: 'E-mail ou senha incorretos. Confira os dados e, se o problema continuar, tente novamente em alguns minutos.',
-  account_locked: 'Muitas tentativas sem sucesso. Aguarde alguns minutos (até 15) e tente novamente.',
-  network: 'Não foi possível conectar ao serviço de login. Verifique sua conexão e tente novamente em instantes.',
-  unknown: 'Não foi possível concluir a autenticação. Tente novamente.',
-}
-
-/** Erro tipado. A mensagem é fixa e nunca carrega senha, tokens ou corpo da requisição. */
-export class KeycloakAuthError extends Error {
-  readonly kind: KeycloakAuthErrorKind
-
+/** Erro do Keycloak: especialização de AuthError, mantida por compatibilidade. */
+export class KeycloakAuthError extends AuthError {
   constructor(kind: KeycloakAuthErrorKind) {
-    super(messages[kind])
+    super(kind)
     this.name = 'KeycloakAuthError'
-    this.kind = kind
   }
 }
 

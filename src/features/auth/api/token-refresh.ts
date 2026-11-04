@@ -1,6 +1,8 @@
 import { isDemoMode } from '@/lib/demo-mode'
 import { clearAuthSession, getAuthState, getRefreshToken, readStoredRefreshToken, updateAuthTokens } from '../session'
-import { KeycloakAuthError, refreshTokens, type KeycloakTokens } from './keycloak'
+import { AuthError } from './auth-error'
+import { getAuthProvider } from './auth-provider'
+import type { AuthTokens } from './auth-types'
 
 let inFlight: Promise<void> | null = null
 
@@ -24,17 +26,17 @@ export function refreshAccessToken(): Promise<void> {
 async function run() {
   const used = getRefreshToken()
   if (!used) throw new Error('Sem refresh token para renovar a sessão.')
-  let tokens: KeycloakTokens
+  let tokens: AuthTokens
   try {
-    tokens = await refreshTokens(used)
+    tokens = await getAuthProvider().refresh(used)
   } catch (error) {
-    if (!(error instanceof KeycloakAuthError) || error.kind !== 'invalid_credentials') throw error
+    if (!(error instanceof AuthError) || error.kind !== 'invalid_credentials') throw error
     if (getRefreshToken() !== used) throw error // sessão trocada: o erro é da sessão antiga
     const adopted = readStoredRefreshToken()?.token
     if (adopted && adopted !== used) {
       // Outra aba rotacionou o token: tenta uma vez com o do storage, sem limpar.
-      tokens = await refreshTokens(adopted).catch((retryError: unknown) => {
-        if (retryError instanceof KeycloakAuthError && retryError.kind === 'invalid_credentials' && getRefreshToken() === used) {
+      tokens = await getAuthProvider().refresh(adopted).catch((retryError: unknown) => {
+        if (retryError instanceof AuthError && retryError.kind === 'invalid_credentials' && getRefreshToken() === used) {
           clearAuthSession()
         }
         throw retryError

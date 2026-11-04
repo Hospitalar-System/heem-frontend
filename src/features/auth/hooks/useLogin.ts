@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { isDemoMode } from '@/lib/demo-mode'
 import { getCurrentUser, getDevelopmentToken } from '../api/identity'
-import { loginWithPassword, logoutSession } from '../api/keycloak'
+import { getAuthProvider } from '../api/auth-provider'
 import type { LoginFormValues } from '../schemas/login.schema'
 import { setAuthSession } from '../session'
 import type { ProblemDetail, UserRole } from '../types'
@@ -29,7 +29,7 @@ export function getRoleLandingPath(roles: UserRole[]) {
 
 export type AccessBlockedReason = 'USUARIO_NAO_CADASTRADO' | 'USUARIO_DESATIVADO' | 'OUTRO'
 
-/** O /me respondeu 403: login válido no Keycloak, mas sem acesso ao HEEM. */
+/** O /me respondeu 403: login válido no provedor, mas sem acesso ao HEEM. */
 export class AccessBlockedError extends Error {
   readonly reason: AccessBlockedReason
 
@@ -77,7 +77,7 @@ export function useLogin() {
 
       if (!values) throw new Error('Informe e-mail e senha para entrar.')
 
-      const { accessToken, refreshToken, expiresAt } = await loginWithPassword({
+      const { accessToken, refreshToken, expiresAt } = await getAuthProvider().signIn({
         email: values.email,
         password: values.password,
       })
@@ -90,7 +90,7 @@ export function useLogin() {
         return destination
       } catch (error) {
         // Sem sessão utilizável: revoga o refresh token (best-effort) e não persiste nada.
-        void logoutSession(refreshToken).catch(() => undefined)
+        void getAuthProvider().signOut({ refreshToken, accessToken }).catch(() => undefined)
         const reason = getForbiddenReason(error)
         throw reason ? new AccessBlockedError(reason) : error
       }

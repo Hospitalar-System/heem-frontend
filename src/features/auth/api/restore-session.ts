@@ -2,7 +2,8 @@ import axios from 'axios'
 import { isDemoMode } from '@/lib/demo-mode'
 import { clearAuthSession, readStoredRefreshToken, setAuthRestoring, setAuthSession, storeRefreshToken } from '../session'
 import { getCurrentUser } from './identity'
-import { KeycloakAuthError, refreshTokens } from './keycloak'
+import { AuthError } from './auth-error'
+import { getAuthProvider } from './auth-provider'
 
 let pending: Promise<void> | null = null
 
@@ -32,7 +33,7 @@ async function run(stored: { token: string; remembered: boolean }) {
   setAuthRestoring(true)
   let used = stored.token
   try {
-    const tokens = await refreshTokens(stored.token)
+    const tokens = await getAuthProvider().refresh(stored.token)
     // Rotação single-use: o token antigo já morreu, então guarda o novo antes do /me.
     storeRefreshToken(tokens.refreshToken, stored.remembered)
     used = tokens.refreshToken
@@ -43,7 +44,7 @@ async function run(stored: { token: string; remembered: boolean }) {
       rememberMe: stored.remembered,
     })
   } catch (error) {
-    const refreshRejected = error instanceof KeycloakAuthError && error.kind === 'invalid_credentials'
+    const refreshRejected = error instanceof AuthError && error.kind === 'invalid_credentials'
     const meUnauthorized = axios.isAxiosError(error) && error.response?.status === 401
     if ((refreshRejected || meUnauthorized) && readStoredRefreshToken()?.token === used) {
       clearAuthSession()
