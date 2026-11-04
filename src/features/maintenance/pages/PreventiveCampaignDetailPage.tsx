@@ -70,7 +70,7 @@ export function PreventiveCampaignDetailPage() {
               <p className="mt-1 text-xs text-text-secondary">{hospitals.data?.find((item) => item.id === data.hospitalId)?.nome ?? '—'} · {recurrenceLabel(data.recorrencia, data.intervalo)} · {assignmentModeLabels[data.modoAtribuicao]}</p>
               <p className="mt-0.5 text-xs text-text-secondary">Início {formatPlanDate(data.dataInicio)}{data.dataFim ? ` · fim ${formatPlanDate(data.dataFim)}` : ''}{data.ativa && data.proximaData ? ` · próxima execução ${formatPlanDate(data.proximaData)}` : ''}</p>
             </div>
-            <div className="flex flex-wrap items-start gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {isAdmin && <CampaignExport campaignId={data.id} />}
               {data.ativa && <button type="button" onClick={() => { setCancelError(''); setConfirmCancel(true) }} className={`inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-danger hover:bg-bg ${focusRing}`}><Ban aria-hidden="true" size={14} />Cancelar campanha</button>}
             </div>
