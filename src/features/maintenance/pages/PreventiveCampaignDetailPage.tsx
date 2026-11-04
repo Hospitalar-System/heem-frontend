@@ -51,6 +51,8 @@ export function PreventiveCampaignDetailPage() {
   // Se a lista de pendências veio limitada, o total vem do contador da execução.
   const pendingTotal = Math.max(data?.execucao.pendencias ?? 0, data?.pendenciasDetalhe.length ?? 0)
 
+  const cancelButton = data?.ativa ? <button type="button" onClick={() => { setCancelError(''); setConfirmCancel(true) }} className={`inline-flex h-10 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-danger hover:bg-bg ${focusRing}`}><Ban aria-hidden="true" size={14} />Cancelar campanha</button> : null
+
   return <AdminPageShell title={data?.nome ?? 'Campanha de preventiva'} subtitle="Progresso da geração de OTs e situação das ordens criadas">
     <div className="space-y-4">
       <Link to="/work-orders/campanhas" className={`inline-flex items-center gap-1.5 rounded-md text-xs font-medium text-primary hover:underline ${focusRing}`}><ArrowLeft aria-hidden="true" size={14} />Voltar às campanhas</Link>
@@ -70,9 +72,8 @@ export function PreventiveCampaignDetailPage() {
               <p className="mt-1 text-xs text-text-secondary">{hospitals.data?.find((item) => item.id === data.hospitalId)?.nome ?? '—'} · {recurrenceLabel(data.recorrencia, data.intervalo)} · {assignmentModeLabels[data.modoAtribuicao]}</p>
               <p className="mt-0.5 text-xs text-text-secondary">Início {formatPlanDate(data.dataInicio)}{data.dataFim ? ` · fim ${formatPlanDate(data.dataFim)}` : ''}{data.ativa && data.proximaData ? ` · próxima execução ${formatPlanDate(data.proximaData)}` : ''}</p>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {isAdmin && <CampaignExport campaignId={data.id} />}
-              {data.ativa && <button type="button" onClick={() => { setCancelError(''); setConfirmCancel(true) }} className={`inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium text-danger hover:bg-bg ${focusRing}`}><Ban aria-hidden="true" size={14} />Cancelar campanha</button>}
+            <div data-testid="campaign-actions" className="flex min-w-0 justify-end">
+              {isAdmin ? <CampaignExport campaignId={data.id}>{cancelButton}</CampaignExport> : cancelButton}
             </div>
           </div>
         </section>
