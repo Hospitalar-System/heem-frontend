@@ -79,20 +79,25 @@ Sem `VITE_API_BASE_URL`, a aplicação inicia em modo de demonstração: o login
 
 ### Variáveis de ambiente
 
-Copie `.env.example` para `.env.local` e ajuste. Toda leitura de `VITE_OIDC_*` fica em `src/lib/oidc-config.ts`.
+Copie `.env.example` para `.env.local` e ajuste. Toda leitura de `VITE_OIDC_*` fica em `src/lib/oidc-config.ts` e a de `VITE_SUPABASE_*`/`VITE_AUTH_PROVIDER` em `src/lib/auth-config.ts`.
 
 | Variável | Padrão | Uso |
 | --- | --- | --- |
 | `VITE_API_BASE_URL` | (vazio: modo demonstração) | URL base da API, por exemplo `http://localhost:8080/api/v1`. |
 | `VITE_OIDC_AUTHORITY` | `http://localhost:8180/realms/heem` | Realm do Keycloak; o app chama `{authority}/protocol/openid-connect/token` e `/logout`. |
 | `VITE_OIDC_CLIENT_ID` | `heem-frontend` | Client público do Keycloak com login direto (Direct Access Grants). |
+| `VITE_AUTH_PROVIDER` | `supabase` se `VITE_SUPABASE_URL` existir, senão `keycloak` | Provedor de autenticação (`supabase` ou `keycloak`). Permite voltar ao Keycloak sem mudar código. |
+| `VITE_SUPABASE_URL` | (vazio) | URL do projeto Supabase, por exemplo `https://<ref>.supabase.co`; o app chama `{url}/auth/v1/token`, `/logout`, `/recover` e `/user`. |
+| `VITE_SUPABASE_ANON_KEY` | (vazio) | Chave pública (anon/publishable) do Supabase. É pública por desenho; a `service_role` NUNCA vai ao front. |
 | `VITE_DEMO_MODE` | (vazio) | `true` força a demonstração; `false` a desativa. |
+
+Com o Supabase, o fluxo "Esqueci minha senha" (`/esqueci-senha`) e a redefinição/convite (`/redefinir-senha`) ficam disponíveis; o link do e-mail chega com os tokens no fragmento da URL, que é lido no cliente e removido do histórico na hora. A URL `{origem}/redefinir-senha` precisa estar em *Redirect URLs* do projeto Supabase. Com o Keycloak esses fluxos ficam ocultos.
 
 Sessão: o access token fica só em memória; o refresh token fica em `sessionStorage` (ou `localStorage` com "lembrar de mim") sob a chave `heem.auth.refresh` e é usado para restaurar a sessão ao abrir o app. Senha, access token e usuário nunca são persistidos.
 
 ### Deploy na Vercel
 
-Configure no projeto da Vercel as três variáveis abaixo (valores de staging):
+Configure no projeto da Vercel as variáveis abaixo (valores de staging). Para autenticar pelo Supabase, adicione também `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` (a anon key é pública e pode ficar no build; a service role NUNCA entra em variável `VITE_*`):
 
 | Variável | Valor (staging) |
 | --- | --- |
