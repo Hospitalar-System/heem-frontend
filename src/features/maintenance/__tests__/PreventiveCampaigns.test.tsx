@@ -368,6 +368,21 @@ describe('Campanha de preventiva', () => {
       expect(getCalls('/campanhas-preventivas/camp-1')).toHaveLength(calls)
     })
 
+    it('mostra formato, exportar e cancelar numa única linha, nessa ordem, com a mesma altura', async () => {
+      renderFlow('/work-orders/campanhas/camp-1')
+      const row = await screen.findByTestId('campaign-controls')
+      expect(row).toHaveClass('flex', 'flex-row', 'flex-wrap', 'items-center', 'justify-end')
+      expect(row).not.toHaveClass('flex-col')
+      const select = within(row).getByRole('combobox')
+      const [exportButton, cancelButton] = within(row).getAllByRole('button')
+      expect(exportButton).toHaveTextContent('Exportar relatório')
+      expect(cancelButton).toHaveTextContent('Cancelar campanha')
+      expect(select.compareDocumentPosition(exportButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(exportButton.compareDocumentPosition(cancelButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(exportButton).toHaveClass('h-10')
+      expect(cancelButton).toHaveClass('h-10')
+    })
+
     it('cancela com confirmação e aviso de que as OTs geradas são mantidas', async () => {
       const user = userEvent.setup()
       renderFlow('/work-orders/campanhas/camp-1')
