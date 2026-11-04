@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/Badge'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
 import { DatePicker } from '@/components/ui/DatePicker'
-import { FilterBar, FilterRange } from '@/components/ui/FilterBar'
 import { PAGINATION_SIZES } from '@/components/ui/Pagination'
 import { Select } from '@/components/ui/Select'
 import { useEquipmentChecklistExecutions } from '../api/equipment-checklist-executions'
@@ -149,14 +148,16 @@ export function EquipmentMeasurementsSection({ equipmentId, isAdmin }: { equipme
 
   return <section aria-labelledby="equipment-measurements" className="space-y-3">
     <h3 id="equipment-measurements" className="text-sm font-semibold text-text-primary">Medições registradas</h3>
-    <FilterBar label="Filtros do histórico de medições">
-      <Select size="sm" aria-label="Filtrar por item" value={itemId} onChange={(next) => update({ mitem: next })} options={itemOptions} />
-      <Checkbox label="Incluir itens sem medição" checked={withEmpty} onCheckedChange={(checked) => update({ msem: checked ? '1' : undefined })} />
-      <FilterRange
-        from={<DatePicker size="sm" aria-label="Período: de" value={from} max={to || undefined} onChange={(next) => update({ mde: next })} />}
-        to={<DatePicker size="sm" aria-label="Período: até" value={to} min={from || undefined} onChange={(next) => update({ mate: next })} />}
-      />
-    </FilterBar>
+    <section aria-label="Filtros do histórico de medições" className="flex flex-wrap items-center gap-3">
+      <Select aria-label="Filtrar por item" value={itemId} onChange={(next) => update({ mitem: next })} options={itemOptions} className="w-56" />
+      <div role="group" aria-label="Período" className="flex flex-wrap items-center gap-2">
+        <span className="whitespace-nowrap text-xs text-text-secondary">Período</span>
+        <div className="w-40"><DatePicker aria-label="Período: de" value={from} max={to || undefined} onChange={(next) => update({ mde: next })} /></div>
+        <span className="text-xs text-text-secondary">até</span>
+        <div className="w-40"><DatePicker aria-label="Período: até" value={to} min={from || undefined} onChange={(next) => update({ mate: next })} /></div>
+      </div>
+      <Checkbox label={<span className="whitespace-nowrap">Incluir itens sem medição</span>} checked={withEmpty} onCheckedChange={(checked) => update({ msem: checked ? "1" : undefined })} />
+    </section>
     <p className="text-[11px] text-text-muted">Os filtros valem para as execuções carregadas nesta página. A faixa esperada é a do item atual; o resultado foi gravado na época da medição.</p>
     {chartRows.length > 0 ? <TrendChart rows={chartRows} /> : null}
     <DataTable
