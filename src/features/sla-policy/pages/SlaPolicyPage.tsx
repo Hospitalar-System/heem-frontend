@@ -108,7 +108,7 @@ export function SlaPolicyPage() {
                     <div className="flex items-start gap-2">
                       <div className="flex gap-1.5">
                         <input type="number" min="1" step="1" aria-label={`Prazo de atendimento, ${label}`} aria-invalid={Boolean(rowError?.atendimento?.valor)} className={`${inputClass} w-24`} {...form.register(`${rowPath}.atendimento.valor`, { valueAsNumber: true })} onChange={(event) => { form.register(`${rowPath}.atendimento.valor`, { valueAsNumber: true }).onChange(event); setSaveNotice('') }} />
-                        <FormSelect size="sm" control={form.control} name={`${rowPath}.atendimento.unidade`} aria-label={`Unidade do atendimento, ${label}`} className="w-[96px]" onValueChange={() => setSaveNotice('')} options={[{ value: 'min', label: 'min' }, { value: 'h', label: 'horas' }]} />
+                        <FormSelect size="sm" control={form.control} name={`${rowPath}.atendimento.unidade`} aria-label={`Unidade do atendimento, ${label}`} className="!w-28 min-w-28 shrink-0" onValueChange={() => setSaveNotice('')} options={[{ value: 'min', label: 'min' }, { value: 'h', label: 'horas' }]} />
                       </div>
                       {rowError?.atendimento?.valor?.message && <p role="alert" className="max-w-32 text-[10px] text-danger">{rowError.atendimento.valor.message}</p>}
                     </div>
@@ -117,7 +117,7 @@ export function SlaPolicyPage() {
                     <div className="flex items-start gap-2">
                       <div className="flex gap-1.5">
                         <input type="number" min="1" step="1" aria-label={`Prazo de resolução, ${label}`} aria-invalid={Boolean(rowError?.resolucao?.valor)} className={`${inputClass} w-24`} {...form.register(`${rowPath}.resolucao.valor`, { valueAsNumber: true })} onChange={(event) => { form.register(`${rowPath}.resolucao.valor`, { valueAsNumber: true }).onChange(event); setSaveNotice('') }} />
-                        <FormSelect size="sm" control={form.control} name={`${rowPath}.resolucao.unidade`} aria-label={`Unidade da resolução, ${label}`} className="w-[96px]" onValueChange={() => setSaveNotice('')} options={[{ value: 'min', label: 'min' }, { value: 'h', label: 'horas' }]} />
+                        <FormSelect size="sm" control={form.control} name={`${rowPath}.resolucao.unidade`} aria-label={`Unidade da resolução, ${label}`} className="!w-28 min-w-28 shrink-0" onValueChange={() => setSaveNotice('')} options={[{ value: 'min', label: 'min' }, { value: 'h', label: 'horas' }]} />
                       </div>
                       {rowError?.resolucao?.valor?.message && <p role="alert" className="max-w-36 text-[10px] text-danger">{rowError.resolucao.valor.message}</p>}
                     </div>
