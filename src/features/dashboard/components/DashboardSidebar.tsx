@@ -14,6 +14,7 @@ import {
 import { useSyncExternalStore } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { preloadRoute } from '@/lib/route-preload'
+import { BrandMark } from '@/components/brand/BrandMark'
 import { logout } from '@/features/auth/api/logout'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import type { UserRole } from '@/features/auth/types'
@@ -55,7 +56,7 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <aside aria-label="Navegação principal" className="flex h-full max-h-dvh w-[248px] shrink-0 flex-col overflow-hidden border-r border-border bg-bg-brand">
       <div className="flex h-[68px] shrink-0 items-center gap-3 px-[22px]">
-        <span aria-hidden="true" className="grid size-[34px] place-items-center rounded-[9px] bg-primary text-[17px] font-bold text-bg-brand">H</span>
+        <BrandMark height={36} />
         <span className="text-[19px] font-bold tracking-tight text-text-primary">HEMM</span>
       </div>
 

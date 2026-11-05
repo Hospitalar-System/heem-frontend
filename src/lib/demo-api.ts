@@ -446,7 +446,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
 }
 
 // Fotos (Stories 13.1/13.2): sem storage real no demo; o PUT para demo:// é pulado e as imagens são SVGs locais.
-const demoPhotoColors = ['#3ED597', '#F5A623', '#5B8DEF', '#B66DFF', '#FF7A59']
+const demoPhotoColors = ['#17B88E', '#F5A623', '#5B8DEF', '#B66DFF', '#FF7A59']
 function demoPhotoUrl(seed: string, size: number) {
   const hash = [...seed].reduce((total, char) => total + char.charCodeAt(0), 0)
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100"><rect width="100" height="100" fill="${demoPhotoColors[hash % demoPhotoColors.length]}"/><circle cx="50" cy="45" r="18" fill="#ffffff" fill-opacity="0.8"/><rect x="25" y="68" width="50" height="10" rx="5" fill="#ffffff" fill-opacity="0.8"/></svg>`

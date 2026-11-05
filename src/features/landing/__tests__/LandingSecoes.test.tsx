@@ -79,7 +79,7 @@ describe('hero e vitrine', () => {
 
   it('as telas do app têm alt, lazy, async e dimensões', () => {
     renderLanding()
-    const imagens = screen.getAllByRole('img', { hidden: true }).filter((img) => img.tagName === 'IMG')
+    const imagens = screen.getAllByRole('img', { hidden: true }).filter((img) => img.tagName === 'IMG' && !img.hasAttribute('data-brand-mark'))
     expect(imagens.length).toBe(5)
     for (const img of imagens) {
       expect(img).toHaveAttribute('alt')

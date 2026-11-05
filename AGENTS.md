@@ -33,7 +33,7 @@ You are an expert Senior Front-End Engineer working on **HEMM (Hospital Equipmen
   - Base Background (`bg-bg`): `#1F1F1F` (Dark) / `#F4F5F7` (Light)
   - Surfaces / Cards / Modals (`bg-surface`): `#2A2A2E` (Dark) / `#FFFFFF` (Light)
   - Borders (`border-border`): `#3A3A3E` (Dark) / `#E2E8F0` (Light)
-  - Primary Action / Healthy State (`bg-primary`): `#3ED597` (Dark) / `#2EB87E` (Light)
+  - Primary Action / Healthy State (`bg-primary`): `#17B88E` (Dark, verde do logo) / `#0C7A5E` (Light)
   - Critical Risk / Emergency (`bg-danger`): `#FF4E4E` (Dark) / `#DC2626` (Light)
   - Warning / Due Maintenance (`bg-warning`): `#F5A623` (Dark) / `#D97706` (Light)
 - **Typography:** Inter font family (H1 28px, H2 22px, H3 18px, Body 14px, Caption 12px).

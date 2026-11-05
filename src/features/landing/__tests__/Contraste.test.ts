@@ -52,7 +52,7 @@ function tema(nome: 'escuro' | 'claro') {
     dangerTexto: c('--danger-text'),
     primary,
     primaryHover: c('--primary-hover'),
-    ink: misturar(primary, 0.15, preto),
+    ink: t['--ink'] ? hex(t['--ink']) : misturar(primary, 0.15, preto),
     onWarn: misturar(warning, 0.2, preto),
     warning,
     avisoBg: { bg: misturar(warning, 0.18, bg), surface: misturar(warning, 0.18, surface), pendenteBg: misturar(warning, 0.3, bg), pendenteSurface: misturar(warning, 0.3, surface) },
@@ -94,7 +94,11 @@ describe.each(['escuro', 'claro'] as const)('contraste AA no tema %s', (nome) =>
 
 describe('tokens da landing', () => {
   it('o tema automático escuro repete exatamente os ajustes do escuro', () => {
-    expect(ajustes.autoEscuro).toEqual({ '--text-muted': ajustes.escuro['--text-muted'], '--danger-text': ajustes.escuro['--danger-text'] })
+    expect(ajustes.autoEscuro).toEqual({
+      '--text-muted': ajustes.escuro['--text-muted'],
+      '--primary-text': ajustes.escuro['--primary-text'],
+      '--danger-text': ajustes.escuro['--danger-text'],
+    })
   })
 
   it('o tom muted global do tema claro reprovaria (prova de que o ajuste é necessário)', () => {

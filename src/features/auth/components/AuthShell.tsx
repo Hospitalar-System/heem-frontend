@@ -1,6 +1,7 @@
 import { ArrowUpRight } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { ThemeSwitcher } from '@/app/ThemeSwitcher'
+import { BrandMark } from '@/components/brand/BrandMark'
 
 /** Layout das telas públicas de autenticação: painel de marca à esquerda e o conteúdo à direita. */
 export function AuthShell({ titleId, title, subtitle, children }: { titleId: string; title: string; subtitle?: string; children: ReactNode }) {
@@ -10,7 +11,7 @@ export function AuthShell({ titleId, title, subtitle, children }: { titleId: str
         <section aria-label="Sobre o HEMM" className="flex min-h-[38vh] w-full items-center bg-bg-brand px-8 py-10 sm:px-12 md:min-h-screen md:w-1/2 md:px-[10.5%]">
           <div className="w-full max-w-[440px]">
             <a href="/login" className="mb-10 inline-flex items-center gap-3 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-primary md:mb-10" aria-label="HEMM — página de login">
-              <span className="grid size-11 place-items-center rounded-[10px] bg-primary text-lg font-bold text-bg-brand">H</span>
+              <BrandMark height={44} />
               <span className="text-[26px] font-bold tracking-tight">HEMM</span>
             </a>
             <h1 className="max-w-[410px] text-[30px] font-bold leading-[1.34] tracking-tight sm:text-[32px]">Gestão de manutenção de equipamentos hospitalares</h1>
