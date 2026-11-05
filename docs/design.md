@@ -23,8 +23,9 @@ Para suportar **Dark**, **Light** e **Auto (Sistema)** sem duplicação de códi
 | `--text-primary` | `#F5F5F5` | `#18181B` | Títulos, textos principais e valores de KPIs [4] |
 | `--text-secondary` | `#C2C2C2` | `#52525B` | Subtítulos, metadados, timestamps e labels [4] |
 | `--text-muted` | `#8A8A90` | `#A1A1AA` | Placeholders, textos desabilitados e skeletons [4] |
-| `--primary` | `#3ED597` | `#2EB87E` | Ação primária e status "OK/Saudável" (WCAG AA) [4] |
-| `--primary-hover` | `#38B38C` | `#249666` | Hover do botão primário [4] |
+| `--primary` | `#17B88E` | `#0C7A5E` | Ação primária e status "OK/Saudável"; verde da marca no escuro, verde escuro no claro (AA como texto/link) [4] |
+| `--primary-hover` | `#129A76` | `#095F49` | Hover do botão primário [4] |
+| `--primary-soft` | `rgba(23,184,142,.12)` | `rgba(12,122,94,.12)` | Fundo suave de chips e realces do primário |
 | `--danger` | `#FF4E4E` | `#DC2626` | Severidade crítica, chamado vencido, ação destrutiva [4] |
 | `--warning` | `#F5A623` | `#D97706` | Manutenção devida, severidade alta/média, atenção [4] |
 
@@ -55,8 +56,9 @@ Para suportar **Dark**, **Light** e **Auto (Sistema)** sem duplicação de códi
     --text-primary: #F5F5F5;
     --text-secondary: #C2C2C2;
     --text-muted: #8A8A90;
-    --primary: #3ED597;
-    --primary-hover: #38B38C;
+    --primary: #17B88E;
+    --primary-hover: #129A76;
+    --primary-soft: rgba(23, 184, 142, 0.12);
     --danger: #FF4E4E;
     --warning: #F5A623;
   }

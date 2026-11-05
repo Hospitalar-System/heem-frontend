@@ -28,7 +28,7 @@ O frame Figma `102:21` tem duas colunas de largura semelhante dentro de uma supe
 - **Painel de marca:** fundo mais escuro, marca HEMM (monograma “H” verde e nome), título “Gestão de manutenção de equipamentos hospitalares” e resumo do produto.
 - **Painel de acesso:** formulário centrado, largura visual aproximada de 360 px, título “Entrar”, subtítulo “Acesse o painel administrativo”, campos de E-mail e Senha e ação primária verde.
 - **Responsividade:** preservar a ordem marca → formulário; reduzir paddings e empilhar os painéis em viewport estreita sem rolagem horizontal.
-- O frame usa Inter, fundos próximos a `#1F1F1F`/`#1A1A1C`, superfícies de campo `#232326`, borda `#3A3A3E`, texto `#F5F5F5`/`#C2C2C2` e verde `#3ED597`. Na implementação, esses valores devem vir dos tokens semânticos do sistema.
+- O frame usa Inter, fundos próximos a `#1F1F1F`/`#1A1A1C`, superfícies de campo `#232326`, borda `#3A3A3E`, texto `#F5F5F5`/`#C2C2C2` e verde `#17B88E`. Na implementação, esses valores devem vir dos tokens semânticos do sistema.
 
 Elementos de produto solicitados além do frame: checkbox “Lembrar-me”, seletor de tema Dark/Light/Auto no cabeçalho do painel de acesso e rodapé com identificação da plataforma/versão. O link visual “Esqueci a senha” não será uma ação ativa até existir especificação e endpoint de recuperação.
 

@@ -10,7 +10,8 @@ describe('arquivos de SEO', () => {
 
   it('index.html tem lang, ícone, theme-color, Open Graph e Twitter Card neutros de produto', () => {
     expect(html).toContain('<html lang="pt-BR">')
-    expect(html).toContain('rel="icon" type="image/svg+xml" href="/favicon.svg"')
+    expect(html).toContain('rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"')
+    expect(html).toContain('rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180.png"')
     expect(html).toContain('name="theme-color"')
     for (const meta of ['og:title', 'og:description', 'og:type" content="website', 'og:locale" content="pt_BR', 'og:url', 'og:image']) {
       expect(html).toContain(`property="${meta}`)
@@ -22,7 +23,9 @@ describe('arquivos de SEO', () => {
   })
 
   it('favicon e imagem OG existem; a imagem é PNG 1200x630', () => {
-    expect(existsSync(path.join(raiz, 'public/favicon.svg'))).toBe(true)
+    for (const arquivo of ['favicon.ico', 'favicon-32.png', 'favicon-48.png', 'apple-touch-icon-180.png', 'simbolo-64.png', 'simbolo-128.png']) {
+      expect(existsSync(path.join(raiz, 'public', arquivo))).toBe(true)
+    }
     const png = readFileSync(path.join(raiz, 'public/og-landing.png'))
     expect(png.subarray(1, 4).toString()).toBe('PNG')
     expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630])

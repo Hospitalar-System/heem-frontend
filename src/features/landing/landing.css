@@ -19,22 +19,25 @@
   /* Contraste AA (L4): texto muted/primário/perigo com tons próprios da landing; os tokens globais não mudam.
      Padrão = tema escuro; os blocos abaixo cobrem claro e automático. Verificado em __tests__/Contraste.test.ts. */
   --text-muted: #b2b2ba;
-  --primary-text: var(--primary);
+  --primary-text: #33cca3;
   --danger-text: #ff8080;
 }
 
 .light .landing,
 .auto .landing {
   --text-muted: #55555e;
-  --primary-text: #0b6b45;
+  --primary-text: #0a6a50;
   --danger-text: #b91c1c;
+  /* Tinta sobre o botão primário: no claro o primário é verde escuro, então o texto é branco (AA). */
+  --ink: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   .auto .landing {
     --text-muted: #b2b2ba;
-    --primary-text: var(--primary);
+    --primary-text: #33cca3;
     --danger-text: #ff8080;
+    --ink: color-mix(in srgb, var(--primary) 15%, black);
   }
 }
 

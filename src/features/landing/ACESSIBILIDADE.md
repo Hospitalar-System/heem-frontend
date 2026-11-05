@@ -14,7 +14,7 @@ Falhavam e foram corrigidos **só no escopo `.landing`** (tokens globais do sist
 | --- | --- | --- |
 | Muted no claro (`#a1a1aa` sobre `#f4f5f7`) | 2,35:1 | `#55555e`, >= 4,5:1 em todos os fundos |
 | Muted no escuro sobre `surface`/`surface-hi` | 4,17:1 / 3,09:1 | `#b2b2ba`, >= 4,5:1 |
-| Verde de texto no claro (`#2eb87e` sobre bg e chips) | 2,1 a 2,3:1 | `--primary-text: #0b6b45` (texto), o verde segue só em fundos/bordas |
+| Verde de texto no claro (verde da marca sobre bg e chips) | < 4,5:1 | `--primary-text: #0a6a50` (texto); no claro o primário global é `#0c7a5e` e a tinta do botão é branca (`--ink: #ffffff`) |
 | Erro no escuro sobre `danger-soft` | 3,7 a 4,3:1 | `--danger-text: #ff8080` |
 | Erro no claro sobre `danger-soft` | 3,6:1 | `--danger-text: #b91c1c` |
 

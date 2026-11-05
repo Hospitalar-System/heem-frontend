@@ -17,6 +17,7 @@ export default {
         primary: {
           DEFAULT: 'var(--primary)',
           hover: 'var(--primary-hover)',
+          soft: 'var(--primary-soft)',
         },
         danger: 'var(--danger)',
         warning: 'var(--warning)',

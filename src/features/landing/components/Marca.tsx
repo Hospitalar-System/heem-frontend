@@ -1,10 +1,11 @@
-import { NOME_PRODUTO, SIGLA } from '../brand'
+import { BrandMark } from '@/components/brand/BrandMark'
+import { NOME_PRODUTO } from '../brand'
 
-/** Quadrado com a sigla + nome do produto. Único ponto de uso da marca na landing. */
+/** Símbolo + nome do produto. Único ponto de uso da marca na landing. */
 export function Marca({ className = '' }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2.5 text-xl font-bold tracking-tight ${className}`}>
-      <span aria-hidden="true" className="grid size-[30px] place-items-center rounded-[9px] bg-primary text-base font-bold text-[var(--ink)]">{SIGLA}</span>
+      <BrandMark height={36} />
       {NOME_PRODUTO}
     </span>
   )

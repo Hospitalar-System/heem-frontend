@@ -37,7 +37,9 @@ describe.each(paginas)('acessibilidade: %s', (_nome, pagina) => {
 
   it('imagens têm alt, ícones decorativos ficam ocultos e SVG informativo tem nome', () => {
     const { container } = renderizar()
-    for (const img of Array.from(container.querySelectorAll('img'))) expect(img.getAttribute('alt')?.length ?? 0).toBeGreaterThan(5)
+    // O símbolo da marca tem alt curto "HEEM"; as demais imagens (telas do app) descrevem o conteúdo.
+    for (const marca of Array.from(container.querySelectorAll('img[data-brand-mark]'))) expect(marca.getAttribute('alt')).toBe('HEEM')
+    for (const img of Array.from(container.querySelectorAll('img:not([data-brand-mark])'))) expect(img.getAttribute('alt')?.length ?? 0).toBeGreaterThan(5)
     for (const svg of Array.from(container.querySelectorAll('svg'))) {
       const oculto = svg.getAttribute('aria-hidden') === 'true' || svg.closest('[aria-hidden="true"]') !== null
       expect(oculto || svg.getAttribute('role') === 'img').toBe(true)
