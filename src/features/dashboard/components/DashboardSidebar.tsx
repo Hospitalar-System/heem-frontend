@@ -57,7 +57,7 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
     <aside aria-label="Navegação principal" className="flex h-full max-h-dvh w-[248px] shrink-0 flex-col overflow-hidden border-r border-border bg-bg-brand">
       <div className="flex h-[68px] shrink-0 items-center gap-3 px-[22px]">
         <BrandMark height={36} />
-        <span className="text-[19px] font-bold tracking-tight text-text-primary">HEMM</span>
+        <span className="text-[19px] font-bold tracking-tight text-text-primary">HEEM</span>
       </div>
 
       <div data-testid="sidebar-menu" className="min-h-0 flex-1 overflow-y-auto pb-3">

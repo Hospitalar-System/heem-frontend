@@ -1,6 +1,6 @@
-# HEMM Front-end
+# HEEM Front-end
 
-Aplicação web de gestão do HEMM, um CMMS hospitalar multi-tenant para administração de clientes, ativos e rotinas de manutenção. O painel atende principalmente Super Admin e Admin do Cliente. O app de campo do Técnico está no repositório [`heem-mobile`](https://github.com/Hospitalar-System/heem-mobile).
+Aplicação web de gestão do HEEM, um CMMS hospitalar multi-tenant para administração de clientes, ativos e rotinas de manutenção. O painel atende principalmente Super Admin e Admin do Cliente. O app de campo do Técnico está no repositório [`heem-mobile`](https://github.com/Hospitalar-System/heem-mobile).
 
 > **Status:** a base de desenvolvimento está configurada. As telas e funcionalidades do produto ainda serão implementadas conforme as especificações em `docs/`.
 
