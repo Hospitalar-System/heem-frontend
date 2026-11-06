@@ -113,7 +113,7 @@ function PendingDashboard({ audience }: { audience: string }) {
     <main className="grid min-h-screen place-items-center bg-bg p-6 text-center text-text-primary">
       <div className="max-w-md rounded-2xl border border-border bg-surface p-8">
         <h1 className="text-xl font-semibold">Acesso confirmado</h1>
-        <p className="mt-2 text-sm text-text-secondary">A área de {audience} será disponibilizada nas próximas etapas do HEMM.</p>
+        <p className="mt-2 text-sm text-text-secondary">A área de {audience} será disponibilizada nas próximas etapas do HEEM.</p>
         <a href="/login" className="mt-5 inline-block text-sm text-primary underline">Voltar ao login</a>
       </div>
     </main>
