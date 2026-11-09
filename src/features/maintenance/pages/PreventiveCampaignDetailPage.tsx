@@ -70,7 +70,7 @@ export function PreventiveCampaignDetailPage() {
             <div>
               <div className="flex flex-wrap items-center gap-2"><h2 className="text-sm font-semibold text-text-primary">{data.nome}</h2><CampaignStatusBadge status={data.status} /></div>
               <p className="mt-1 text-xs text-text-secondary">{hospitals.data?.find((item) => item.id === data.hospitalId)?.nome ?? '—'} · {recurrenceLabel(data.recorrencia, data.intervalo)} · {assignmentModeLabels[data.modoAtribuicao]}</p>
-              <p className="mt-0.5 text-xs text-text-secondary">Início {formatPlanDate(data.dataInicio)}{data.dataFim ? ` · fim ${formatPlanDate(data.dataFim)}` : ''}{data.ativa && data.proximaData ? ` · próxima execução ${formatPlanDate(data.proximaData)}` : ''}</p>
+              <p className="mt-0.5 text-xs text-text-secondary">Início {formatPlanDate(data.dataInicio)}{data.dataFim ? ` · fim ${formatPlanDate(data.dataFim)}` : ''}{data.ativa && data.proximaData ? ` · ${data.recorrencia !== 'avulsa' ? 'Recorrente, próxima' : 'próxima'} execução ${formatPlanDate(data.proximaData)}` : ''}</p>
             </div>
             <div data-testid="campaign-actions" className="flex min-w-0 justify-end">
               {isAdmin ? <CampaignExport campaignId={data.id}>{cancelButton}</CampaignExport> : cancelButton}
