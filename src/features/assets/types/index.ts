@@ -52,6 +52,8 @@ export interface Equipment {
   documentosVencidos?: number | null
   documentosVencendo?: number | null
   proximaValidade?: string | null
+  /** Instante da conclusão da última OT do equipamento (lista e ficha); nulo = nunca; ausente em backend antigo. */
+  ultimaManutencaoEm?: string | null
 }
 
 export interface EquipmentEditableFields {

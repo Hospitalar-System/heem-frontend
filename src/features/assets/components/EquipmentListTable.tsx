@@ -3,6 +3,7 @@ import { parseDate, formatBr } from '@/components/ui/civil-date'
 import { DataTable, type DataColumn, type DataTableProps } from '@/components/ui/DataTable'
 import type { Equipment } from '../types'
 import { EquipmentStatusBadge } from './EquipmentStatusBadge'
+import { formatLastMaintenance } from '../utils/last-maintenance'
 import { EquipmentThumb } from './EquipmentPhotoSection'
 
 export function DocumentsIndicator({ vencidos, vencendo, proximaValidade }: { vencidos?: number | null; vencendo?: number | null; proximaValidade?: string | null }) {
@@ -34,7 +35,10 @@ export function EquipmentListTable({ items, sectorNameById, isLoading, error, em
     { key: 'modelo', header: 'Modelo', cell: (item) => <span className="text-text-secondary">{item.modelo || '—'}</span> },
     { key: 'serie', header: 'Nº série', cell: (item) => <span className="text-text-secondary">{item.numeroSerie || '—'}</span> },
     { key: 'setor', header: 'Setor', cell: (item) => <span className="text-text-secondary">{sectorNameById.get(item.setorId) ?? '—'}</span> },
-    { key: 'manutencao', header: 'Últ. manut.', cell: () => <span className="text-text-muted" title="A API não fornece a data da última manutenção na listagem">—</span> },
+    { key: 'manutencao', header: 'Últ. manut.', className: 'whitespace-nowrap', cell: (item) => {
+      const date = formatLastMaintenance(item.ultimaManutencaoEm)
+      return date ? <span className="text-text-secondary">{date}</span> : <span className="text-text-muted" title="Nenhuma manutenção concluída">—</span>
+    } },
     { key: 'documentos', header: 'Documentos', className: 'whitespace-nowrap', cell: (item) => <DocumentsIndicator vencidos={item.documentosVencidos} vencendo={item.documentosVencendo} proximaValidade={item.proximaValidade} /> },
     { key: 'status', header: 'Status', width: '9.5rem', className: 'whitespace-nowrap', cell: (item) => <EquipmentStatusBadge status={item.statusCicloVida} /> },
   ]
