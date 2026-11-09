@@ -1,27 +1,29 @@
-# Pendências do texto jurídico (Story L4)
+# Pendências do texto jurídico
 
-As páginas `/privacidade` e `/termos` são **provisórias** (versão `provisoria-1`, a mesma gravada no servidor em
-`heem.leads.politica-versao`). Todo trecho `[PENDENTE: ...]` aparece destacado na tela e deve ser preenchido pelo
-Pedro/jurídico em `conteudo.ts` (mesma pasta). Ao publicar o texto definitivo: trocar `VERSAO_POLITICA` e
-`heem.leads.politica-versao` do backend juntos, retirar o aviso de provisório e esvaziar esta lista.
+As páginas `/privacidade` e `/termos` passaram a usar o texto aprovado pelo Pedro em 09/11/2026
+(`_bmad-output/implementation-artifacts/textos-legais-2026-11-09.md`), mantendo o nome **HEMM** como na fonte (o nome
+oficial do produto ainda não foi decidido). A **revisão jurídica segue pendente**: por isso o aviso de texto provisório
+continua na tela e a versão continua `provisoria-1` (a mesma gravada no servidor em `heem.leads.politica-versao`).
+Ao publicar a versão revisada: trocar `VERSAO_POLITICA` e `heem.leads.politica-versao` do backend juntos, retirar o
+aviso de provisório e esvaziar esta lista. Todo trecho `[PENDENTE: ...]` que voltar a existir em `conteudo.ts` aparece
+destacado na tela.
 
-## Política de Privacidade
-- [ ] Controlador: razão social e CNPJ
-- [ ] Encarregado (DPO): nome e e-mail
-- [ ] Compartilhamento: com quem e para quê (operadores/suboperadores)
-- [ ] Retenção: prazo e critério de eliminação dos dados do formulário
-- [ ] Segurança: medidas adicionais no servidor validadas pela área responsável
-- [ ] Data da última atualização
+## O que mudou em 09/11/2026
+- [x] Data da última atualização: 09/11/2026 (política e termos)
+- [x] Responsável e encarregado pelo tratamento de dados: Pedro Widholzer
+- [x] Contato: pedrocostaw222@gmail.com
+- [x] Retenção: formulário 60 dias; dados de conta 7 dias após o fim do contrato do Cliente
+- [x] Compartilhamento: Render, Vercel, Supabase e Resend, com transferência internacional (EUA)
 
-## Termos de Uso
-- [ ] Prestador: razão social e CNPJ
-- [ ] Acesso e contratação: condições, planos e prazos
-- [ ] Uso aceitável: revisão jurídica das regras e consequências
-- [ ] Propriedade intelectual: titularidade e licença de uso
-- [ ] Limitação de responsabilidade
-- [ ] Lei aplicável e foro
-- [ ] Data da última atualização
+## Ainda pendente
+- [ ] **Revisão jurídica de toda a política e de todos os termos** (nada foi validado por advogado)
+- [ ] Controlador como pessoa jurídica: razão social e CNPJ (hoje o texto cita só o responsável pessoa física)
+- [ ] Termos: condições de contratação, planos e prazos (o texto remete ao contrato entre as partes)
+- [ ] Termos: titularidade e licença de uso do software; limitação de responsabilidade; foro competente
+- [ ] Alinhar com o backend: a retenção de 60 dias dos leads (job de limpeza) e a de 7 dias dos dados de conta
+- [ ] Trocar a versão (`VERSAO_POLITICA`) junto com `heem.leads.politica-versao` quando o texto revisado for publicado
 
 ## Fora do texto
-- [ ] E-mail de contato (`EMAIL_CONTATO` em `../brand.ts`)
+- [ ] E-mail de contato da landing (`EMAIL_CONTATO` em `../brand.ts`), se for exibido fora das páginas legais
 - [ ] Domínio e `VITE_SITE_URL`
+- [ ] Nome oficial do produto (HEMM ou HEEM): os textos legais seguem com HEMM até a decisão
