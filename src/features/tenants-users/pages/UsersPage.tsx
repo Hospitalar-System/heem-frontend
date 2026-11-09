@@ -55,7 +55,7 @@ export function UsersPage() {
 
   function userActions(user: TenantUser): RowAction[] {
     const actions: RowAction[] = [{ label: 'Editar', icon: <Pencil size={14} />, onSelect: () => setModal(user) }]
-    if (user.ativo) actions.push({ label: 'Desativar', icon: <PowerOff size={14} />, destructive: true, disabled: deactivate.isPending, onSelect: () => deactivateUser(user), confirm: { title: 'Desativar usuário?', description: `Desativar ${user.nome}? A pessoa perderá acesso ao HEEM.`, confirmLabel: 'Desativar' } })
+    if (user.ativo) actions.push({ label: 'Desativar', icon: <PowerOff size={14} />, destructive: true, disabled: deactivate.isPending, onSelect: () => deactivateUser(user), confirm: { title: 'Desativar usuário?', description: `Desativar ${user.nome}? A pessoa perderá acesso ao HEMM.`, confirmLabel: 'Desativar' } })
     if (canAnonymize && isTenantUserRole(user.role)) actions.push({ label: 'Anonimizar CPF', icon: <ShieldOff size={14} />, destructive: true, onSelect: () => setAnonymizeTarget(user) })
     return actions
   }
