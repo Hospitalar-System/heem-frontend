@@ -13,7 +13,7 @@ import { CampaignStatusBadge } from '../components/CampaignParts'
 import type { Campaign, CampaignStatus } from '../types/campaigns'
 import { formatPlanDate } from '../utils/preventive-plans'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
-import { campaignApiError, campaignStatusLabels, recurrenceLabel } from '../utils/preventive-campaigns'
+import { campaignApiError, campaignStatusLabels, recurrenceLabel, recurringNextLabel } from '../utils/preventive-campaigns'
 
 const statusOptions = [{ value: '', label: 'Todos os status' }, ...(Object.keys(campaignStatusLabels) as CampaignStatus[]).map((value) => ({ value, label: campaignStatusLabels[value] }))]
 const linkClass = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
@@ -37,7 +37,7 @@ export function PreventiveCampaignsPage() {
     { key: 'nome', header: 'Campanha', cell: (campaign) => <><Link to={`/work-orders/campanhas/${campaign.id}`} className={`font-medium text-primary hover:underline ${linkClass}`}>{campaign.nome}</Link><span className="block text-[10px] text-text-muted">Início {formatPlanDate(campaign.dataInicio)}</span></> },
     { key: 'hospital', header: 'Hospital', cell: (campaign) => <span className="text-text-secondary">{hospitalById.get(campaign.hospitalId) ?? '—'}</span> },
     { key: 'status', header: 'Status', cell: (campaign) => <CampaignStatusBadge status={campaign.status} /> },
-    { key: 'recorrencia', header: 'Recorrência', cell: (campaign) => <span className="text-text-secondary">{recurrenceLabel(campaign.recorrencia, campaign.intervalo)}</span> },
+    { key: 'recorrencia', header: 'Recorrência', cell: (campaign) => <span className="text-text-secondary">{recurrenceLabel(campaign.recorrencia, campaign.intervalo)}{recurringNextLabel(campaign) ? <span className="block text-[10px] text-text-muted">{recurringNextLabel(campaign)}</span> : null}</span> },
     { key: 'proxima', header: 'Próxima data', cell: (campaign) => <span className="text-text-secondary">{campaign.ativa ? formatPlanDate(campaign.proximaData) : '—'}</span> },
     { key: 'execucao', header: 'Última execução', cell: (campaign) => <span className="text-text-secondary">{campaign.execucao.geradas} geradas · {campaign.execucao.puladas} puladas · {campaign.execucao.pendencias} pendências<span className="block text-[10px] text-text-muted">{campaign.execucao.processadas} de {campaign.execucao.totalEquipamentos} equipamentos</span></span> },
   ]

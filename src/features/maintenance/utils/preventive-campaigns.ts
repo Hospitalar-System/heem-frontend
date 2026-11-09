@@ -1,3 +1,4 @@
+import { formatPlanDate } from './preventive-plans'
 import type { CampaignAssignmentMode, CampaignInput, CampaignPendingReason, CampaignRecurrence, CampaignStatus } from '../types/campaigns'
 import type { CampaignFormValues } from '../schemas/preventive-campaigns.schema'
 
@@ -19,6 +20,13 @@ export function recurrenceLabel(recorrencia: CampaignRecurrence, intervalo: numb
   if (recorrencia === 'avulsa' || !intervalo) return 'Avulsa'
   const unit = recorrencia === 'dias' ? (intervalo === 1 ? 'dia' : 'dias') : (intervalo === 1 ? 'mês' : 'meses')
   return `A cada ${intervalo} ${unit}`
+}
+
+/** Rótulo curto da campanha recorrente ativa ("Recorrente, próxima execução dd/mm"); vazio para avulsa, inativa ou sem data. */
+export function recurringNextLabel(campaign: { recorrencia: CampaignRecurrence; ativa: boolean; proximaData: string | null }) {
+  if (campaign.recorrencia === 'avulsa' || !campaign.ativa || !campaign.proximaData) return null
+  const next = formatPlanDate(campaign.proximaData)
+  return next === '—' ? null : `Recorrente, próxima execução ${next.slice(0, 5)}`
 }
 
 export const pendingReasons: CampaignPendingReason[] = ['SEM_CATEGORIA', 'CATEGORIA_SEM_CHECKLIST', 'CHECKLIST_INDISPONIVEL', 'SEM_TECNICO_DISPONIVEL']
