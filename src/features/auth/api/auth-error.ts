@@ -8,6 +8,7 @@ export type AuthErrorKind =
   | 'weak_password'
   | 'invalid_link'
   | 'network'
+  | 'timeout'
   | 'unsupported'
   | 'unknown'
 
@@ -19,6 +20,7 @@ const messages: Record<AuthErrorKind, string> = {
   weak_password: 'A senha é fraca demais. Use uma senha mais longa e menos previsível.',
   invalid_link: 'Este link é inválido ou expirou. Solicite um novo link.',
   network: 'Não foi possível conectar ao serviço de login. Verifique sua conexão e tente novamente em instantes.',
+  timeout: 'O servidor demorou para responder. Ele pode estar acordando; tente novamente em instantes.',
   unsupported: 'Esta operação não está disponível neste ambiente.',
   unknown: 'Não foi possível concluir a autenticação. Tente novamente.',
 }
@@ -33,3 +35,18 @@ export class AuthError extends Error {
     this.kind = kind
   }
 }
+
+/**
+ * Converte um fetch/requisição abortado no erro certo: timeout (abortado com AuthError 'timeout' como
+ * motivo) vira AuthError; cancelamento do usuário vira AbortError, que a UI trata em silêncio.
+ */
+export function toAbortError(signal: AbortSignal): Error {
+  const reason: unknown = signal.reason
+  if (reason instanceof AuthError && reason.kind === 'timeout') return reason
+  return new DOMException('Login cancelado.', 'AbortError')
+}
+
+export function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+

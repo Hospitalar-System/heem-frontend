@@ -115,8 +115,8 @@ describe('LoginForm', () => {
     await fill(user)
 
     expect(await screen.findByTestId('current-path')).toHaveTextContent('/dashboard')
-    expect(loginWithPassword).toHaveBeenCalledWith({ email: 'ana@hospital.com.br', password: 'segredo-123' })
-    expect(getCurrentUser).toHaveBeenCalledWith('access-1')
+    expect(loginWithPassword).toHaveBeenCalledWith({ email: 'ana@hospital.com.br', password: 'segredo-123' }, { signal: expect.any(AbortSignal) })
+    expect(getCurrentUser).toHaveBeenCalledWith('access-1', expect.any(AbortSignal))
     expect(getAuthState()).toMatchObject({ accessToken: 'access-1', isAuthenticated: true, user: profile })
     expect(window.sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)).toBe('refresh-1')
     expect(window.localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)).toBeNull()
