@@ -7,7 +7,7 @@ import { loginWithPassword, logoutSession, refreshTokens } from './keycloak'
 export const keycloakProvider: AuthProvider = {
   name: 'keycloak',
   supportsPasswordReset: false,
-  signIn: (credentials) => loginWithPassword(credentials),
+  signIn: (credentials, options) => loginWithPassword(credentials, options),
   refresh: (refreshToken) => refreshTokens(refreshToken),
   signOut: ({ refreshToken }) => logoutSession(refreshToken),
   requestPasswordReset: () => Promise.reject(new AuthError('unsupported')),

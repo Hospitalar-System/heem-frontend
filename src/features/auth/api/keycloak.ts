@@ -1,5 +1,5 @@
 import { oidcConfig } from '@/lib/oidc-config'
-import { AuthError } from './auth-error'
+import { AuthError, toAbortError } from './auth-error'
 import type { AuthTokens } from './auth-types'
 
 // Cliente do Keycloak (login direto, seção 1.5 do guia de autenticação).
@@ -21,14 +21,14 @@ export class KeycloakAuthError extends AuthError {
 const tokenUrl = () => `${oidcConfig.authority}/protocol/openid-connect/token`
 const logoutUrl = () => `${oidcConfig.authority}/protocol/openid-connect/logout`
 
-export function loginWithPassword({ email, password }: { email: string; password: string }) {
+export function loginWithPassword({ email, password }: { email: string; password: string }, options?: { signal?: AbortSignal }) {
   return requestTokens({
     grant_type: 'password',
     client_id: oidcConfig.clientId,
     username: email,
     password,
     scope: 'openid',
-  })
+  }, options?.signal)
 }
 
 export function refreshTokens(refreshToken: string) {
@@ -51,8 +51,8 @@ export async function logoutSession(refreshToken: string): Promise<void> {
   throw error
 }
 
-async function requestTokens(params: Record<string, string>): Promise<KeycloakTokens> {
-  const response = await send(tokenUrl(), params)
+async function requestTokens(params: Record<string, string>, signal?: AbortSignal): Promise<KeycloakTokens> {
+  const response = await send(tokenUrl(), params, signal)
   if (!response.ok) throw await readError(response)
 
   let body: unknown
@@ -69,7 +69,7 @@ async function requestTokens(params: Record<string, string>): Promise<KeycloakTo
   return { accessToken, refreshToken, expiresAt: Date.now() + expiresIn * 1000 }
 }
 
-async function send(url: string, params: Record<string, string>) {
+async function send(url: string, params: Record<string, string>, signal?: AbortSignal) {
   try {
     return await fetch(url, {
       method: 'POST',
@@ -77,8 +77,10 @@ async function send(url: string, params: Record<string, string>) {
       body: new URLSearchParams(params).toString(),
       credentials: 'omit',
       cache: 'no-store',
+      signal,
     })
   } catch {
+    if (signal?.aborted) throw toAbortError(signal)
     // Falha de rede, CORS ou serviço dormindo. Descarta a causa original de propósito.
     throw new KeycloakAuthError('network')
   }

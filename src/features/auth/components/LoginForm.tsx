@@ -18,7 +18,14 @@ export function LoginForm() {
   })
   const { errors } = form.formState
   const pending = mutation.isPending
+  const { isWaking, cancel } = mutation
   const canResetPassword = getAuthProvider().supportsPasswordReset
+
+  // Voltar da espera (cancelar) devolve o foco ao campo de senha, já limpo.
+  const handleCancel = () => {
+    cancel()
+    setTimeout(() => form.setFocus('password'), 0)
+  }
 
   if (mutation.error instanceof AccessBlockedError) {
     return <AccessBlockedScreen reason={mutation.error.reason} onBack={() => mutation.reset()} />
@@ -55,6 +62,8 @@ export function LoginForm() {
       // A senha nunca fica no formulário depois do envio, com sucesso ou erro.
       onSettled: () => form.resetField('password', { defaultValue: '' }),
     })
+    // Já limpa agora: o valor foi capturado pelo envio e não precisa ficar no formulário durante a espera.
+    form.resetField('password', { defaultValue: '' })
   })
 
   return (
@@ -86,10 +95,22 @@ export function LoginForm() {
       </FormField>
       <Checkbox label="Lembrar de mim" disabled={pending} containerClassName="text-sm text-text-secondary" {...form.register('rememberMe')} />
       {errorRegion}
+      <div role="status" aria-live="polite">
+        {pending && isWaking && (
+          <p className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-secondary">
+            O servidor está acordando, isso pode levar até 1 minuto. Aguarde…
+          </p>
+        )}
+      </div>
       <button type="submit" disabled={pending} className={buttonClass}>
         {submitIcon}
         {submitLabel}
       </button>
+      {pending && isWaking && (
+        <button type="button" onClick={handleCancel} className="w-full rounded-md px-3 py-2 text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary">
+          Cancelar
+        </button>
+      )}
       {canResetPassword && (
         <p className="text-center">
           <Link to="/esqueci-senha" className="rounded-md text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary">Esqueci minha senha</Link>

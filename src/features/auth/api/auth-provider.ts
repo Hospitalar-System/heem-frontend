@@ -4,7 +4,7 @@ import { supabaseProvider } from './supabase-provider'
 import type { AuthTokens } from './auth-types'
 
 export type { AuthTokens } from './auth-types'
-export { AuthError, type AuthErrorKind } from './auth-error'
+export { AuthError, isAbortError, type AuthErrorKind } from './auth-error'
 
 /**
  * Contrato de autenticação independente do emissor. O papel do usuário vem sempre do GET /me,
@@ -14,7 +14,8 @@ export interface AuthProvider {
   readonly name: 'keycloak' | 'supabase'
   /** O provedor sabe enviar link de redefinição de senha? Sem isso a UI esconde o fluxo. */
   readonly supportsPasswordReset: boolean
-  signIn(credentials: { email: string; password: string }): Promise<AuthTokens>
+  /** `signal` aborta a requisição: motivo AuthError 'timeout' vira esse erro; qualquer outro vira AbortError. */
+  signIn(credentials: { email: string; password: string }, options?: { signal?: AbortSignal }): Promise<AuthTokens>
   /** Refresh token single-use (rotação): devolve um par novo. */
   refresh(refreshToken: string): Promise<AuthTokens>
   /** Best-effort: sessão já encerrada conta como sucesso. */

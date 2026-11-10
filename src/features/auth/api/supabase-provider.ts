@@ -1,5 +1,5 @@
 import { authConfig } from '@/lib/auth-config'
-import { AuthError } from './auth-error'
+import { AuthError, toAbortError } from './auth-error'
 import type { AuthProvider } from './auth-provider'
 import type { AuthTokens } from './auth-types'
 
@@ -20,7 +20,7 @@ function headers(bearer?: string): Record<string, string> {
   }
 }
 
-async function send(url: string, init: { method: string; body: unknown; bearer?: string }): Promise<Response> {
+async function send(url: string, init: { method: string; body: unknown; bearer?: string; signal?: AbortSignal }): Promise<Response> {
   try {
     return await fetch(url, {
       method: init.method,
@@ -28,8 +28,10 @@ async function send(url: string, init: { method: string; body: unknown; bearer?:
       body: JSON.stringify(init.body),
       credentials: 'omit',
       cache: 'no-store',
+      signal: init.signal,
     })
   } catch {
+    if (init.signal?.aborted) throw toAbortError(init.signal)
     // Falha de rede ou CORS. Descarta a causa original de propósito.
     throw new AuthError('network')
   }
@@ -64,8 +66,8 @@ async function readError(response: Response, context: Context): Promise<AuthErro
   return new AuthError('unknown')
 }
 
-async function requestTokens(path: string, body: Record<string, string>): Promise<AuthTokens> {
-  const response = await send(`${base()}${path}`, { method: 'POST', body })
+async function requestTokens(path: string, body: Record<string, string>, signal?: AbortSignal): Promise<AuthTokens> {
+  const response = await send(`${base()}${path}`, { method: 'POST', body, signal })
   if (!response.ok) throw await readError(response, 'session')
 
   let json: unknown
@@ -86,7 +88,7 @@ export const supabaseProvider: AuthProvider = {
   name: 'supabase',
   supportsPasswordReset: true,
 
-  signIn: ({ email, password }) => requestTokens('/token?grant_type=password', { email, password }),
+  signIn: ({ email, password }, options) => requestTokens('/token?grant_type=password', { email, password }, options?.signal),
 
   refresh: (refreshToken) => requestTokens('/token?grant_type=refresh_token', { refresh_token: refreshToken }),
 

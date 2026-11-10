@@ -27,7 +27,7 @@ export async function getDevelopmentToken() {
   return token
 }
 
-export async function getCurrentUser(accessToken: string): Promise<UserProfileDTO> {
+export async function getCurrentUser(accessToken: string, signal?: AbortSignal): Promise<UserProfileDTO> {
   if (isDemoMode) {
     return {
       id: 'user-demo-1',
@@ -40,6 +40,7 @@ export async function getCurrentUser(accessToken: string): Promise<UserProfileDT
 
   const { data } = await apiClient.get<CurrentUserResponse>('/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
+    signal,
   })
   return normalizeCurrentUser(data)
 }
