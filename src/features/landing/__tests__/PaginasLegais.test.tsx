@@ -43,14 +43,22 @@ describe.each([
     expect(screen.queryByText(/ainda está em desenvolvimento/)).not.toBeInTheDocument()
   })
 
-  it('destaca todos os [PENDENTE] e não deixa nenhum fora do realce', async () => {
+  it('destaca todo [PENDENTE] que existir e não deixa nenhum fora do realce', async () => {
     const { container } = await abrir(caminho)
     await screen.findByRole('heading', { level: 1, name: documento.titulo })
     const destacados = Array.from(container.querySelectorAll('mark.landing-pendente'))
     const esperados = JSON.stringify(documento).match(/\[PENDENTE[^\]]*\]/g) ?? []
-    expect(esperados.length).toBeGreaterThan(3)
     expect(destacados.map((el) => el.textContent)).toEqual(esperados)
-    expect((container.textContent ?? '').match(/\[PENDENTE/g)).toHaveLength(esperados.length)
+    expect((container.textContent ?? '').match(/\[PENDENTE/g) ?? []).toHaveLength(esperados.length)
+  })
+
+  it('traz a data de atualização, o responsável e o contato aprovados em 09/11/2026', async () => {
+    const { container } = await abrir(caminho)
+    await screen.findByRole('heading', { level: 1, name: documento.titulo })
+    const texto = container.textContent ?? ''
+    expect(texto).toContain('09/11/2026')
+    expect(texto).toContain('Pedro Widholzer')
+    expect(texto).toContain('pedrocostaw222@gmail.com')
   })
 
   it('tem uma seção com âncora por item do índice e hierarquia h1 > h2', async () => {
@@ -134,5 +142,27 @@ describe('ligações e vazamento de metas', () => {
     expect(document.title).toBe('Sistema')
     expect(document.head.querySelector('meta[property="og:title"]')).toBeNull()
     expect(document.head.querySelector('link[rel="canonical"]')).toBeNull()
+  })
+})
+
+describe('conteúdo aprovado em 09/11/2026', () => {
+  const texto = (doc: typeof politicaPrivacidade) => doc.secoes.flatMap((x) => [x.titulo, ...x.paragrafos, ...(x.itens ?? [])]).join('\n')
+
+  it('a política traz as retenções, os prestadores e o papel de controlador e operador', () => {
+    const t = texto(politicaPrivacidade)
+    expect(t).toContain('dados do formulário: 60 dias')
+    expect(t).toContain('dados de conta: 7 dias após o fim do contrato do Cliente')
+    for (const prestador of ['Render', 'Vercel', 'Supabase', 'Resend']) expect(t).toContain(prestador)
+    expect(t).toContain('Somos controladores')
+    expect(t).toContain('Somos operadores')
+    expect(t).toContain('não deve receber dados de pacientes')
+  })
+
+  it('os termos proíbem dados de pacientes e explicam o uso offline e o encerramento', () => {
+    const t = texto(termosDeUso)
+    expect(t).toContain('não inserir dados de pacientes')
+    expect(t).toContain('podem ser perdidos se o aparelho for danificado')
+    expect(t).toContain('Suspensão e encerramento')
+    expect(t).toContain('/privacidade')
   })
 })
