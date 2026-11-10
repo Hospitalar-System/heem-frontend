@@ -12,7 +12,7 @@ destacado na tela.
 - [x] Data da última atualização: 09/11/2026 (política e termos)
 - [x] Responsável e encarregado pelo tratamento de dados: Pedro Widholzer
 - [x] Contato: pedrocostaw222@gmail.com
-- [x] Retenção: formulário 60 dias; dados de conta 7 dias após o fim do contrato do Cliente
+- [x] Retenção: formulário 60 dias; dados de conta removidos ou anonimizados em até 7 dias após o encerramento do contrato do Cliente, por procedimento operacional
 - [x] Compartilhamento: Render, Vercel, Supabase e Resend, com transferência internacional (EUA)
 
 ## Ainda pendente
