@@ -151,7 +151,7 @@ describe('conteúdo aprovado em 09/11/2026', () => {
   it('a política traz as retenções, os prestadores e o papel de controlador e operador', () => {
     const t = texto(politicaPrivacidade)
     expect(t).toContain('dados do formulário: 60 dias')
-    expect(t).toContain('dados de conta: 7 dias após o fim do contrato do Cliente')
+    expect(t).toContain('dados de conta: removidos ou anonimizados em até 7 dias após o encerramento do contrato do Cliente, por procedimento operacional')
     for (const prestador of ['Render', 'Vercel', 'Supabase', 'Resend']) expect(t).toContain(prestador)
     expect(t).toContain('Somos controladores')
     expect(t).toContain('Somos operadores')

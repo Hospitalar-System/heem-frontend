@@ -123,7 +123,7 @@ export const politicaPrivacidade: DocumentoLegal = {
       paragrafos: ['Prazos de guarda:'],
       itens: [
         'dados do formulário: 60 dias;',
-        'dados de conta: 7 dias após o fim do contrato do Cliente;',
+        'dados de conta: removidos ou anonimizados em até 7 dias após o encerramento do contrato do Cliente, por procedimento operacional;',
         'dados operacionais: conforme o contrato com o Cliente, que decide sobre retenção e exclusão;',
         'registros de auditoria: pelo tempo necessário à rastreabilidade e a obrigações legais; quando houver pedido de exclusão válido, os dados pessoais desses registros são anonimizados.',
       ],
