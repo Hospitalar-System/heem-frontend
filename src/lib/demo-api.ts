@@ -260,7 +260,9 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
       exportsById.set(id, { id, status: 'pendente', urlDownload: null, polls: 0, format })
       return { id, status: 'pendente', urlDownload: null }
     }
-    const result = { id, status: 'concluido', urlDownload: 'https://example.test/demo-relatorio.csv' }
+    // Parâmetros extras (hospitalId, setorId, desde, ate, agrupar) são aceitos e ignorados; a extensão segue o formato pedido.
+    const extension = ['pdf', 'xlsx', 'csv'].includes(body.formato as string) ? body.formato : 'csv'
+    const result = { id, status: 'concluido', urlDownload: `https://example.test/demo-relatorio.${extension as string}` }
     exportsById.set(id, result)
     return result
   }

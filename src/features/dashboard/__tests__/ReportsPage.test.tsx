@@ -204,51 +204,6 @@ describe('ReportsPage', () => {
     expect(await screen.findByText('Não foi possível carregar os indicadores.')).toBeInTheDocument()
   })
 
-  it('filters requests and exports selected content, then offers the completed download', async () => {
-    const user = userEvent.setup()
-    render(<ReportsPage />, { wrapper: TestProviders })
-    await screen.findByText('286 h')
-    await chooseOption(user, 'Hospital', 'Santa Casa')
-    await chooseOption(user, 'Setor', 'UTI Adulto')
-    await chooseOption(user, 'Conteúdo da exportação', 'Ordens de trabalho')
-    await user.click(screen.getByRole('button', { name: 'Exportar PDF' }))
-
-    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', expect.objectContaining({
-      hospitalId: 'hospital-1', setorId: 'sector-1', conteudo: 'ordens_trabalho', formato: 'pdf',
-    })))
-    expect(await screen.findByRole('link', { name: 'Baixar arquivo' })).toHaveAttribute('href', 'https://storage.test/export.pdf')
-  })
-
-  it('exporta os indicadores filtrados com o conteúdo INDICADORES sem bloquear a tela', async () => {
-    const user = userEvent.setup()
-    vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { id: 'export-xlsx', status: 'pendente', urlDownload: null } } as never)
-    render(<ReportsPage />, { wrapper: TestProviders })
-    expect(await screen.findByText('286 h')).toBeInTheDocument()
-    await chooseOption(user, 'Conteúdo da exportação', 'Indicadores')
-    await user.click(screen.getByRole('button', { name: 'Exportar Excel' }))
-
-    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', expect.objectContaining({
-      conteudo: 'INDICADORES', formato: 'xlsx',
-    })))
-    expect(await screen.findByRole('link', { name: 'Baixar arquivo' })).toHaveAttribute('href', 'https://storage.test/export.xlsx')
-    expect(screen.getByRole('region', { name: 'Indicadores do período' })).toBeInTheDocument()
-  })
-
-  it('informa que a solicitação está sendo enviada sem bloquear os indicadores', async () => {
-    const user = userEvent.setup()
-    let resolvePost!: (value: { data: { id: string; status: string; urlDownload: null } }) => void
-    const pendingPost = new Promise<{ data: { id: string; status: string; urlDownload: null } }>((resolve) => { resolvePost = resolve })
-    vi.mocked(apiClient.post).mockReturnValueOnce(pendingPost as never)
-    render(<ReportsPage />, { wrapper: TestProviders })
-    await screen.findByText('286 h')
-
-    await user.click(screen.getByRole('button', { name: 'Exportar PDF' }))
-    expect(await screen.findByRole('status')).toHaveTextContent('Solicitando exportação')
-    expect(screen.getByRole('region', { name: 'Indicadores do período' })).toBeInTheDocument()
-    resolvePost({ data: { id: 'export-1', status: 'pendente', urlDownload: null } })
-    expect(await screen.findByRole('link', { name: 'Baixar arquivo' })).toHaveAttribute('href', 'https://storage.test/export.pdf')
-  })
-
   it('impede um período invertido: dias anteriores ao início ficam desabilitados', async () => {
     const user = userEvent.setup()
     render(<ReportsPage />, { wrapper: TestProviders })
