@@ -1,4 +1,5 @@
 import { lazy, Suspense, useSyncExternalStore, type PropsWithChildren } from 'react'
+import { RedirectToLogin } from './RedirectToLogin'
 import { createBrowserRouter, generatePath, Link, Navigate, RouterProvider, useLocation, useParams } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { RequireRole } from './RequireRole'
@@ -165,14 +166,14 @@ function RequireEquipmentRole({ children, editorOnly = false }: PropsWithChildre
 function RequireTicketListAccess({ children }: PropsWithChildren) {
   const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
   if (useAuthRestoring()) return <SessionRestoring />
-  if (!auth.isAuthenticated || !auth.user) return <Navigate to="/login" replace />
+  if (!auth.isAuthenticated || !auth.user) return <RedirectToLogin />
   return auth.user.roles.includes('admin_cliente') ? children : <Navigate to="/access-denied" replace />
 }
 
 function RequireTicketAccess({ children }: PropsWithChildren) {
   const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
   if (useAuthRestoring()) return <SessionRestoring />
-  if (!auth.isAuthenticated || !auth.user) return <Navigate to="/login" replace />
+  if (!auth.isAuthenticated || !auth.user) return <RedirectToLogin />
   const canReadTicket = auth.user.roles.some((role) => ['admin_cliente', 'tecnico', 'interno_hospital'].includes(role))
   return canReadTicket ? children : <Navigate to="/access-denied" replace />
 }
