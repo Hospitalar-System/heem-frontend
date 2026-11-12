@@ -59,10 +59,10 @@ const documents: RecordValue[] = [
   { id: 'doc-demo-2', equipamentoId: 'equipment-demo-1', tipoDocumento: 'LAUDO_SEGURANCA', nomeArquivo: 'laudo-60601.pdf', uploadedEm: now, validadeAte: dayIso(12) },
   { id: 'doc-demo-3', equipamentoId: 'equipment-demo-1', tipoDocumento: 'MANUAL', nomeArquivo: 'manual-mx500.pdf', uploadedEm: now, validadeAte: null },
 ]
-/** Setor com a situação e as contagens que o servidor calcula (ativos = ATIVO ou EM_MANUTENCAO). */
+/** Setor com a situação e as contagens que o servidor calcula (ativos = ATIVO, NAO_APTO ou EM_MANUTENCAO). */
 function sectorView(sector: RecordValue) {
   const items = equipment.filter((item) => item.setorId === sector.id && item.ativo !== false)
-  return { ativo: true, ...sector, equipamentosAtivos: items.filter((item) => item.statusCicloVida === 'ATIVO' || item.statusCicloVida === 'EM_MANUTENCAO').length, equipamentosTotal: items.length }
+  return { ativo: true, ...sector, equipamentosAtivos: items.filter((item) => ['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO'].includes(String(item.statusCicloVida))).length, equipamentosTotal: items.length }
 }
 /** Histórico de estado simulado (contrato #208): mais recente primeiro ao listar. */
 const stateHistory: RecordValue[] = [
@@ -72,18 +72,19 @@ const stateHistory: RecordValue[] = [
 const STATE_ENUM = ['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']
 /** PATCH /equipamentos/{id}/estado com as regras do contrato (papel, descrição, DESCARTADO terminal). */
 function changeEquipmentState(record: RecordValue, body: RecordValue) {
-  const estado = String(body.estado ?? '')
+  const estado = String(body.estado ?? '').trim().toUpperCase()
   const raw = typeof body.descricao === 'string' ? body.descricao.trim() : ''
-  if (!STATE_ENUM.includes(estado) || raw.length > 200) throw demoProblem(400, { code: 'VALIDACAO_FALHOU' })
   const { user } = getAuthState()
   const roles = user?.roles ?? []
   const admin = roles.includes('admin_cliente')
   if (!admin && !roles.includes('tecnico')) throw demoProblem(403, { code: 'ACESSO_NEGADO' })
-  if (!admin && (estado === 'INATIVO' || estado === 'DESCARTADO')) throw demoProblem(403, { code: 'ACESSO_NEGADO' })
+  if (!STATE_ENUM.includes(estado) || raw.length > 200) throw demoProblem(400, { code: 'VALIDACAO_FALHOU' })
   if (estado === 'EM_MANUTENCAO' && !raw) throw demoProblem(400, { code: 'DESCRICAO_OBRIGATORIA' })
-  if (record.statusCicloVida === 'DESCARTADO') throw demoProblem(409, { code: 'TRANSICAO_INVALIDA' })
+  // técnico não sai de INATIVO/DESCARTADO nem vai para eles; esse 403 vem antes do DESCARTADO terminal
+  if (!admin && (['INATIVO', 'DESCARTADO'].includes(String(record.statusCicloVida)) || estado === 'INATIVO' || estado === 'DESCARTADO')) throw demoProblem(403, { code: 'ACESSO_NEGADO' })
   const descricao = estado === 'ATIVO' ? null : raw || null
   if (record.statusCicloVida === estado && (record.descricaoEstado ?? null) === descricao) return record
+  if (record.statusCicloVida === 'DESCARTADO') throw demoProblem(409, { code: 'TRANSICAO_INVALIDA' })
   const alteradoEm = new Date().toISOString()
   stateHistory.push({ id: makeId('est'), equipamentoId: record.id, estadoAnterior: record.statusCicloVida, estadoNovo: estado, descricao, alteradoPorId: user?.id ?? null, alteradoPorNome: user?.name ?? 'Usuário demo', alteradoEm, origem: 'MANUAL', ordemTrabalhoId: null })
   Object.assign(record, { statusCicloVida: estado, descricaoEstado: descricao, estadoAtualizadoEm: alteradoEm })
