@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { isDemoMode } from '@/lib/demo-mode'
 import { getCurrentUser, getDevelopmentToken } from '../api/identity'
 import { AuthError, getAuthProvider } from '../api/auth-provider'
@@ -8,6 +8,7 @@ import { toAbortError } from '../api/auth-error'
 import type { LoginFormValues } from '../schemas/login.schema'
 import { setAuthSession } from '../session'
 import type { ProblemDetail, UserRole } from '../types'
+import { safeInternalPath } from '../utils/safe-redirect'
 
 /** Prazo total do login: o servidor gratuito pode levar mais de 30 s para acordar. */
 export const LOGIN_TIMEOUT_MS = 40_000
@@ -69,6 +70,7 @@ export function getLoginErrorMessage(error: unknown) {
 
 export function useLogin() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [isWaking, setIsWaking] = useState(false)
   const controllerRef = useRef<AbortController | null>(null)
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -120,7 +122,7 @@ export function useLogin() {
         }
       }
     },
-    onSuccess: (destination) => navigate(destination, { replace: true }),
+    onSuccess: (destination) => navigate(safeInternalPath((location.state as { from?: unknown } | null)?.from) ?? destination, { replace: true }),
   })
 
   /** Cancelamento do usuário: aborta a requisição e volta ao estado inicial, sem erro nem mensagem. */
