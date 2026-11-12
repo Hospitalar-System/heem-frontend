@@ -17,7 +17,7 @@ function formatDate(value: string | null | undefined) {
 export function EquipmentStateControl({ equipment, role }: { equipment: Equipment; role: StateRole }) {
   const [open, setOpen] = useState(false)
   const updatedAt = formatDate(equipment.estadoAtualizadoEm)
-  const canChange = role !== 'leitura' && canChangeFrom(equipment.statusCicloVida)
+  const canChange = role !== 'leitura' && canChangeFrom(equipment.statusCicloVida, role)
   return <div className="flex min-w-0 max-w-sm flex-col items-start gap-1.5 sm:items-end">
     <EquipmentStateBadge state={equipment.statusCicloVida} />
     {equipment.descricaoEstado ? <p data-testid="descricao-estado" className="break-words text-xs text-text-secondary sm:text-right">{equipment.descricaoEstado}</p> : null}

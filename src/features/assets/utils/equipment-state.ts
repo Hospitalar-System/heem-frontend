@@ -25,9 +25,11 @@ export function equipmentStateLabel(value: string | null | undefined): string {
   return isKnownState(value) ? equipmentStateLabels[value] : value
 }
 
-/** Só DESCARTADO é terminal: nenhuma mudança é oferecida a partir dele. */
-export function canChangeFrom(state: string | null | undefined) {
-  return state !== 'DESCARTADO'
+/** Só DESCARTADO é terminal. INATIVO e DESCARTADO só o admin altera (o backend devolve 403 ao técnico). */
+export function canChangeFrom(state: string | null | undefined, role: StateRole = 'admin') {
+  if (state === 'DESCARTADO') return false
+  if (state === 'INATIVO' && role !== 'admin') return false
+  return true
 }
 
 export type StateRole = 'admin' | 'tecnico' | 'leitura'

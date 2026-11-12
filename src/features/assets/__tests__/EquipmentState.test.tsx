@@ -115,6 +115,18 @@ describe('ficha: estado atual', () => {
     expect(screen.queryByRole('button', { name: 'Alterar estado' })).not.toBeInTheDocument()
   })
 
+  it.each([['INATIVO', 'Inativo'], ['DESCARTADO', 'Descartado']])('técnico não altera %s', async (state, label) => {
+    setup({ role: 'tecnico', equipment: { statusCicloVida: state } })
+    await screen.findByText(label)
+    expect(screen.queryByRole('button', { name: 'Alterar estado' })).not.toBeInTheDocument()
+  })
+
+  it('admin altera INATIVO', async () => {
+    setup({ equipment: { statusCicloVida: 'INATIVO' } })
+    await screen.findByText('Inativo')
+    expect(screen.getByRole('button', { name: 'Alterar estado' })).toBeInTheDocument()
+  })
+
   it('tolera estado desconhecido no cabeçalho', async () => {
     setup({ equipment: { statusCicloVida: 'QUARENTENA' } })
     expect(await screen.findByText('QUARENTENA')).toBeInTheDocument()
