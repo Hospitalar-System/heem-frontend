@@ -126,7 +126,7 @@ export function EquipmentFormPage() {
           <h2 className="text-sm font-semibold">Classificação técnica</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <SelectField label="Classe de risco ANVISA" name="classeRiscoAnvisa" control={form.control} options={['I', 'II', 'III', 'IV']} />
-            <SelectField label="Status do ciclo de vida" name="statusCicloVida" control={form.control} options={['ATIVO', 'EM_MANUTENCAO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']} />
+            <SelectField label="Status do ciclo de vida" name="statusCicloVida" control={form.control} options={['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']} />
             <SelectField label="Criticidade" name="criticidade" control={form.control} options={['ALTA', 'MEDIA', 'BAIXA']} />
             <SelectField label="Tipo de proteção" name="tipoProtecao" control={form.control} options={['CLASSE_I', 'CLASSE_II', 'ALIMENTACAO_INTERNA']} />
             <SelectField label="Parte aplicada" name="parteAplicada" control={form.control} options={['TIPO_B', 'TIPO_BF', 'TIPO_CF']} />

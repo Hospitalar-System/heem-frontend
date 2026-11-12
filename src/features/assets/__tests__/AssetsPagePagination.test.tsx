@@ -117,6 +117,17 @@ describe('AssetsPage: paginação e ordenação no servidor', () => {
     expect(equipmentCalls().at(-1)).toEqual({ pagina: 0, tamanho: 25, ordenar: 'categoria', direcao: 'asc' })
   })
 
+  it('filtro de status envia o texto do banco em minúsculas (Não apto, Desativado, Apto)', async () => {
+    entry = '/assets'
+    const user = userEvent.setup()
+    render(<AssetsPage />, { wrapper: Providers })
+    await screen.findByText(/Mostrando/)
+    for (const [label, value] of [['Não apto', 'nao_apto'], ['Desativado', 'desativado'], ['Apto', 'ativo']]) {
+      await chooseOption(user, 'Filtrar por status', label)
+      await waitFor(() => expect(equipmentCalls().at(-1)).toMatchObject({ status: value }))
+    }
+  })
+
   it('status e busca vão ao servidor, voltam à página 1, ficam na URL e o total reflete o filtro', async () => {
     entry = '/assets?pagina=2'
     const user = userEvent.setup()

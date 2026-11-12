@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { parseDate, formatBr } from '@/components/ui/civil-date'
 import { DataTable, type DataColumn, type DataTableProps } from '@/components/ui/DataTable'
 import type { Equipment } from '../types'
-import { EquipmentStatusBadge } from './EquipmentStatusBadge'
+import { EquipmentStateBadge } from './EquipmentStateBadge'
 import { formatLastMaintenance } from '../utils/last-maintenance'
 import { EquipmentThumb } from './EquipmentPhotoSection'
 
@@ -40,7 +40,7 @@ export function EquipmentListTable({ items, sectorNameById, isLoading, error, em
       return date ? <span className="text-text-secondary">{date}</span> : <span className="text-text-muted" title="Nenhuma manutenção concluída">—</span>
     } },
     { key: 'documentos', header: 'Documentos', className: 'whitespace-nowrap', cell: (item) => <DocumentsIndicator vencidos={item.documentosVencidos} vencendo={item.documentosVencendo} proximaValidade={item.proximaValidade} /> },
-    { key: 'status', header: 'Status', width: '9.5rem', className: 'whitespace-nowrap', cell: (item) => <EquipmentStatusBadge status={item.statusCicloVida} /> },
+    { key: 'status', header: 'Status', width: '9.5rem', className: 'whitespace-nowrap', cell: (item) => <EquipmentStateBadge state={item.statusCicloVida} /> },
   ]
   return <DataTable
     label="Equipamentos"
