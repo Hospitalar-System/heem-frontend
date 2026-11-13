@@ -4,9 +4,7 @@ import { Download, FileDown, RotateCw } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { PageAction } from '@/components/ui/PageAction'
-import { DatePicker } from '@/components/ui/DatePicker'
 import { Select } from '@/components/ui/Select'
-import { useHospitals, useSectors } from '@/features/assets/api/assets'
 import { useCampaigns } from '@/features/maintenance/api/preventive-campaigns'
 import { EXPORT_CONTENTS, EXPORT_FORMATS } from '../api/reports'
 import type { ExportRequest } from '../api/reports'
@@ -22,15 +20,28 @@ const fieldLabel = 'grid min-w-0 gap-1 text-xs text-text-secondary'
 const alertBox = 'flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger bg-surface px-3 py-2 text-xs text-text-primary'
 const smallButton = 'rounded-md border border-border bg-surface px-3 py-1.5 font-medium outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary'
 
-/** Escolha do relatório a exportar: tipo, período, hospital/setor, nível, orientação e formato. */
-export function ExportBuilder() {
+export interface ExportFiltersSummary {
+  /** Período, hospital e setor vêm dos filtros do topo da página (um único conjunto de filtros). */
+  desde: string
+  ate: string
+  hospitalId: string
+  setorId: string
+  hospitalName: string
+  sectorName: string
+  invalidRange: boolean
+  onEditFilters: () => void
+}
+
+const formatDay = (value: string) => (value ? value.split('-').reverse().join('/') : '—')
+
+/** Escolha do relatório a exportar: tipo, formato e, para campanha, a campanha. Período/hospital/setor vêm dos filtros da página. */
+export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
+  const { desde, ate, hospitalId, setorId, hospitalName, sectorName, invalidRange, onEditFilters } = filters
   const ids = useId()
   const [defaults] = useState(() => defaultExportValues())
-  const { control, register, handleSubmit, setValue, formState: { errors } } = useForm<ExportBuilderValues>({ resolver: zodResolver(exportBuilderSchema), defaultValues: defaults })
-  const [conteudo, desde, ate, hospitalId] = useWatch({ control, name: ['conteudo', 'desde', 'ate', 'hospitalId'] })
+  const { control, register, handleSubmit, formState: { errors } } = useForm<ExportBuilderValues>({ resolver: zodResolver(exportBuilderSchema), defaultValues: defaults })
+  const conteudo = useWatch({ control, name: 'conteudo' })
   const isCampaign = conteudo === 'campanha'
-  const hospitals = useHospitals()
-  const sectors = useSectors(hospitalId)
   const campaigns = useCampaigns({ ...(hospitalId ? { hospitalId } : {}), tamanho: 100 }, isCampaign)
   const flow = useExportDownload()
   const [lastBody, setLastBody] = useState<ExportRequest | null>(null)
@@ -38,7 +49,6 @@ export function ExportBuilder() {
   const cancelRef = useRef<HTMLButtonElement>(null)
   const againRef = useRef<HTMLButtonElement>(null)
   const retryRef = useRef<HTMLButtonElement>(null)
-  const hospitalOptions = [{ value: '', label: 'Todos' }, ...(hospitals.data ?? []).map((hospital) => ({ value: hospital.id, label: hospital.nome }))]
 
   function send(body: ExportRequest) {
     setLastBody(body)
@@ -58,7 +68,10 @@ export function ExportBuilder() {
     requestAnimationFrame(() => submitRef.current?.focus())
   }
 
-  const submit = handleSubmit((values) => send(buildExportBody(values)))
+  const submit = handleSubmit((values) => {
+    if (values.conteudo !== 'campanha' && invalidRange) return
+    send(buildExportBody({ ...values, desde, ate, hospitalId, setorId: hospitalId ? setorId : '' }))
+  })
   const busy = flow.phase === 'requesting' || flow.phase === 'generating'
   const summary = lastBody ? `${exportContentLabels[lastBody.conteudo]} em ${exportFormatLabels[lastBody.formato]}` : ''
 
@@ -66,7 +79,7 @@ export function ExportBuilder() {
     <section aria-labelledby={`${ids}-title`} className="rounded-lg border border-border bg-surface p-4 xl:p-5">
       <div className="mb-4">
         <h2 id={`${ids}-title`} className="text-sm font-semibold text-text-primary">Gerar relatório</h2>
-        <p className="mt-1 text-xs text-text-muted">Escolha o tipo, o período e o formato do arquivo.</p>
+        <p className="mt-1 text-xs text-text-muted">Escolha o tipo e o formato do arquivo. Período, hospital e setor seguem os filtros acima.</p>
       </div>
       <form noValidate onSubmit={(event) => { event.preventDefault(); void submit() }} className="grid gap-4">
         <fieldset className="grid gap-1.5">
@@ -79,44 +92,27 @@ export function ExportBuilder() {
           </div>
         </fieldset>
 
-        {isCampaign ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className={fieldLabel}>
-              <span>Hospital</span>
-              <Controller control={control} name="hospitalId" render={({ field }) => <Select size="sm" aria-label="Hospital da exportação" value={field.value} onChange={(next) => { field.onChange(next); setValue('campanhaId', ''); setValue('setorId', '') }} options={hospitalOptions} />} />
-            </label>
-            <label className={fieldLabel}>
-              <span>Campanha</span>
-              <Controller control={control} name="campanhaId" render={({ field }) => <Select size="sm" aria-label="Campanha" placeholder="Escolha a campanha" value={field.value} onChange={field.onChange} aria-invalid={Boolean(errors.campanhaId)} aria-describedby={errors.campanhaId ? `${ids}-campanha-error` : undefined} options={(campaigns.data?.items ?? []).map((campaign) => ({ value: campaign.id, label: campaign.nome }))} />} />
-              {errors.campanhaId && <span id={`${ids}-campanha-error`} role="alert" className="text-xs text-danger">{errors.campanhaId.message}</span>}
-            </label>
-            <p className="text-[11px] text-text-muted sm:col-span-2">O relatório da campanha cobre todas as ordens de trabalho dela; o período não se aplica.</p>
-          </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <label className={fieldLabel}>
-              <span>De</span>
-              <Controller control={control} name="desde" render={({ field }) => <DatePicker size="sm" required aria-label="Período de" value={field.value} max={ate || undefined} onChange={field.onChange} />} />
-              {errors.desde && <span role="alert" className="text-xs text-danger">{errors.desde.message}</span>}
-            </label>
-            <label className={fieldLabel}>
-              <span>Até</span>
-              <Controller control={control} name="ate" render={({ field }) => <DatePicker size="sm" required aria-label="Período até" value={field.value} min={desde || undefined} onChange={field.onChange} />} />
-              {errors.ate && <span role="alert" className="text-xs text-danger">{errors.ate.message}</span>}
-            </label>
-            <label className={fieldLabel}>
-              <span>Hospital</span>
-              <Controller control={control} name="hospitalId" render={({ field }) => <Select size="sm" aria-label="Hospital da exportação" value={field.value} onChange={(next) => { field.onChange(next); setValue('setorId', '') }} options={hospitalOptions} />} />
-            </label>
-            <label className={fieldLabel}>
-              <span>Setor</span>
-              <Controller control={control} name="setorId" render={({ field }) => <Select size="sm" aria-label="Setor da exportação" value={field.value} disabled={!hospitalId} onChange={field.onChange} options={[{ value: '', label: 'Todos' }, ...(sectors.data ?? []).map((sector) => ({ value: sector.id, label: sector.nome }))]} />} />
-            </label>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 py-2 text-xs text-text-secondary">
+          <p data-testid="export-filters-summary">
+            {isCampaign ? 'O período não se aplica à campanha' : `Período ${formatDay(desde)} a ${formatDay(ate)}`}
+            {` · Hospital: ${hospitalName}`}
+            {!isCampaign && ` · Setor: ${sectorName}`}
+          </p>
+          <button type="button" onClick={onEditFilters} className="font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary">Alterar filtros</button>
+        </div>
+        {!isCampaign && invalidRange && <p className="text-xs text-danger">Corrija o período nos filtros acima para gerar o relatório.</p>}
+
+        {isCampaign && (
+          <label className={fieldLabel}>
+            <span>Campanha</span>
+            <Controller control={control} name="campanhaId" render={({ field }) => <Select size="sm" aria-label="Campanha" placeholder="Escolha a campanha" value={field.value} onChange={field.onChange} aria-invalid={Boolean(errors.campanhaId)} aria-describedby={errors.campanhaId ? `${ids}-campanha-error` : undefined} options={(campaigns.data?.items ?? []).map((campaign) => ({ value: campaign.id, label: campaign.nome }))} />} />
+            {errors.campanhaId && <span id={`${ids}-campanha-error`} role="alert" className="text-xs text-danger">{errors.campanhaId.message}</span>}
+            <span className="text-[11px] text-text-muted">O relatório da campanha cobre todas as ordens de trabalho dela.</span>
+          </label>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <fieldset className="grid gap-1.5" disabled={!EXPORT_BACKEND_SUPPORT.nivel}>
+        {(EXPORT_BACKEND_SUPPORT.nivel || EXPORT_BACKEND_SUPPORT.orientacao) && <div className="grid gap-4 md:grid-cols-2">
+          {EXPORT_BACKEND_SUPPORT.nivel && <fieldset className="grid gap-1.5">
             <legend className="mb-1 text-xs font-medium text-text-secondary">Nível</legend>
             <div className="grid grid-cols-2 gap-2">
               {levelOptions.map((option) => <label key={option.value} className={radioLabel}>
@@ -124,9 +120,8 @@ export function ExportBuilder() {
                 {option.label}
               </label>)}
             </div>
-            {!EXPORT_BACKEND_SUPPORT.nivel && <p className="text-[11px] text-text-muted">Disponível em breve. Por enquanto o arquivo traz o relatório completo.</p>}
-          </fieldset>
-          <fieldset className="grid gap-1.5" disabled={!EXPORT_BACKEND_SUPPORT.orientacao}>
+          </fieldset>}
+          {EXPORT_BACKEND_SUPPORT.orientacao && <fieldset className="grid gap-1.5">
             <legend className="mb-1 text-xs font-medium text-text-secondary">Orientação do PDF</legend>
             <div className="grid grid-cols-2 gap-2">
               {orientationOptions.map((option) => <label key={option.value} className={radioLabel}>
@@ -134,9 +129,9 @@ export function ExportBuilder() {
                 {option.label}
               </label>)}
             </div>
-            <p className="text-[11px] text-text-muted">{EXPORT_BACKEND_SUPPORT.orientacao ? 'Só vale para PDF.' : 'Disponível em breve. Por enquanto o PDF sai em retrato.'}</p>
-          </fieldset>
-        </div>
+            <p className="text-[11px] text-text-muted">Só vale para PDF.</p>
+          </fieldset>}
+        </div>}
 
         <fieldset className="grid gap-1.5">
           <legend className="mb-1 text-xs font-medium text-text-secondary">Formato</legend>

@@ -4,9 +4,9 @@ import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
-import { chooseDate } from '@/test/date-helpers'
 import { chooseOption } from '@/test/select-helpers'
 import { ExportBuilder } from '../components/ExportBuilder'
+import type { ExportFiltersSummary } from '../components/ExportBuilder'
 import { buildExportBody, defaultExportValues, exportErrorMessage } from '../components/export-builder-model'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), post: vi.fn() } }))
@@ -15,6 +15,9 @@ function TestProviders({ children }: PropsWithChildren) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>
 }
+
+const baseFilters: ExportFiltersSummary = { desde: '2026-10-14', ate: '2026-11-12', hospitalId: '', setorId: '', hospitalName: 'Todos', sectorName: 'Todos', invalidRange: false, onEditFilters: () => undefined }
+const renderBuilder = (filters: Partial<ExportFiltersSummary> = {}) => render(<ExportBuilder filters={{ ...baseFilters, ...filters }} />, { wrapper: TestProviders })
 
 const pending = { data: { id: 'export-1', status: 'pendente', urlDownload: null } }
 
@@ -33,12 +36,10 @@ describe('ExportBuilder', () => {
   })
   afterEach(() => vi.useRealTimers())
 
-  it('monta o corpo com tipo, período, hospital, setor e formato; nível e orientação não são enviados', async () => {
+  it('monta o corpo com tipo, período, hospital, setor e formato dos filtros da página; nível e orientação não são enviados', async () => {
     const user = userEvent.setup()
-    render(<ExportBuilder />, { wrapper: TestProviders })
+    renderBuilder({ hospitalId: 'hospital-1', setorId: 'sector-1', hospitalName: 'Santa Casa', sectorName: 'UTI Adulto' })
     await user.click(screen.getByRole('radio', { name: 'Ordens de trabalho' }))
-    await chooseOption(user, 'Hospital da exportação', 'Santa Casa')
-    await chooseOption(user, 'Setor da exportação', 'UTI Adulto')
     await user.click(screen.getByRole('radio', { name: 'CSV' }))
     await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
 
@@ -52,44 +53,39 @@ describe('ExportBuilder', () => {
     expect(await screen.findByRole('button', { name: 'Cancelar' })).toBeInTheDocument()
   })
 
-  it('deixa nível e orientação visíveis, mas desabilitados e marcados como em breve', () => {
-    render(<ExportBuilder />, { wrapper: TestProviders })
-    expect(screen.getByRole('radio', { name: 'Resumo' })).toBeDisabled()
-    expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeDisabled()
-    expect(screen.getAllByText(/Disponível em breve/)).toHaveLength(2)
-  })
-
-  it('o setor depende do hospital e volta a Todos ao trocar de hospital', async () => {
+  it('não repete os campos de período, hospital e setor; mostra só o resumo e o link Alterar filtros', async () => {
     const user = userEvent.setup()
-    render(<ExportBuilder />, { wrapper: TestProviders })
-    expect(screen.getByRole('combobox', { name: 'Setor da exportação' })).toBeDisabled()
-    await chooseOption(user, 'Hospital da exportação', 'Santa Casa')
-    await chooseOption(user, 'Setor da exportação', 'UTI Adulto')
-    expect(screen.getByRole('combobox', { name: 'Setor da exportação' })).toHaveTextContent('UTI Adulto')
-    await chooseOption(user, 'Hospital da exportação', 'Todos')
-    expect(screen.getByRole('combobox', { name: 'Setor da exportação' })).toBeDisabled()
-    expect(screen.getByRole('combobox', { name: 'Setor da exportação' })).toHaveTextContent('Todos')
-  })
-
-  it('bloqueia período invertido: dias após o fim ficam desabilitados e nada é enviado', async () => {
-    const user = userEvent.setup()
-    render(<ExportBuilder />, { wrapper: TestProviders })
-    await user.click(screen.getByRole('button', { name: 'Período de' }))
-    await user.click(await screen.findByRole('button', { name: 'Próximo mês' }))
-    expect(screen.getByRole('button', { name: '13 de novembro de 2026' })).toHaveAttribute('aria-disabled', 'true')
-    await user.click(screen.getByRole('button', { name: '13 de novembro de 2026' }))
-    expect(apiClient.post).not.toHaveBeenCalled()
-    await user.keyboard('{Escape}')
-    await chooseDate(user, 'Período de', '2026-10-20')
-    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
-    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', expect.objectContaining({ desde: '2026-10-20T00:00:00.000Z' })))
-  })
-
-  it('campanha exige a campanha escolhida e envia só campanhaId e formato (sem período)', async () => {
-    const user = userEvent.setup()
-    render(<ExportBuilder />, { wrapper: TestProviders })
-    await user.click(screen.getByRole('radio', { name: 'Campanha preventiva' }))
+    const onEditFilters = vi.fn()
+    renderBuilder({ hospitalName: 'Santa Casa', sectorName: 'UTI Adulto', onEditFilters })
     expect(screen.queryByRole('button', { name: 'Período de' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Hospital da exportação' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Setor da exportação' })).not.toBeInTheDocument()
+    expect(screen.getByTestId('export-filters-summary')).toHaveTextContent('Período 14/10/2026 a 12/11/2026 · Hospital: Santa Casa · Setor: UTI Adulto')
+    await user.click(screen.getByRole('button', { name: 'Alterar filtros' }))
+    expect(onEditFilters).toHaveBeenCalledTimes(1)
+  })
+
+  it('esconde Nível e Orientação enquanto o backend não os suporta', () => {
+    renderBuilder()
+    expect(screen.queryByRole('radio', { name: 'Resumo' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: 'Paisagem' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Disponível em breve/)).not.toBeInTheDocument()
+  })
+
+  it('período inválido nos filtros bloqueia o envio', async () => {
+    const user = userEvent.setup()
+    renderBuilder({ desde: '2026-11-20', ate: '2026-11-01', invalidRange: true })
+    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    expect(apiClient.post).not.toHaveBeenCalled()
+    expect(screen.getByText(/Corrija o período/)).toBeInTheDocument()
+  })
+
+  it('o seletor de campanha só aparece no tipo Campanha preventiva e o período não se aplica', async () => {
+    const user = userEvent.setup()
+    renderBuilder({ hospitalName: 'Santa Casa' })
+    expect(screen.queryByRole('combobox', { name: 'Campanha' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Campanha preventiva' }))
+    expect(screen.getByTestId('export-filters-summary')).toHaveTextContent('O período não se aplica à campanha · Hospital: Santa Casa')
     await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
     expect(await screen.findByText('Escolha a campanha.')).toBeInTheDocument()
     expect(apiClient.post).not.toHaveBeenCalled()
@@ -98,13 +94,15 @@ describe('ExportBuilder', () => {
     await user.click(screen.getByRole('radio', { name: 'XLSX' }))
     await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', { conteudo: 'campanha', formato: 'xlsx', campanhaId: 'camp-1' }))
+    await user.click(screen.getByRole('radio', { name: 'Chamados' }))
+    expect(screen.queryByRole('combobox', { name: 'Campanha' })).not.toBeInTheDocument()
   })
 
   it('mostra Gerando… enquanto solicita', async () => {
     const user = userEvent.setup()
     let resolvePost!: (value: unknown) => void
     vi.mocked(apiClient.post).mockReturnValueOnce(new Promise((resolve) => { resolvePost = resolve }) as never)
-    render(<ExportBuilder />, { wrapper: TestProviders })
+    renderBuilder()
     await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
     expect(await screen.findByRole('button', { name: 'Gerando…' })).toBeDisabled()
     resolvePost(pending)
@@ -120,7 +118,7 @@ describe('ExportBuilder: acompanhamento e download automático', () => {
 
   const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms) })
   async function generate() {
-    render(<ExportBuilder />, { wrapper: TestProviders })
+    renderBuilder()
     fireEvent.click(screen.getByRole('button', { name: 'Gerar relatório' }))
     await tick(0)
   }

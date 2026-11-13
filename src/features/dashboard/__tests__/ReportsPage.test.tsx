@@ -88,6 +88,16 @@ describe('ReportsPage', () => {
     expect(screen.queryByText('Tempo médio de atendimento')).not.toBeInTheDocument()
   })
 
+  it('usa um único conjunto de filtros: o construtor mostra o resumo e Alterar filtros foca o primeiro campo', async () => {
+    const user = userEvent.setup()
+    render(<ReportsPage />, { wrapper: TestProviders })
+    await screen.findByText('286 h')
+    expect(screen.getAllByRole('combobox', { name: 'Hospital' })).toHaveLength(1)
+    expect(screen.getByTestId('export-filters-summary')).toHaveTextContent(/Período \d{2}\/\d{2}\/\d{4} a \d{2}\/\d{2}\/\d{4} · Hospital: Todos · Setor: Todos/)
+    await user.click(screen.getByRole('button', { name: 'Alterar filtros' }))
+    expect(screen.getByRole('button', { name: 'Data inicial' })).toHaveFocus()
+  })
+
   it('explica MTTA, MTTR e MTBF e mostra as severidades da disponibilidade', async () => {
     render(<ReportsPage />, { wrapper: TestProviders })
     const legend = within(await screen.findByRole('region', { name: 'Legenda dos indicadores' }))
