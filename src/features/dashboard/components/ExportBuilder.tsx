@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { isDemoMode } from '@/lib/demo-mode'
 import { Download, FileDown, RotateCw } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
@@ -150,6 +151,7 @@ export function ExportBuilder() {
         <div className="flex flex-wrap items-center gap-3">
           <PageAction icon={FileDown} disabled={busy} buttonRef={submitRef} onClick={() => void submit()}>{busy ? 'Gerando…' : 'Gerar relatório'}</PageAction>
         </div>
+        {isDemoMode ? <p className="text-[11px] text-text-muted">Modo demonstração: os arquivos são amostras ilustrativas, não o modelo final dos relatórios.</p> : null}
       </form>
 
       <div className="mt-4 grid gap-2">

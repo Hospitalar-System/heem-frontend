@@ -111,6 +111,21 @@ describe('modo de demonstração', () => {
     expect(last.comErro).toBe(last.erros.length)
     expect(last.erros.map((error) => error.code)).toContain('CATEGORIA_NAO_ENCONTRADA')
   })
+
+  it('exportação da campanha em PDF baixa a amostra real do backend (public/demo), os outros formatos geram arquivo local', async () => {
+    const pdf = (await apiClient.post('/relatorios/exportacoes', { conteudo: 'campanha', formato: 'pdf', campanhaId: 'c1' })).data as { id: string }
+    await apiClient.get(`/relatorios/exportacoes/${pdf.id}`)
+    const donePdf = (await apiClient.get(`/relatorios/exportacoes/${pdf.id}`)).data as { status: string; urlDownload: string }
+    expect(donePdf.status).toBe('concluido')
+    expect(donePdf.urlDownload.startsWith('http')).toBe(true)
+    expect(donePdf.urlDownload.endsWith('/demo/campanha-completa.pdf')).toBe(true)
+
+    const csv = (await apiClient.post('/relatorios/exportacoes', { conteudo: 'campanha', formato: 'csv', campanhaId: 'c1' })).data as { id: string }
+    await apiClient.get(`/relatorios/exportacoes/${csv.id}`)
+    const doneCsv = (await apiClient.get(`/relatorios/exportacoes/${csv.id}`)).data as { urlDownload: string }
+    expect(doneCsv.urlDownload.startsWith('data:text/csv')).toBe(true)
+  })
+
   it('simula a campanha de preventiva: prévia, criação, progresso por consulta e cancelamento', async () => {
     const body = { hospitalId: 'hospital-demo-1', nome: 'Campanha demo', setorIds: [], categoriaIds: [], dataInicio: '2999-01-01', recorrencia: 'avulsa', modoAtribuicao: 'equilibrado' }
     const preview = (await apiClient.post('/campanhas-preventivas/previa', body)).data as { totalEquipamentos: number; aGerar: number; totalPendencias: number; pendenciasPorMotivo: Record<string, number> }

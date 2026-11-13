@@ -302,7 +302,11 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     const polls = Number(pendingExport.polls) + 1
     pendingExport.polls = polls
     if (polls < 2) return { id: pendingExport.id, status: 'pendente', urlDownload: null }
-    return { id: pendingExport.id, status: 'concluido', urlDownload: demoExportDataUrl('campanha', pendingExport.format as DemoExportFormat) }
+    // PDF da campanha: amostra real do backend (public/demo, sem dado sensível); os demais formatos são arquivos mínimos gerados no cliente.
+    const urlDownload = pendingExport.format === 'pdf' && typeof window !== 'undefined'
+      ? `${window.location.origin}/demo/campanha-completa.pdf`
+      : demoExportDataUrl('campanha', pendingExport.format as DemoExportFormat)
+    return { id: pendingExport.id, status: 'concluido', urlDownload }
   }
   if (path.startsWith('/relatorios/exportacoes/')) return exportsById.get(lastPart(path)) ?? { id: lastPart(path), status: 'concluido', urlDownload: demoExportDataUrl('chamados', 'csv') }
   if (path === '/importacoes' && method === 'post') return startDemoImport(body)
