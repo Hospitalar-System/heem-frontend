@@ -1,5 +1,7 @@
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 
+import { getAuthState } from '@/features/auth/session'
+
 type RecordValue = Record<string, unknown>
 
 const now = new Date().toISOString()
@@ -14,8 +16,8 @@ const sectors: RecordValue[] = [
 ]
 const equipment: RecordValue[] = [
   { id: 'equipment-demo-1', setorId: 'sector-demo-1', codigo: 'EQ-1001', nome: 'Monitor multiparamétrico', categoriaId: 'category-demo-1', categoriaNome: 'Monitor Multiparamétrico', modelo: 'MX-500', numeroSerie: 'DEMO-MX500-01', marca: 'MedTech', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'ATIVO', criticidade: 'ALTA', tipoProtecao: 'CLASSE_I', parteAplicada: 'TIPO_CF', modoOperacao: 'CONTINUO', dataInstalacao: '2024-03-15', dataGarantiaFim: '2027-03-15', nivelRisco: 'ALTO' },
-  { id: 'equipment-demo-2', setorId: 'sector-demo-2', codigo: 'EQ-1002', nome: 'Ventilador pulmonar', categoriaId: 'category-demo-2', categoriaNome: 'Ventilador Pulmonar', modelo: 'Vento 4', numeroSerie: 'DEMO-V4-02', marca: 'MedTech', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'EM_MANUTENCAO', criticidade: 'ALTA', tipoProtecao: 'CLASSE_I', parteAplicada: 'TIPO_BF', modoOperacao: 'CONTINUO', dataInstalacao: '2023-08-10', dataGarantiaFim: '2026-08-10', nivelRisco: 'MEDIO' },
-  { id: 'equipment-demo-3', setorId: 'sector-demo-3', codigo: 'EQ-1003', nome: 'Desfibrilador', categoriaId: null, categoriaNome: null, modelo: 'Heart 2', numeroSerie: 'DEMO-H2-03', marca: 'CardioCare', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'ATIVO', criticidade: 'ALTA', tipoProtecao: 'CLASSE_II', parteAplicada: 'TIPO_BF', modoOperacao: 'INTERMITENTE', dataInstalacao: '2024-01-20', dataGarantiaFim: '2027-01-20', nivelRisco: 'BAIXO' },
+  { id: 'equipment-demo-2', setorId: 'sector-demo-2', codigo: 'EQ-1002', nome: 'Ventilador pulmonar', categoriaId: 'category-demo-2', categoriaNome: 'Ventilador Pulmonar', modelo: 'Vento 4', numeroSerie: 'DEMO-V4-02', marca: 'MedTech', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'EM_MANUTENCAO', descricaoEstado: 'Aguardando troca da válvula expiratória', estadoAtualizadoEm: '2026-11-08T14:20:00Z', criticidade: 'ALTA', tipoProtecao: 'CLASSE_I', parteAplicada: 'TIPO_BF', modoOperacao: 'CONTINUO', dataInstalacao: '2023-08-10', dataGarantiaFim: '2026-08-10', nivelRisco: 'MEDIO' },
+  { id: 'equipment-demo-3', setorId: 'sector-demo-3', codigo: 'EQ-1003', nome: 'Desfibrilador', categoriaId: null, categoriaNome: null, modelo: 'Heart 2', numeroSerie: 'DEMO-H2-03', marca: 'CardioCare', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'NAO_APTO', descricaoEstado: 'Falha no teste de carga da bateria', estadoAtualizadoEm: '2026-11-10T09:05:00Z', criticidade: 'ALTA', tipoProtecao: 'CLASSE_II', parteAplicada: 'TIPO_BF', modoOperacao: 'INTERMITENTE', dataInstalacao: '2024-01-20', dataGarantiaFim: '2027-01-20', nivelRisco: 'BAIXO' },
 ]
 const categories: RecordValue[] = [
   { id: 'category-demo-1', nome: 'Monitor Multiparamétrico', ativa: true, checklistPadraoId: 'checklist-demo-1', origem: 'manual', revisada: true },
@@ -57,10 +59,36 @@ const documents: RecordValue[] = [
   { id: 'doc-demo-2', equipamentoId: 'equipment-demo-1', tipoDocumento: 'LAUDO_SEGURANCA', nomeArquivo: 'laudo-60601.pdf', uploadedEm: now, validadeAte: dayIso(12) },
   { id: 'doc-demo-3', equipamentoId: 'equipment-demo-1', tipoDocumento: 'MANUAL', nomeArquivo: 'manual-mx500.pdf', uploadedEm: now, validadeAte: null },
 ]
-/** Setor com a situação e as contagens que o servidor calcula (ativos = ATIVO ou EM_MANUTENCAO). */
+/** Setor com a situação e as contagens que o servidor calcula (ativos = ATIVO, NAO_APTO ou EM_MANUTENCAO). */
 function sectorView(sector: RecordValue) {
   const items = equipment.filter((item) => item.setorId === sector.id && item.ativo !== false)
-  return { ativo: true, ...sector, equipamentosAtivos: items.filter((item) => item.statusCicloVida === 'ATIVO' || item.statusCicloVida === 'EM_MANUTENCAO').length, equipamentosTotal: items.length }
+  return { ativo: true, ...sector, equipamentosAtivos: items.filter((item) => ['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO'].includes(String(item.statusCicloVida))).length, equipamentosTotal: items.length }
+}
+/** Histórico de estado simulado (contrato #208): mais recente primeiro ao listar. */
+const stateHistory: RecordValue[] = [
+  { id: 'est-1', equipamentoId: 'equipment-demo-2', estadoAnterior: 'ATIVO', estadoNovo: 'EM_MANUTENCAO', descricao: 'Aguardando troca da válvula expiratória', alteradoPorId: 'user-demo-2', alteradoPorNome: 'Bruno Técnico', alteradoEm: '2026-11-08T14:20:00Z', origem: 'MANUAL', ordemTrabalhoId: null },
+  { id: 'est-2', equipamentoId: 'equipment-demo-3', estadoAnterior: 'ATIVO', estadoNovo: 'NAO_APTO', descricao: 'Falha no teste de carga da bateria', alteradoPorId: 'user-demo-2', alteradoPorNome: 'Bruno Técnico', alteradoEm: '2026-11-10T09:05:00Z', origem: 'MANUAL', ordemTrabalhoId: null },
+]
+const STATE_ENUM = ['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']
+/** PATCH /equipamentos/{id}/estado com as regras do contrato (papel, descrição, DESCARTADO terminal). */
+function changeEquipmentState(record: RecordValue, body: RecordValue) {
+  const estado = String(body.estado ?? '').trim().toUpperCase()
+  const raw = typeof body.descricao === 'string' ? body.descricao.trim() : ''
+  const { user } = getAuthState()
+  const roles = user?.roles ?? []
+  const admin = roles.includes('admin_cliente')
+  if (!admin && !roles.includes('tecnico')) throw demoProblem(403, { code: 'ACESSO_NEGADO' })
+  if (!STATE_ENUM.includes(estado) || raw.length > 200) throw demoProblem(400, { code: 'VALIDACAO_FALHOU' })
+  if (estado === 'EM_MANUTENCAO' && !raw) throw demoProblem(400, { code: 'DESCRICAO_OBRIGATORIA' })
+  // técnico não sai de INATIVO/DESCARTADO nem vai para eles; esse 403 vem antes do DESCARTADO terminal
+  if (!admin && (['INATIVO', 'DESCARTADO'].includes(String(record.statusCicloVida)) || estado === 'INATIVO' || estado === 'DESCARTADO')) throw demoProblem(403, { code: 'ACESSO_NEGADO' })
+  const descricao = estado === 'ATIVO' ? null : raw || null
+  if (record.statusCicloVida === estado && (record.descricaoEstado ?? null) === descricao) return record
+  if (record.statusCicloVida === 'DESCARTADO') throw demoProblem(409, { code: 'TRANSICAO_INVALIDA' })
+  const alteradoEm = new Date().toISOString()
+  stateHistory.push({ id: makeId('est'), equipamentoId: record.id, estadoAnterior: record.statusCicloVida, estadoNovo: estado, descricao, alteradoPorId: user?.id ?? null, alteradoPorNome: user?.name ?? 'Usuário demo', alteradoEm, origem: 'MANUAL', ordemTrabalhoId: null })
+  Object.assign(record, { statusCicloVida: estado, descricaoEstado: descricao, estadoAtualizadoEm: alteradoEm })
+  return record
 }
 function demoProblem(status: number, data: Record<string, unknown>) {
   return Object.assign(new Error(String(data.code)), { response: { status, data } })
@@ -142,7 +170,7 @@ export const demoApiAdapter: AxiosAdapter = async (config) => {
 
 /** Rotas que o backend pagina (`pagina` 0-based + `tamanho`, total em X-Total-Count). */
 const PAGINATED_PATHS = new Set(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos', '/campanhas-preventivas', '/checklists', '/equipamentos', '/categorias-equipamento'])
-const PAGINATED_PATTERNS = [/^\/hospitais\/[^/]+\/setores$/, /^\/equipamentos\/[^/]+\/documentos$/, /^\/equipamentos\/[^/]+\/execucoes-checklist$/]
+const PAGINATED_PATTERNS = [/^\/equipamentos\/[^/]+\/historico-estado$/, /^\/hospitais\/[^/]+\/setores$/, /^\/equipamentos\/[^/]+\/documentos$/, /^\/equipamentos\/[^/]+\/execucoes-checklist$/]
 
 const SEVERITY_RANK: Record<string, number> = { CRITICA: 0, ALTA: 1, MEDIA: 2, BAIXA: 3 }
 const SORTABLE: Record<string, string[]> = {
@@ -281,6 +309,14 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   const categoryResult = handleCategories(method, path, body, params)
   if (categoryResult !== undefined) return categoryResult
   if (path === '/equipamentos' && method === 'post') return createRecord(equipment, { ...categorizedBody(body), ativo: true })
+  const stateChange = path.match(/^\/equipamentos\/([^/]+)\/estado$/)
+  if (stateChange && method === 'patch') {
+    const record = equipment.find((item) => item.id === stateChange[1])
+    if (!record) throw demoProblem(404, { code: 'EQUIPAMENTO_NAO_ENCONTRADO' })
+    return changeEquipmentState(record, body)
+  }
+  const stateHistoryMatch = path.match(/^\/equipamentos\/([^/]+)\/historico-estado$/)
+  if (stateHistoryMatch && method === 'get') return stateHistory.filter((item) => item.equipamentoId === stateHistoryMatch[1]).sort((a, b) => String(b.alteradoEm).localeCompare(String(a.alteradoEm))).map(({ equipamentoId, ...entry }) => { void equipamentoId; return entry })
   const equipmentUpdate = path.match(/^\/equipamentos\/([^/]+)$/)
   if (equipmentUpdate && method === 'put') {
     const record = equipment.find((item) => item.id === equipmentUpdate[1])
