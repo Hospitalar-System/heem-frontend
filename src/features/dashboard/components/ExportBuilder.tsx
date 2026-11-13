@@ -8,7 +8,7 @@ import { Select } from '@/components/ui/Select'
 import { useCampaigns } from '@/features/maintenance/api/preventive-campaigns'
 import { EXPORT_CONTENTS, EXPORT_FORMATS } from '../api/reports'
 import type { ExportRequest } from '../api/reports'
-import { EXPORT_BACKEND_SUPPORT, buildExportBody, defaultExportValues, exportBuilderSchema, exportContentLabels, exportFilename, exportFormatLabels } from './export-builder-model'
+import { EXPORT_BACKEND_SUPPORT, buildExportBody, defaultExportValues, defaultOrientation, exportBuilderSchema, exportContentLabels, exportFilename, exportFormatLabels } from './export-builder-model'
 import type { ExportBuilderValues } from './export-builder-model'
 import { useExportDownload } from './use-export-download'
 
@@ -39,8 +39,10 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
   const { desde, ate, hospitalId, setorId, hospitalName, sectorName, invalidRange, onEditFilters } = filters
   const ids = useId()
   const [defaults] = useState(() => defaultExportValues())
-  const { control, register, handleSubmit, formState: { errors } } = useForm<ExportBuilderValues>({ resolver: zodResolver(exportBuilderSchema), defaultValues: defaults })
-  const conteudo = useWatch({ control, name: 'conteudo' })
+  const { control, register, handleSubmit, setValue, formState: { errors } } = useForm<ExportBuilderValues>({ resolver: zodResolver(exportBuilderSchema), defaultValues: defaults })
+  const [conteudo, formato] = useWatch({ control, name: ['conteudo', 'formato'] })
+  const isPdf = formato === 'pdf'
+  const orientationTouched = useRef(false)
   const isCampaign = conteudo === 'campanha'
   const campaigns = useCampaigns({ ...(hospitalId ? { hospitalId } : {}), tamanho: 100 }, isCampaign)
   const flow = useExportDownload()
@@ -54,6 +56,11 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
     setLastBody(body)
     void flow.start(body, exportFilename(body))
   }
+
+  // Trocar o tipo reaplica a orientação padrão dele, se a pessoa ainda não escolheu uma.
+  useEffect(() => {
+    if (!orientationTouched.current) setValue('orientacao', defaultOrientation(conteudo))
+  }, [conteudo, setValue])
 
   // Foco acompanha o estado: Cancelar enquanto gera, "Baixar novamente" ao concluir, "Tentar de novo" na falha.
   useEffect(() => {
@@ -121,15 +128,15 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
               </label>)}
             </div>
           </fieldset>}
-          {EXPORT_BACKEND_SUPPORT.orientacao && <fieldset className="grid gap-1.5">
+          {EXPORT_BACKEND_SUPPORT.orientacao && <fieldset className="grid gap-1.5" disabled={!isPdf}>
             <legend className="mb-1 text-xs font-medium text-text-secondary">Orientação do PDF</legend>
             <div className="grid grid-cols-2 gap-2">
               {orientationOptions.map((option) => <label key={option.value} className={radioLabel}>
-                <input type="radio" value={option.value} className="size-4 accent-primary" {...register('orientacao')} />
+                <input type="radio" value={option.value} className="size-4 accent-primary" {...register('orientacao', { onChange: () => { orientationTouched.current = true } })} />
                 {option.label}
               </label>)}
             </div>
-            <p className="text-[11px] text-text-muted">Só vale para PDF.</p>
+            <p className="text-[11px] text-text-muted">{isPdf ? 'O padrão depende do tipo; você pode trocar.' : 'Só vale para PDF.'}</p>
           </fieldset>}
         </div>}
 
@@ -153,7 +160,7 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
         <div role="status" aria-live="polite" className={flow.phase === 'generating' || flow.phase === 'requesting' || flow.phase === 'done' ? 'flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary' : 'sr-only'}>
           {flow.phase === 'requesting' && <span className="flex items-center gap-2"><RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />Solicitando o relatório…</span>}
           {flow.phase === 'generating' && <span className="flex items-center gap-2"><RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />Gerando… {summary}. Isso pode levar alguns instantes.</span>}
-          {flow.phase === 'done' && <span className="flex items-center gap-2"><Download aria-hidden="true" size={14} />Relatório baixado ({flow.filename}).</span>}
+          {flow.phase === 'done' && <span className="flex items-center gap-2"><Download aria-hidden="true" size={14} />Relatório baixado ({flow.filename}){flow.layout ? ` · ${flow.layout}` : ''}.</span>}
           {flow.phase === 'generating' && <button ref={cancelRef} type="button" onClick={cancel} className={smallButton}>Cancelar</button>}
           {flow.phase === 'done' && <button ref={againRef} type="button" onClick={() => void flow.downloadAgain()} className={smallButton}>Baixar novamente</button>}
         </div>

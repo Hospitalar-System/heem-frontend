@@ -285,15 +285,19 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path === '/relatorios/conformidade') return ['CRITICO', 'ALTO', 'MEDIO', 'BAIXO'].map((nivelRisco, index) => ({ nivelRisco, percentualConforme: [96, 92, 98, 100][index], totalMedicoes: [25, 38, 54, 12][index] }))
   if (path === '/relatorios/exportacoes' && method === 'post') {
     const id = makeId('export')
+    // Efetivos como o backend: nível padrão COMPLETO; orientação só em PDF (padrão PAISAGEM nas listagens, RETRATO nos demais).
+    const isPdf = body.formato === 'pdf'
+    const nivel = String(body.nivel ?? 'COMPLETO').toUpperCase()
+    const orientacao = isPdf ? String(body.orientacao ?? (['chamados', 'ordens_trabalho', 'medicoes'].includes(String(body.conteudo)) ? 'PAISAGEM' : 'RETRATO')).toUpperCase() : null
     if (body.conteudo === 'campanha') {
       // Relatório da campanha: nasce pendente e conclui na consulta seguinte (exercita o polling). Arquivo de exemplo local, sem dado real.
       const format = ['pdf', 'xlsx', 'csv'].includes(body.formato as string) ? body.formato : 'pdf'
-      exportsById.set(id, { id, status: 'pendente', urlDownload: null, polls: 0, format })
-      return { id, status: 'pendente', urlDownload: null }
+      exportsById.set(id, { id, status: 'pendente', urlDownload: null, polls: 0, format, nivel, orientacao })
+      return { id, status: 'pendente', urlDownload: null, nivel, orientacao }
     }
     // Parâmetros extras (hospitalId, setorId, desde, ate, agrupar) são aceitos e ignorados; a extensão segue o formato pedido.
     const extension = ['pdf', 'xlsx', 'csv'].includes(body.formato as string) ? body.formato : 'csv'
-    const result = { id, status: 'concluido', urlDownload: demoExportDataUrl(String(body.conteudo), extension as DemoExportFormat) }
+    const result = { id, status: 'concluido', urlDownload: demoExportDataUrl(String(body.conteudo), extension as DemoExportFormat), nivel, orientacao }
     exportsById.set(id, result)
     return result
   }
@@ -301,12 +305,13 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (pendingExport && 'polls' in pendingExport) {
     const polls = Number(pendingExport.polls) + 1
     pendingExport.polls = polls
-    if (polls < 2) return { id: pendingExport.id, status: 'pendente', urlDownload: null }
+    const { nivel, orientacao } = pendingExport
+    if (polls < 2) return { id: pendingExport.id, status: 'pendente', urlDownload: null, nivel, orientacao }
     // PDF da campanha: amostra real do backend (public/demo, sem dado sensível); os demais formatos são arquivos mínimos gerados no cliente.
     const urlDownload = pendingExport.format === 'pdf' && typeof window !== 'undefined'
-      ? `${window.location.origin}/demo/campanha-completa.pdf`
+      ? `${window.location.origin}/demo/campanha-${pendingExport.nivel === 'RESUMO' ? 'resumo' : 'completa'}.pdf`
       : demoExportDataUrl('campanha', pendingExport.format as DemoExportFormat)
-    return { id: pendingExport.id, status: 'concluido', urlDownload }
+    return { id: pendingExport.id, status: 'concluido', urlDownload, nivel, orientacao }
   }
   if (path.startsWith('/relatorios/exportacoes/')) return exportsById.get(lastPart(path)) ?? { id: lastPart(path), status: 'concluido', urlDownload: demoExportDataUrl('chamados', 'csv') }
   if (path === '/importacoes' && method === 'post') return startDemoImport(body)

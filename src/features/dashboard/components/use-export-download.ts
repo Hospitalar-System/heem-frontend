@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiClient } from '@/lib/axios'
 import { exportStatusSchema, useRequestReportExport } from '../api/reports'
 import type { ExportRequest } from '../api/reports'
-import { exportErrorMessage } from './export-builder-model'
+import { exportErrorMessage, exportLayoutLabel } from './export-builder-model'
 
 export const EXPORT_POLL_FIRST_MS = 1500
 export const EXPORT_POLL_MAX_INTERVAL_MS = 5000
@@ -12,7 +12,7 @@ export const EXPORT_TIMEOUT_MS = 180_000
 
 export type ExportPhase = 'idle' | 'requesting' | 'generating' | 'done' | 'error'
 
-export interface ExportFlowState { phase: ExportPhase; error: string | null; filename: string | null }
+export interface ExportFlowState { phase: ExportPhase; error: string | null; filename: string | null; /** Nível e orientação efetivos, ex.: "Completo · Paisagem". */ layout?: string }
 
 const TIMEOUT_MESSAGE = 'O relatório está demorando mais que o esperado. Tente de novo em instantes.'
 const POLL_ERROR_MESSAGE = 'Não foi possível consultar o andamento do relatório. Verifique a conexão e tente de novo.'
@@ -78,7 +78,7 @@ export function useExportDownload() {
         if (!url) return fail('O relatório foi gerado, mas o link de download não foi fornecido. Tente de novo.')
         current.current = { id: created.id, url, filename }
         triggerDownload(url, filename)
-        setState({ phase: 'done', error: null, filename })
+        setState({ phase: 'done', error: null, filename, layout: exportLayoutLabel(status.nivel ?? created.nivel, status.orientacao ?? created.orientacao) })
         return
       }
       if (waited >= EXPORT_TIMEOUT_MS) return fail(TIMEOUT_MESSAGE)

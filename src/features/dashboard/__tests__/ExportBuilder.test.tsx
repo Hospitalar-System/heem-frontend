@@ -36,7 +36,7 @@ describe('ExportBuilder', () => {
   })
   afterEach(() => vi.useRealTimers())
 
-  it('monta o corpo com tipo, período, hospital, setor e formato dos filtros da página; nível e orientação não são enviados', async () => {
+  it('monta o corpo com tipo, período, hospital, setor e formato dos filtros da página; CSV não leva nível nem orientação', async () => {
     const user = userEvent.setup()
     renderBuilder({ hospitalId: 'hospital-1', setorId: 'sector-1', hospitalName: 'Santa Casa', sectorName: 'UTI Adulto' })
     await user.click(screen.getByRole('radio', { name: 'Ordens de trabalho' }))
@@ -65,11 +65,42 @@ describe('ExportBuilder', () => {
     expect(onEditFilters).toHaveBeenCalledTimes(1)
   })
 
-  it('esconde Nível e Orientação enquanto o backend não os suporta', () => {
+  it('PDF envia nível e orientação em maiúsculas, com o padrão do tipo (paisagem em chamados)', async () => {
+    const user = userEvent.setup()
     renderBuilder()
-    expect(screen.queryByRole('radio', { name: 'Resumo' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('radio', { name: 'Paisagem' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/Disponível em breve/)).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Completo' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Retrato' })).toBeEnabled()
+    await user.click(screen.getByRole('radio', { name: 'Resumo' }))
+    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(1))
+    expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', expect.objectContaining({ conteudo: 'chamados', formato: 'pdf', nivel: 'RESUMO', orientacao: 'PAISAGEM' }))
+  })
+
+  it('XLSX e CSV omitem a orientação (e o nível) e a orientação fica desabilitada', async () => {
+    const user = userEvent.setup()
+    renderBuilder()
+    await user.click(screen.getByRole('radio', { name: 'XLSX' }))
+    expect(screen.getByRole('radio', { name: 'Retrato' })).toBeDisabled()
+    expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(1))
+    const body = vi.mocked(apiClient.post).mock.calls[0][1] as Record<string, unknown>
+    expect(body).not.toHaveProperty('orientacao')
+    expect(body).not.toHaveProperty('nivel')
+  })
+
+  it('trocar o tipo reaplica a orientação padrão enquanto a pessoa não escolheu; depois respeita a escolha', async () => {
+    const user = userEvent.setup()
+    renderBuilder()
+    await user.click(screen.getByRole('radio', { name: 'Indicadores' }))
+    expect(screen.getByRole('radio', { name: 'Retrato' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: 'Medições' }))
+    expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: 'Retrato' }))
+    await user.click(screen.getByRole('radio', { name: 'Ordens de trabalho' }))
+    expect(screen.getByRole('radio', { name: 'Retrato' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeEnabled()
   })
 
   it('período inválido nos filtros bloqueia o envio', async () => {
@@ -145,11 +176,12 @@ describe('ExportBuilder: acompanhamento e download automático', () => {
     await tick(1500)
     expect(getExport).toHaveBeenCalledTimes(1)
     expect(clicks).toHaveLength(0)
-    getExport.mockResolvedValue({ data: { id: 'export-1', status: 'concluido', urlDownload: 'https://storage.test/export.pdf?sig=1' } })
+    getExport.mockResolvedValue({ data: { id: 'export-1', status: 'concluido', urlDownload: 'https://storage.test/export.pdf?sig=1', nivel: 'COMPLETO', orientacao: 'PAISAGEM' } })
     await tick(2000)
     expect(clicks).toEqual([{ href: 'https://storage.test/export.pdf?sig=1', download: 'relatorio-chamados-2026-11-12.pdf' }])
     expect(openSpy).not.toHaveBeenCalled()
     expect(screen.getByRole('status')).toHaveTextContent('Relatório baixado')
+    expect(screen.getByRole('status')).toHaveTextContent('Completo · Paisagem')
     expect(screen.getByRole('button', { name: 'Baixar novamente' })).toHaveFocus()
     await tick(20_000)
     expect(clicks).toHaveLength(1)

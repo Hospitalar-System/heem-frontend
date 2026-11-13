@@ -112,6 +112,27 @@ describe('modo de demonstração', () => {
     expect(last.erros.map((error) => error.code)).toContain('CATEGORIA_NAO_ENCONTRADA')
   })
 
+  it('exportação devolve nível e orientação efetivos (padrões por tipo; orientação só em PDF)', async () => {
+    const post = async (body: Record<string, unknown>) => (await apiClient.post('/relatorios/exportacoes', body)).data as { id: string; nivel: string; orientacao: string | null }
+    const base = { desde: '2026-10-01T00:00:00.000Z', ate: '2026-10-31T23:59:59.999Z' }
+    expect(await post({ ...base, conteudo: 'chamados', formato: 'pdf' })).toMatchObject({ nivel: 'COMPLETO', orientacao: 'PAISAGEM' })
+    expect(await post({ ...base, conteudo: 'indicadores', formato: 'pdf', nivel: 'resumo' })).toMatchObject({ nivel: 'RESUMO', orientacao: 'RETRATO' })
+    expect(await post({ ...base, conteudo: 'medicoes', formato: 'pdf', orientacao: 'RETRATO' })).toMatchObject({ orientacao: 'RETRATO' })
+    expect(await post({ ...base, conteudo: 'chamados', formato: 'csv' })).toMatchObject({ nivel: 'COMPLETO', orientacao: null })
+  })
+
+  it('campanha em PDF usa a amostra resumo ou completa conforme o nível, e o GET devolve os efetivos', async () => {
+    const run = async (nivel?: string) => {
+      const { id } = (await apiClient.post('/relatorios/exportacoes', { conteudo: 'campanha', formato: 'pdf', campanhaId: 'c1', ...(nivel ? { nivel } : {}) })).data as { id: string }
+      await apiClient.get(`/relatorios/exportacoes/${id}`)
+      return (await apiClient.get(`/relatorios/exportacoes/${id}`)).data as { urlDownload: string; nivel: string; orientacao: string }
+    }
+    const resumo = await run('RESUMO')
+    expect(resumo.urlDownload.endsWith('/demo/campanha-resumo.pdf')).toBe(true)
+    expect(resumo).toMatchObject({ nivel: 'RESUMO', orientacao: 'RETRATO' })
+    expect((await run()).urlDownload.endsWith('/demo/campanha-completa.pdf')).toBe(true)
+  })
+
   it('exportação da campanha em PDF baixa a amostra real do backend (public/demo), os outros formatos geram arquivo local', async () => {
     const pdf = (await apiClient.post('/relatorios/exportacoes', { conteudo: 'campanha', formato: 'pdf', campanhaId: 'c1' })).data as { id: string }
     await apiClient.get(`/relatorios/exportacoes/${pdf.id}`)

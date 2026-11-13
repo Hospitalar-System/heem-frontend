@@ -3,10 +3,14 @@ import { EXPORT_CONTENTS, EXPORT_FORMATS } from '../api/reports'
 import type { ExportRequest } from '../api/reports'
 
 /**
- * Controles que o backend (ExportacaoRequest) ainda não aceita. Ficam visíveis e desabilitados na tela e
- * NUNCA entram no corpo da requisição. Ao ganhar suporte no backend, troque para true e inclua o campo em buildExportBody.
+ * Controles que o backend (ExportacaoRequest) aceita. Com false, somem da tela e não entram no corpo.
  */
-export const EXPORT_BACKEND_SUPPORT = { nivel: false, orientacao: false } as const
+export const EXPORT_BACKEND_SUPPORT = { nivel: true, orientacao: true } as const
+
+/** Orientação padrão do backend por tipo: paisagem nas listagens, retrato nos demais. */
+export function defaultOrientation(conteudo: string): 'retrato' | 'paisagem' {
+  return ['chamados', 'ordens_trabalho', 'medicoes'].includes(conteudo) ? 'paisagem' : 'retrato'
+}
 
 export const exportContentLabels: Record<(typeof EXPORT_CONTENTS)[number], string> = {
   chamados: 'Chamados',
@@ -51,15 +55,21 @@ function isoDate(date: Date) {
 export function defaultExportValues(now = new Date()): ExportBuilderValues {
   const from = new Date(now)
   from.setDate(from.getDate() - 29)
-  return { conteudo: 'chamados', desde: isoDate(from), ate: isoDate(now), hospitalId: '', setorId: '', campanhaId: '', nivel: 'completo', orientacao: 'retrato', formato: 'pdf' }
+  return { conteudo: 'chamados', desde: isoDate(from), ate: isoDate(now), hospitalId: '', setorId: '', campanhaId: '', nivel: 'completo', orientacao: defaultOrientation('chamados'), formato: 'pdf' }
 }
 
-/** Monta o corpo só com o que o backend aceita hoje (sem nível/orientação). */
+/** Corpo do POST: nível e orientação só para PDF (CSV/XLSX ignoram); o backend aceita qualquer caixa, enviamos maiúsculas. */
 export function buildExportBody(values: ExportBuilderValues): ExportRequest {
-  if (values.conteudo === 'campanha') return { conteudo: 'campanha', formato: values.formato, campanhaId: values.campanhaId }
+  const pdf = values.formato === 'pdf'
+  const layout = {
+    ...(EXPORT_BACKEND_SUPPORT.nivel && pdf ? { nivel: values.nivel.toUpperCase() as 'RESUMO' | 'COMPLETO' } : {}),
+    ...(EXPORT_BACKEND_SUPPORT.orientacao && pdf ? { orientacao: values.orientacao.toUpperCase() as 'RETRATO' | 'PAISAGEM' } : {}),
+  }
+  if (values.conteudo === 'campanha') return { conteudo: 'campanha', formato: values.formato, campanhaId: values.campanhaId, ...layout }
   return {
     conteudo: values.conteudo,
     formato: values.formato,
+    ...layout,
     desde: startOfDay(values.desde),
     ate: endOfDay(values.ate),
     ...(values.hospitalId ? { hospitalId: values.hospitalId } : {}),
@@ -76,6 +86,12 @@ export function exportErrorMessage(error: unknown): string {
   if (response?.status === 503 || code === 'SERVICO_OCUPADO') return 'O serviço de relatórios está ocupado no momento. Aguarde alguns instantes e tente novamente.'
   if (code === 'CAMPANHA_NAO_ENCONTRADA') return 'Campanha não encontrada. Atualize a lista e escolha outra.'
   return response?.data?.detail || (code ? `Não foi possível gerar o relatório (${code}).` : 'Não foi possível gerar o relatório. Tente novamente.')
+}
+
+/** "Completo · Paisagem" a partir dos valores efetivos devolvidos pelo backend (qualquer caixa). */
+export function exportLayoutLabel(nivel?: string | null, orientacao?: string | null) {
+  const pretty = (value?: string | null) => (value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : '')
+  return [pretty(nivel), pretty(orientacao)].filter(Boolean).join(' · ')
 }
 
 /** Nome do arquivo baixado: relatorio-<tipo>-<data>.<extensão>. */
