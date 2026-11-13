@@ -1,16 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Download, FileDown, RotateCw } from 'lucide-react'
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { PageAction } from '@/components/ui/PageAction'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { Select } from '@/components/ui/Select'
 import { useHospitals, useSectors } from '@/features/assets/api/assets'
 import { useCampaigns } from '@/features/maintenance/api/preventive-campaigns'
-import { EXPORT_CONTENTS, EXPORT_FORMATS, useReportExport, useRequestReportExport } from '../api/reports'
+import { EXPORT_CONTENTS, EXPORT_FORMATS } from '../api/reports'
 import type { ExportRequest } from '../api/reports'
-import { EXPORT_BACKEND_SUPPORT, buildExportBody, defaultExportValues, exportBuilderSchema, exportContentLabels, exportErrorMessage, exportFormatLabels } from './export-builder-model'
+import { EXPORT_BACKEND_SUPPORT, buildExportBody, defaultExportValues, exportBuilderSchema, exportContentLabels, exportFilename, exportFormatLabels } from './export-builder-model'
 import type { ExportBuilderValues } from './export-builder-model'
+import { useExportDownload } from './use-export-download'
 
 const levelOptions = [{ value: 'resumo', label: 'Resumo' }, { value: 'completo', label: 'Completo' }] as const
 const orientationOptions = [{ value: 'retrato', label: 'Retrato' }, { value: 'paisagem', label: 'Paisagem' }] as const
@@ -30,25 +31,35 @@ export function ExportBuilder() {
   const hospitals = useHospitals()
   const sectors = useSectors(hospitalId)
   const campaigns = useCampaigns({ ...(hospitalId ? { hospitalId } : {}), tamanho: 100 }, isCampaign)
-  const requestExport = useRequestReportExport()
-  const [exportId, setExportId] = useState<string | null>(null)
+  const flow = useExportDownload()
   const [lastBody, setLastBody] = useState<ExportRequest | null>(null)
-  const exportStatus = useReportExport(exportId)
-  const status = exportStatus.data?.status
+  const submitRef = useRef<HTMLButtonElement>(null)
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const againRef = useRef<HTMLButtonElement>(null)
+  const retryRef = useRef<HTMLButtonElement>(null)
   const hospitalOptions = [{ value: '', label: 'Todos' }, ...(hospitals.data ?? []).map((hospital) => ({ value: hospital.id, label: hospital.nome }))]
 
-  async function send(body: ExportRequest) {
+  function send(body: ExportRequest) {
     setLastBody(body)
-    setExportId(null)
-    try {
-      setExportId((await requestExport.mutateAsync(body)).id)
-    } catch {
-      // O erro aparece na tela (requestExport.error); o clique não rejeita.
-    }
+    void flow.start(body, exportFilename(body))
+  }
+
+  // Foco acompanha o estado: Cancelar enquanto gera, "Baixar novamente" ao concluir, "Tentar de novo" na falha.
+  useEffect(() => {
+    if (flow.phase === 'generating') cancelRef.current?.focus()
+    else if (flow.phase === 'done') againRef.current?.focus()
+    else if (flow.phase === 'error') retryRef.current?.focus()
+  }, [flow.phase])
+
+  function cancel() {
+    flow.cancel()
+    setLastBody(null)
+    requestAnimationFrame(() => submitRef.current?.focus())
   }
 
   const submit = handleSubmit((values) => send(buildExportBody(values)))
-  const busy = requestExport.isPending || status === 'pendente'
+  const busy = flow.phase === 'requesting' || flow.phase === 'generating'
+  const summary = lastBody ? `${exportContentLabels[lastBody.conteudo]} em ${exportFormatLabels[lastBody.formato]}` : ''
 
   return (
     <section aria-labelledby={`${ids}-title`} className="rounded-lg border border-border bg-surface p-4 xl:p-5">
@@ -137,31 +148,21 @@ export function ExportBuilder() {
         </fieldset>
 
         <div className="flex flex-wrap items-center gap-3">
-          <PageAction icon={FileDown} disabled={busy} onClick={() => void submit()}>{requestExport.isPending ? 'Gerando…' : 'Gerar relatório'}</PageAction>
-          {requestExport.isPending && <span role="status" className="flex items-center gap-2 text-xs text-text-secondary"><RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />Solicitando o relatório…</span>}
+          <PageAction icon={FileDown} disabled={busy} buttonRef={submitRef} onClick={() => void submit()}>{busy ? 'Gerando…' : 'Gerar relatório'}</PageAction>
         </div>
       </form>
 
       <div className="mt-4 grid gap-2">
-        {requestExport.isError && <div role="alert" className={alertBox}>
-          <span>{exportErrorMessage(requestExport.error)}</span>
-          {lastBody && <button type="button" onClick={() => void send(lastBody)} className={smallButton}>Tentar novamente</button>}
-        </div>}
-        {exportStatus.isError && <div role="alert" className={alertBox}>
-          <span>Não foi possível consultar o andamento do relatório.</span>
-          <button type="button" onClick={() => void exportStatus.refetch()} className={smallButton}>Tentar novamente</button>
-        </div>}
-        {status === 'pendente' && <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
-          <span>{exportStatus.pollStopped ? 'O relatório ainda está sendo gerado.' : 'Gerando o relatório…'}</span>
-          {exportStatus.pollStopped ? <button type="button" onClick={() => void exportStatus.refetch()} className={smallButton}>Atualizar</button> : <RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />}
-        </div>}
-        {status === 'falhou' && <div role="alert" className={alertBox}>
-          <span>Não foi possível gerar o relatório.</span>
-          {lastBody && <button type="button" onClick={() => void send(lastBody)} className={smallButton}>Tentar novamente</button>}
-        </div>}
-        {status === 'concluido' && <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
-          <span>{exportStatus.data?.urlDownload ? 'Relatório pronto para download.' : 'Relatório concluído, mas o link de download não foi fornecido.'}</span>
-          {exportStatus.data?.urlDownload && <a href={exportStatus.data.urlDownload} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-primary hover:underline"><Download aria-hidden="true" size={14} />Baixar</a>}
+        <div role="status" aria-live="polite" className={flow.phase === 'generating' || flow.phase === 'requesting' || flow.phase === 'done' ? 'flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary' : 'sr-only'}>
+          {flow.phase === 'requesting' && <span className="flex items-center gap-2"><RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />Solicitando o relatório…</span>}
+          {flow.phase === 'generating' && <span className="flex items-center gap-2"><RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />Gerando… {summary}. Isso pode levar alguns instantes.</span>}
+          {flow.phase === 'done' && <span className="flex items-center gap-2"><Download aria-hidden="true" size={14} />Relatório baixado ({flow.filename}).</span>}
+          {flow.phase === 'generating' && <button ref={cancelRef} type="button" onClick={cancel} className={smallButton}>Cancelar</button>}
+          {flow.phase === 'done' && <button ref={againRef} type="button" onClick={() => void flow.downloadAgain()} className={smallButton}>Baixar novamente</button>}
+        </div>
+        {flow.phase === 'error' && <div role="alert" className={alertBox}>
+          <span>{flow.error}</span>
+          {lastBody && <button ref={retryRef} type="button" onClick={() => send(lastBody)} className={smallButton}>Tentar de novo</button>}
         </div>}
       </div>
     </section>

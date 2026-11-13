@@ -219,9 +219,41 @@ describe('modo de demonstração: relatório da campanha', () => {
     expect(first).toEqual(expect.objectContaining({ status: 'pendente', urlDownload: null }))
     const done = (await apiClient.get(`/relatorios/exportacoes/${id}`)).data as { status: string; urlDownload: string }
     expect(done.status).toBe('concluido')
-    expect(done.urlDownload).toBe('https://example.test/demo-relatorio-campanha.xlsx')
+    expect(done.urlDownload).toMatch(/^data:application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet;base64,/)
     const detail = (await apiClient.get('/campanhas-preventivas/campaign-demo-1')).data as { puladasDetalhe: Array<{ motivo: string; otCodigo: string }> }
     expect(detail.puladasDetalhe[0]).toEqual(expect.objectContaining({ motivo: 'JA_TEM_OT_PREVENTIVA_ABERTA', otCodigo: 'OT-2026-001' }))
+  })
+})
+
+describe('modo de demonstração: arquivo de exportação baixável', () => {
+  const decode = (url: string) => Buffer.from(url.split(',')[1], 'base64')
+  const exportUrl = async (formato: string) => {
+    const { data } = await apiClient.post('/relatorios/exportacoes', { conteudo: 'chamados', formato, desde: '2026-10-01T00:00:00.000Z', ate: '2026-10-31T23:59:59.999Z' })
+    return (data as { urlDownload: string }).urlDownload
+  }
+
+  it('csv traz cabeçalho e linhas', async () => {
+    const url = await exportUrl('csv')
+    expect(url).toMatch(/^data:text\/csv/)
+    const text = decode(url).toString('utf-8')
+    expect(text).toContain('Código;Equipamento')
+    expect(text.split('\r\n').length).toBeGreaterThan(3)
+  })
+
+  it('pdf começa com %PDF-1.4 e termina com %%EOF', async () => {
+    const url = await exportUrl('pdf')
+    expect(url).toMatch(/^data:application\/pdf/)
+    const text = decode(url).toString('latin1')
+    expect(text.startsWith('%PDF-1.4')).toBe(true)
+    expect(text.trimEnd().endsWith('%%EOF')).toBe(true)
+  })
+
+  it('xlsx é um zip com as partes do pacote', async () => {
+    const bytes = decode(await exportUrl('xlsx'))
+    expect([...bytes.subarray(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04])
+    const text = bytes.toString('utf-8')
+    expect(text).toContain('xl/worksheets/sheet1.xml')
+    expect(text).toContain('Monitor multiparamétrico')
   })
 })
 

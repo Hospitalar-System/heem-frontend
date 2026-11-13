@@ -1,6 +1,8 @@
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { getAuthState } from '@/features/auth/session'
 import { isValidCnpj } from '@/lib/br-documents'
+import { demoExportDataUrl } from '@/lib/demo-export-files'
+import type { DemoExportFormat } from '@/lib/demo-export-files'
 
 
 type RecordValue = Record<string, unknown>
@@ -284,14 +286,14 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path === '/relatorios/exportacoes' && method === 'post') {
     const id = makeId('export')
     if (body.conteudo === 'campanha') {
-      // Relatório da campanha: nasce pendente e conclui na consulta seguinte (exercita o polling). URL de exemplo, sem dado real.
+      // Relatório da campanha: nasce pendente e conclui na consulta seguinte (exercita o polling). Arquivo de exemplo local, sem dado real.
       const format = ['pdf', 'xlsx', 'csv'].includes(body.formato as string) ? body.formato : 'pdf'
       exportsById.set(id, { id, status: 'pendente', urlDownload: null, polls: 0, format })
       return { id, status: 'pendente', urlDownload: null }
     }
     // Parâmetros extras (hospitalId, setorId, desde, ate, agrupar) são aceitos e ignorados; a extensão segue o formato pedido.
     const extension = ['pdf', 'xlsx', 'csv'].includes(body.formato as string) ? body.formato : 'csv'
-    const result = { id, status: 'concluido', urlDownload: `https://example.test/demo-relatorio.${extension as string}` }
+    const result = { id, status: 'concluido', urlDownload: demoExportDataUrl(String(body.conteudo), extension as DemoExportFormat) }
     exportsById.set(id, result)
     return result
   }
@@ -300,9 +302,9 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     const polls = Number(pendingExport.polls) + 1
     pendingExport.polls = polls
     if (polls < 2) return { id: pendingExport.id, status: 'pendente', urlDownload: null }
-    return { id: pendingExport.id, status: 'concluido', urlDownload: `https://example.test/demo-relatorio-campanha.${pendingExport.format as string}` }
+    return { id: pendingExport.id, status: 'concluido', urlDownload: demoExportDataUrl('campanha', pendingExport.format as DemoExportFormat) }
   }
-  if (path.startsWith('/relatorios/exportacoes/')) return exportsById.get(lastPart(path)) ?? { id: lastPart(path), status: 'concluido', urlDownload: 'https://example.test/demo-relatorio.csv' }
+  if (path.startsWith('/relatorios/exportacoes/')) return exportsById.get(lastPart(path)) ?? { id: lastPart(path), status: 'concluido', urlDownload: demoExportDataUrl('chamados', 'csv') }
   if (path === '/importacoes' && method === 'post') return startDemoImport(body)
   if (path.startsWith('/importacoes/') && method === 'get') return pollDemoImport(lastPart(path))
   if (path === '/sla/politica') {

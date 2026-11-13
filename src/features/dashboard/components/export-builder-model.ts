@@ -77,3 +77,8 @@ export function exportErrorMessage(error: unknown): string {
   if (code === 'CAMPANHA_NAO_ENCONTRADA') return 'Campanha não encontrada. Atualize a lista e escolha outra.'
   return response?.data?.detail || (code ? `Não foi possível gerar o relatório (${code}).` : 'Não foi possível gerar o relatório. Tente novamente.')
 }
+
+/** Nome do arquivo baixado: relatorio-<tipo>-<data>.<extensão>. */
+export function exportFilename(body: ExportRequest, now = new Date()) {
+  return `relatorio-${body.conteudo.replaceAll('_', '-')}-${isoDate(now)}.${body.formato}`
+}

@@ -6,8 +6,8 @@ import { campaignApiError, campaignExportFormats } from '../utils/preventive-cam
 
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
 const secondaryButton = `rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-bg ${focusRing}`
-/** Só links http(s) viram download; qualquer outro esquema é ignorado. */
-const safeUrl = (url: string | null | undefined) => (url && /^https?:\/\//i.test(url) ? url : null)
+/** Só links http(s) (e data: do modo demonstração) viram download; qualquer outro esquema é ignorado. */
+const safeUrl = (url: string | null | undefined) => (url && /^(https?:\/\/|data:)/i.test(url) ? url : null)
 
 /**
  * "Exportar relatório" da campanha (Story F4.10): escolhe o formato, solicita a exportação assíncrona,
@@ -49,13 +49,14 @@ export function CampaignExport({ campaignId, children }: { campaignId: string; c
     downloadedFor.current = exportId
     const anchor = document.createElement('a')
     anchor.href = downloadUrl
+    if (downloadUrl.startsWith('data:')) anchor.download = `relatorio-campanha.${formato}`
     anchor.rel = 'noopener noreferrer'
     anchor.hidden = true
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
     setDownloaded(true)
-  }, [downloadUrl, exportId])
+  }, [downloadUrl, exportId, formato])
   const message = request.isPending ? 'Solicitando…'
     : processing ? 'Gerando…'
       : status.data?.status === 'concluido' ? (downloadUrl ? 'Relatório baixado' : 'Link de download indisponível. Tente de novo.')
