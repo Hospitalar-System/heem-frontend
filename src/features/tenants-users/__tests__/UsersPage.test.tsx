@@ -277,4 +277,28 @@ describe('UsersPage F2.2', () => {
     await screen.findByText('Clara Mendes')
     expect(await listRowActions(userEvent.setup(), 'Ações de Clara Mendes')).toContain('Anonimizar CPF')
   })
+
+  it('mostra o CREA só para técnico e o envia no cadastro', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Convidar usuário' }))
+    // o papel inicial é técnico
+    expect(screen.getByLabelText('CREA (opcional)')).toBeInTheDocument()
+    await chooseOption(user, screen.getByLabelText('Papel'), 'Admin do Cliente')
+    expect(screen.queryByLabelText('CREA (opcional)')).not.toBeInTheDocument()
+    await chooseOption(user, screen.getByLabelText('Papel'), 'Técnico')
+    await user.type(screen.getByLabelText('Código'), 'USR-03')
+    await user.type(screen.getByLabelText('Nome'), 'Rui Lima')
+    await user.type(screen.getByLabelText('E-mail'), 'rui@example.com')
+    await user.type(screen.getByLabelText('CREA (opcional)'), 'CREA-RS 123456')
+    await user.click(screen.getByRole('button', { name: 'Criar usuário' }))
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/users', { codigo: 'USR-03', nome: 'Rui Lima', email: 'rui@example.com', role: 'tecnico', crea: 'CREA-RS 123456' }))
+  })
+
+  it('exibe o CREA do técnico na lista e não envia crea para outros papéis', async () => {
+    users = [{ ...activeUser, crea: 'CREA-RS 777' }, { id: 'user-2', codigo: 'ADM-1', nome: 'Ana', email: 'ana@example.com', role: 'admin_cliente', ativo: true, crea: 'CREA-X' }]
+    renderPage()
+    expect(await screen.findByText(/USR-01 · CREA CREA-RS 777/)).toBeInTheDocument()
+    expect(screen.queryByText(/CREA-X/)).not.toBeInTheDocument()
+  })
 })

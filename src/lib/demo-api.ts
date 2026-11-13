@@ -1,4 +1,6 @@
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import { getAuthState } from '@/features/auth/session'
+import { isValidCnpj } from '@/lib/br-documents'
 
 type RecordValue = Record<string, unknown>
 
@@ -45,7 +47,7 @@ const checklistItems: RecordValue[] = [
 ]
 const users: RecordValue[] = [
   { id: 'user-demo-1', codigo: 'ADM-001', nome: 'Clara Mendes', email: 'clara.mendes@example.test', role: 'admin_cliente', ativo: true },
-  { id: 'user-demo-2', codigo: 'TEC-001', nome: 'Rafael Costa', email: 'rafael.costa@example.test', role: 'tecnico', ativo: true },
+  { id: 'user-demo-2', codigo: 'TEC-001', nome: 'Rafael Costa', email: 'rafael.costa@example.test', role: 'tecnico', ativo: true, crea: 'CREA-RS 123456' },
   { id: 'user-demo-3', codigo: 'INT-001', nome: 'Marina Alves', email: 'marina.alves@example.test', role: 'interno_hospital', ativo: true },
 ]
 const platformUsers: RecordValue[] = [{ id: 'platform-user-demo-1', codigo: 'SUP-001', nome: 'Alex Santos', email: 'alex.santos@example.test', role: 'super_admin', ativo: true }]
@@ -382,6 +384,8 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path === '/equipamentos/foto-upload-url' && method === 'post') {
     return { url: 'https://example.test/upload', chave: `demo/${body.nomeArquivo ?? 'foto'}`, expiraEm: now }
   }
+  const companyResult = handleCompany(method, path, body)
+  if (companyResult !== undefined) return companyResult
   const photoResult = handlePhotos(method, path, body)
   if (photoResult !== undefined) return photoResult
   if (path === '/ordens-de-trabalho/preventivas' || path === '/ordens-de-trabalho/corretivas') {
@@ -800,4 +804,60 @@ function nextPlanDate(anchor: string, intervalDays: number) {
   const today = Date.parse(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`)
   if (!Number.isFinite(start) || intervalDays < 1 || start >= today) return anchor
   return new Date(start + Math.ceil((today - start) / (intervalDays * day)) * intervalDays * day).toISOString().slice(0, 10)
+}
+
+// Perfil da empresa prestadora (heem-backend#209): em memória; o PUT para demo:// é pulado e o logo vira data URL local.
+const DEMO_BRAND_DEFAULT = '#3ED597'
+const demoCompany: RecordValue = { razaoSocial: null, cnpj: null, endereco: { logradouro: null, numero: null, complemento: null, bairro: null, cidade: null, uf: null, cep: null }, contatoTelefone: null, contatoEmail: null, responsavelTecnicoNome: null, responsavelTecnicoCrea: null, contratoNumero: null, corMarca: DEMO_BRAND_DEFAULT, logoChave: null, atualizadoEm: null }
+const demoLogoSvg = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="60" viewBox="0 0 160 60"><rect width="160" height="60" rx="8" fill="#17B88E"/><text x="80" y="36" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#ffffff">LOGO DEMO</text></svg>')}`
+function companyView(): RecordValue {
+  const { logoChave, ...rest } = demoCompany
+  return { cadastrada: Boolean(rest.razaoSocial && rest.cnpj), ...rest, logoUrl: logoChave ? demoLogoSvg : null }
+}
+function requireCompanyAdmin() {
+  if (!(getAuthState().user?.roles ?? []).includes('admin_cliente')) throw demoProblem(403, { code: 'ACESSO_NEGADO' })
+}
+const tooLong = (value: unknown, max: number) => typeof value === 'string' && value.length > max
+function handleCompany(method: string, path: string, body: RecordValue): unknown {
+  if (!path.startsWith('/prestadora')) return undefined
+  if (path === '/prestadora' && method === 'get') return companyView()
+  requireCompanyAdmin()
+  const invalid = () => demoProblem(400, { code: 'VALIDACAO_FALHOU' })
+  if (path === '/prestadora' && method === 'put') {
+    const address = (body.endereco ?? {}) as RecordValue
+    const razao = String(body.razaoSocial ?? '').trim()
+    const uf = address.uf as string | null | undefined
+    const cep = address.cep as string | null | undefined
+    if (!razao || razao.length > 150 || !isValidCnpj(String(body.cnpj ?? ''))) throw invalid()
+    if (uf && !/^[A-Z]{2}$/.test(uf)) throw invalid()
+    if (cep && !/^\d{5}-?\d{3}$/.test(cep)) throw invalid()
+    if (['logradouro', 'numero', 'complemento', 'bairro', 'cidade'].some((field) => tooLong(address[field], 100))) throw invalid()
+    if (tooLong(body.contatoTelefone, 30) || tooLong(body.contatoEmail, 180) || tooLong(body.responsavelTecnicoNome, 150) || tooLong(body.responsavelTecnicoCrea, 30) || tooLong(body.contratoNumero, 60)) throw invalid()
+    if (body.contatoEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.contatoEmail))) throw invalid()
+    const pick = (field: string) => (body[field] as string | null | undefined) ?? null
+    Object.assign(demoCompany, {
+      razaoSocial: razao, cnpj: String(body.cnpj).replace(/\D/g, ''), contatoTelefone: pick('contatoTelefone'), contatoEmail: pick('contatoEmail'),
+      responsavelTecnicoNome: pick('responsavelTecnicoNome'), responsavelTecnicoCrea: pick('responsavelTecnicoCrea'), contratoNumero: pick('contratoNumero'),
+      endereco: { logradouro: null, numero: null, complemento: null, bairro: null, cidade: null, uf: null, cep: null, ...address }, atualizadoEm: new Date().toISOString(),
+    })
+    return companyView()
+  }
+  if (path === '/prestadora/marca' && method === 'put') {
+    const cor = body.corMarca as string | null | undefined
+    if (cor != null && !/^#[0-9A-Fa-f]{6}$/.test(cor)) throw invalid()
+    demoCompany.corMarca = cor ? cor.toUpperCase() : DEMO_BRAND_DEFAULT
+    demoCompany.atualizadoEm = new Date().toISOString()
+    return companyView()
+  }
+  if (path === '/prestadora/logo/upload-url' && method === 'post') {
+    if (body.contentType !== 'image/png' && body.contentType !== 'image/jpeg') throw invalid()
+    return { chave: `demo/prestadora/logo-${makeId('logo')}`, uploadUrl: 'demo://prestadora/logo', expiraEm: now }
+  }
+  if (path === '/prestadora/logo' && method === 'put') {
+    if (typeof body.chave !== 'string' || !body.chave.startsWith('demo/prestadora/')) throw invalid()
+    demoCompany.logoChave = body.chave
+    return companyView()
+  }
+  if (path === '/prestadora/logo' && method === 'delete') { demoCompany.logoChave = null; return null }
+  return undefined
 }

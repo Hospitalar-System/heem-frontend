@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { apiClient } from '../axios'
 import { isDemoMode } from '../demo-mode'
+import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { dashboardSummaryResponseSchema } from '@/features/dashboard/types'
 
 describe('modo de demonstração', () => {
@@ -221,5 +222,31 @@ describe('modo de demonstração: relatório da campanha', () => {
     expect(done.urlDownload).toBe('https://example.test/demo-relatorio-campanha.xlsx')
     const detail = (await apiClient.get('/campanhas-preventivas/campaign-demo-1')).data as { puladasDetalhe: Array<{ motivo: string; otCodigo: string }> }
     expect(detail.puladasDetalhe[0]).toEqual(expect.objectContaining({ motivo: 'JA_TEM_OT_PREVENTIVA_ABERTA', otCodigo: 'OT-2026-001' }))
+  })
+})
+
+describe('demo: perfil da empresa (#209)', () => {
+  const company = { razaoSocial: 'MedServ Ltda', cnpj: '11222333000181', endereco: { logradouro: null, numero: null, complemento: null, bairro: null, cidade: null, uf: 'RS', cep: '90010123' }, contatoTelefone: null, contatoEmail: null, responsavelTecnicoNome: null, responsavelTecnicoCrea: null, contratoNumero: null }
+
+  it('sem cadastro responde cadastrada:false com a cor padrão', async () => {
+    const { data } = await apiClient.get('/prestadora')
+    expect(data).toMatchObject({ cadastrada: false, corMarca: '#3ED597', logoUrl: null })
+  })
+
+  it('recusa escrita de quem não é admin (403)', async () => {
+    clearAuthSession()
+    setAuthSession('t', { id: 'u', name: 'Téc', roles: ['tecnico'], tenantId: 'x' })
+    await expect(apiClient.put('/prestadora', company)).rejects.toMatchObject({ response: { status: 403, data: { code: 'ACESSO_NEGADO' } } })
+    clearAuthSession()
+  })
+
+  it('admin: valida CNPJ e hex, salva e volta ao padrão com null', async () => {
+    setAuthSession('t', { id: 'u', name: 'Adm', roles: ['admin_cliente'], tenantId: 'x' })
+    await expect(apiClient.put('/prestadora', { ...company, cnpj: '11222333000180' })).rejects.toMatchObject({ response: { status: 400, data: { code: 'VALIDACAO_FALHOU' } } })
+    await expect(apiClient.put('/prestadora/marca', { corMarca: 'verde' })).rejects.toMatchObject({ response: { status: 400 } })
+    expect((await apiClient.put('/prestadora', company)).data).toMatchObject({ cadastrada: true, cnpj: '11222333000181' })
+    expect((await apiClient.put('/prestadora/marca', { corMarca: '#112233' })).data.corMarca).toBe('#112233')
+    expect((await apiClient.put('/prestadora/marca', { corMarca: null })).data.corMarca).toBe('#3ED597')
+    clearAuthSession()
   })
 })

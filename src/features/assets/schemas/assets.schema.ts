@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { CreateEquipmentInput } from '../types'
 
-export const hospitalSchema = z.object({ nome: z.string().trim().min(1, 'Informe o nome do hospital.'), cnpj: z.string().trim().min(1, 'Informe o CNPJ.') })
+export const hospitalSchema = z.object({ nome: z.string().trim().min(1, 'Informe o nome do hospital.'), cnpj: z.string().trim().min(1, 'Informe o CNPJ.'), contratoNumero: z.string().trim().max(60, 'Contrato: no máximo 60 caracteres.').nullish() })
 export const setorSchema = z.object({
   codigo: z.string().trim().min(1, 'Informe o código.'),
   nome: z.string().trim().min(1, 'Informe o nome do setor.'),
