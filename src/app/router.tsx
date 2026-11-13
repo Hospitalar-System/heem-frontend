@@ -32,6 +32,7 @@ const WorkOrderDetailPage = lazy(() => import('@/features/maintenance/pages/Work
 const ChecklistsPage = lazy(() => import('@/features/maintenance/pages/ChecklistsPage').then((module) => ({ default: module.ChecklistsPage })))
 const SlaPolicyPage = lazy(() => import('@/features/sla-policy/pages/SlaPolicyPage').then((module) => ({ default: module.SlaPolicyPage })))
 const BatchImportPage = lazy(() => import('@/features/imports/pages/BatchImportPage').then((module) => ({ default: module.BatchImportPage })))
+const CompanyProfilePage = lazy(() => import('@/features/settings/pages/CompanyProfilePage').then((module) => ({ default: module.CompanyProfilePage })))
 const PreventiveRoutinesPage = lazy(() => import('@/features/maintenance/pages/PreventiveRoutinesPage').then((module) => ({ default: module.PreventiveRoutinesPage })))
 
 const PreventiveCampaignsPage = lazy(() => import('@/features/maintenance/pages/PreventiveCampaignsPage').then((module) => ({ default: module.PreventiveCampaignsPage })))
@@ -63,6 +64,7 @@ export const routes = [
   { path: '/settings/categories', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><CategoriesPage /></Suspense></RequireRole> },
   { path: '/settings/sla-policy', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><SlaPolicyPage /></Suspense></RequireRole> },
   { path: '/settings/imports', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><BatchImportPage /></Suspense></RequireRole> },
+  { path: '/settings/company', element: <RequireRole allowPlatformAdmin={false}><Suspense fallback={<RouteContentFallback />}><CompanyProfilePage /></Suspense></RequireRole> },
   { path: '/settings/users', element: <RequireRole role="admin_cliente"><Suspense fallback={<RouteContentFallback />}><UsersPage /></Suspense></RequireRole> },
   // Rotas antigas: mantidas só como redirecionamento (preservam query string e hash).
   { path: '/categories', element: <LegacyRedirect to="/settings/categories" /> },

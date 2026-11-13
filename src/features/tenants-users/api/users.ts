@@ -16,9 +16,16 @@ export function useUserHospitalLinks(users: TenantUser[]) {
   return useQueries({ queries: users.map((user) => ({ queryKey: [...key, user.id, 'hospitals'], queryFn: async () => (await apiClient.get<string[]>(`/users/${user.id}/hospitais`)).data })) })
 }
 export function useHospitalChoices() { return useQuery({ queryKey: ['hospitals'], queryFn: async () => (await apiClient.get<Hospital[]>('/hospitais')).data }) }
+/** CREA só existe para técnico (400 nos demais papéis). Na edição, vazio vira '' para limpar (null = não mexe no CREA atual); no cadastro, vazio é omitido. */
+function creaField(data: TenantUserInput, editing: boolean) {
+  if (data.role !== 'tecnico') return {}
+  const crea = data.crea?.trim() ?? ''
+  return crea || editing ? { crea } : {}
+}
+function withoutCrea(data: TenantUserInput) { const rest = { ...data }; delete rest.crea; return rest }
 export function useSaveTenantUser() {
   const client = useQueryClient()
-  return useMutation({ mutationFn: async ({ id, data }: { id?: string; data: TenantUserInput }) => id ? (await apiClient.put<TenantUser>(`/users/${id}`, { nome: data.nome, email: data.email, role: data.role })).data : (await apiClient.post<TenantUser>('/users', data)).data, onSuccess: () => client.invalidateQueries({ queryKey: key }) })
+  return useMutation({ mutationFn: async ({ id, data }: { id?: string; data: TenantUserInput }) => id ? (await apiClient.put<TenantUser>(`/users/${id}`, { nome: data.nome, email: data.email, role: data.role, ...creaField(data, true) })).data : (await apiClient.post<TenantUser>('/users', { ...withoutCrea(data), ...creaField(data, false) })).data, onSuccess: () => client.invalidateQueries({ queryKey: key }) })
 }
 export function useSetUserHospitals() {
   const client = useQueryClient()

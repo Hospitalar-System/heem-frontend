@@ -1,8 +1,8 @@
 export type RiscoSetor = 'CRITICO' | 'SEMI_CRITICO' | 'NAO_CRITICO'
 export type GrupoInstalacao = 'GRUPO_0' | 'GRUPO_1' | 'GRUPO_2'
 
-export interface Hospital { id: string; nome: string; cnpj: string }
-export interface HospitalInput { nome: string; cnpj: string }
+export interface Hospital { id: string; nome: string; cnpj: string; contratoNumero?: string | null }
+export interface HospitalInput { nome: string; cnpj: string; contratoNumero?: string | null }
 export interface Setor {
   id: string; hospitalId: string; codigo: string; nome: string; andar?: string | null; classificacaoRisco: RiscoSetor; grupoInstalacao: GrupoInstalacao
   /** Campos do servidor; ausentes em respostas antigas (tratar como ativo, sem contagem). */
