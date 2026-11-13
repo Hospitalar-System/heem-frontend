@@ -2,7 +2,6 @@ import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'ax
 import { getAuthState } from '@/features/auth/session'
 import { isValidCnpj } from '@/lib/br-documents'
 
-import { getAuthState } from '@/features/auth/session'
 
 type RecordValue = Record<string, unknown>
 
