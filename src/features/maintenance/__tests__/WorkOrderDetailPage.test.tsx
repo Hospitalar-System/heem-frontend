@@ -3,7 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { EXPORT_BACKEND_SUPPORT } from '@/features/dashboard/components/export-builder-model'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { apiClient } from '@/lib/axios'
 import { WorkOrderDetailPage } from '../pages/WorkOrderDetailPage'
@@ -101,5 +102,33 @@ describe('WorkOrderDetailPage', () => {
     expect(await screen.findByRole('heading', { name: 'OT-2041' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /Fotos/ })).not.toBeInTheDocument()
     expect(apiClient.get).not.toHaveBeenCalledWith('/ordens-de-trabalho/order-1/fotos')
+  })
+
+  describe('botão Gerar laudo da OT', () => {
+    const flagsBefore = { ...EXPORT_BACKEND_SUPPORT }
+    afterEach(() => Object.assign(EXPORT_BACKEND_SUPPORT, flagsBefore))
+    const withStatus = (status: string) => {
+      const base = vi.mocked(apiClient.get).getMockImplementation()!
+      vi.mocked(apiClient.get).mockImplementation(async (url, config) => url === '/ordens-de-trabalho/order-1' ? { data: { ...order, status } } as never : base(url, config))
+    }
+
+    it('flag desligada: não aparece nem em OT concluída', async () => {
+      withStatus('CONCLUIDA')
+      render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+      expect(await screen.findByRole('heading', { name: 'OT-2041' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Gerar laudo da OT' })).not.toBeInTheDocument()
+    })
+
+    it('flag ligada: só em OT concluída', async () => {
+      EXPORT_BACKEND_SUPPORT.laudoOt = true
+      withStatus('CONCLUIDA')
+      const view = render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+      expect(await screen.findByRole('button', { name: 'Gerar laudo da OT' })).toBeInTheDocument()
+      view.unmount()
+      withStatus('EM_EXECUCAO')
+      render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+      expect(await screen.findByRole('heading', { name: 'OT-2041' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Gerar laudo da OT' })).not.toBeInTheDocument()
+    })
   })
 })

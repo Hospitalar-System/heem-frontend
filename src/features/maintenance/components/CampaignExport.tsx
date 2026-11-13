@@ -2,7 +2,7 @@ import { Download, FileDown, RotateCw } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Select } from '@/components/ui/Select'
 import { useReportExport, useRequestCampaignExport, type CampaignExportFormat } from '@/features/dashboard/api/reports'
-import { campaignApiError, campaignExportFormats } from '../utils/preventive-campaigns'
+import { campaignApiError, campaignExportFormats, campaignLevelOptions } from '../utils/preventive-campaigns'
 
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
 const secondaryButton = `rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-primary hover:bg-bg ${focusRing}`
@@ -16,6 +16,7 @@ const safeUrl = (url: string | null | undefined) => (url && /^(https?:\/\/|data:
  */
 export function CampaignExport({ campaignId, children }: { campaignId: string; children?: ReactNode }) {
   const [formato, setFormato] = useState<CampaignExportFormat>('pdf')
+  const [nivel, setNivel] = useState<'RESUMO' | 'COMPLETO'>('COMPLETO')
   const [exportId, setExportId] = useState<string | null>(null)
   const request = useRequestCampaignExport()
   const status = useReportExport(exportId)
@@ -31,7 +32,7 @@ export function CampaignExport({ campaignId, children }: { campaignId: string; c
     setExportId(null)
     setDownloaded(false)
     try {
-      const result = await request.mutateAsync({ campanhaId: campaignId, formato })
+      const result = await request.mutateAsync({ campanhaId: campaignId, formato, ...(formato === 'pdf' ? { nivel } : {}) })
       setExportId(result.id)
     } catch {
       // O erro da mutação é exibido abaixo, sem rejeitar o manipulador do clique.
@@ -66,6 +67,7 @@ export function CampaignExport({ campaignId, children }: { campaignId: string; c
   return <div className="flex min-w-0 flex-col items-end gap-1.5">
     <div data-testid="campaign-controls" className="flex flex-row flex-wrap items-center justify-end gap-2">
       <div className="w-24"><Select aria-label="Formato do relatório" value={formato} onChange={(next) => setFormato(next as CampaignExportFormat)} options={campaignExportFormats} disabled={busy} /></div>
+      {formato === 'pdf' && <div className="w-28"><Select aria-label="Nível do relatório" value={nivel} onChange={(next) => setNivel(next as 'RESUMO' | 'COMPLETO')} options={campaignLevelOptions} disabled={busy} /></div>}
       <button type="button" disabled={busy} onClick={() => void submit()} className={`inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover ${focusRing} disabled:cursor-not-allowed disabled:opacity-50`}>
         <FileDown aria-hidden="true" size={14} />Exportar relatório
       </button>

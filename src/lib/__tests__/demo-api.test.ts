@@ -121,6 +121,21 @@ describe('modo de demonstração', () => {
     expect(await post({ ...base, conteudo: 'chamados', formato: 'csv' })).toMatchObject({ nivel: 'COMPLETO', orientacao: null })
   })
 
+  it('aceita emergencias, laudo_ot e dossie_equipamento e entrega arquivos de amostra', async () => {
+    const base = { desde: '2026-10-01T00:00:00.000Z', ate: '2026-10-31T23:59:59.999Z' }
+    const em = (await apiClient.post('/relatorios/exportacoes', { ...base, conteudo: 'emergencias', formato: 'csv' })).data as { status: string; urlDownload: string }
+    expect(em.status).toBe('concluido')
+    expect(em.urlDownload.startsWith('data:text/csv')).toBe(true)
+    expect((await apiClient.post('/relatorios/exportacoes', { ...base, conteudo: 'emergencias', formato: 'pdf' })).data).toMatchObject({ orientacao: 'RETRATO' })
+    for (const body of [{ conteudo: 'laudo_ot', formato: 'pdf', ordemTrabalhoId: 'order-demo-3' }, { conteudo: 'dossie_equipamento', formato: 'pdf', equipamentoId: 'e1' }]) {
+      const { id } = (await apiClient.post('/relatorios/exportacoes', body)).data as { id: string }
+      expect(((await apiClient.get('/relatorios/exportacoes/' + id)).data as { status: string }).status).toBe('pendente')
+      const done = (await apiClient.get('/relatorios/exportacoes/' + id)).data as { status: string; urlDownload: string }
+      expect(done.status).toBe('concluido')
+      expect(done.urlDownload.startsWith('data:application/pdf')).toBe(true)
+    }
+  })
+
   it('campanha em PDF usa a amostra resumo ou completa conforme o nível, e o GET devolve os efetivos', async () => {
     const run = async (nivel?: string) => {
       const { id } = (await apiClient.post('/relatorios/exportacoes', { conteudo: 'campanha', formato: 'pdf', campanhaId: 'c1', ...(nivel ? { nivel } : {}) })).data as { id: string }

@@ -14,6 +14,9 @@ import { EquipmentLabelsSection } from '../components/EquipmentLabelsSection'
 import { useEquipment, useEquipmentWorkOrders, useHospital, useSector } from '../api/assets'
 import type { Equipment } from '../types'
 import { Badge } from '@/components/ui/Badge'
+import { dossieEquipamentoBody } from '@/features/dashboard/api/documents'
+import { EXPORT_BACKEND_SUPPORT } from '@/features/dashboard/components/export-builder-model'
+import { GenerateDocumentButton } from '@/features/dashboard/components/GenerateDocumentButton'
 
 type EquipmentTab = 'dados' | 'medicoes' | 'checklists' | 'ots' | 'documentos' | 'etiquetas' | 'estados'
 const tabs: Array<{ id: EquipmentTab; label: string; Icon: typeof Gauge }> = [
@@ -37,6 +40,7 @@ export function EquipmentDetailPage() {
   const role = stateRole(roles)
   // Backend: documentos só para admin_cliente e tecnico; alterar validade/excluir só admin_cliente.
   const canReadDocuments = isAdmin || roles.includes('tecnico')
+  const canGenerateDossier = EXPORT_BACKEND_SUPPORT.dossieEquipamento && canReadDocuments
   const visibleTabs = [...tabs, ...(canReadDocuments ? [{ id: 'documentos' as const, label: 'Documentos', Icon: FileText }] : []), ...(isAdmin ? [{ id: 'etiquetas' as const, label: 'Etiquetas', Icon: Tag }] : [])]
   const nextPreventive = useMemo(() => (orders.data ?? [])
     .filter((order) => order.tipo === 'PREVENTIVA' && order.status === 'AGENDADA' && order.dataAgendada)
@@ -53,7 +57,10 @@ export function EquipmentDetailPage() {
       </div>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div><p className="text-xs text-text-muted">{equipment.data.codigo} · {hospital.data?.nome ?? 'Hospital'}{sector.data?.nome ? ` › ${sector.data.nome}` : ''}</p><h2 className="mt-1 text-xl font-semibold">{equipment.data.nome}</h2></div>
-        <EquipmentStateControl equipment={equipment.data} role={role} />
+        <div className="flex flex-wrap items-start justify-end gap-3">
+          {canGenerateDossier ? <GenerateDocumentButton label="Gerar dossiê do equipamento" body={dossieEquipamentoBody(equipment.data.id)} filename={`dossie-${equipment.data.codigo}.pdf`} /> : null}
+          <EquipmentStateControl equipment={equipment.data} role={role} />
+        </div>
       </div>
 
       <div role="tablist" aria-label="Seções do equipamento" className="mt-5 flex max-w-full gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">

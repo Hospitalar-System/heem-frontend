@@ -1,11 +1,26 @@
 import { z } from 'zod'
+import { EMERGENCIAS_CONTEUDO, OT_STATUS_VALUES, OT_TIPO_VALUES } from '../api/documents'
 import { EXPORT_CONTENTS, EXPORT_FORMATS } from '../api/reports'
 import type { ExportRequest } from '../api/reports'
 
 /**
  * Controles que o backend (ExportacaoRequest) aceita. Com false, somem da tela e não entram no corpo.
  */
-export const EXPORT_BACKEND_SUPPORT = { nivel: true, orientacao: true } as const
+export const EXPORT_BACKEND_SUPPORT = {
+  nivel: true,
+  orientacao: true,
+  /** Tipo "Emergências" na lista de tipos. */
+  emergencias: false,
+  /** Filtros tipo e status das Ordens de trabalho (PDF, XLSX e CSV). */
+  filtrosOt: false,
+  /** Botão "Gerar laudo da OT" na ficha da OT concluída. */
+  laudoOt: false,
+  /** Botão "Gerar dossiê do equipamento" na ficha do equipamento. */
+  dossieEquipamento: false,
+}
+
+/** Tipos exibidos na tela, respeitando as flags de suporte do backend. */
+export const visibleExportContents = () => EXPORT_CONTENTS.filter((value) => value !== EMERGENCIAS_CONTEUDO || EXPORT_BACKEND_SUPPORT.emergencias)
 
 /** Orientação padrão do backend por tipo: paisagem nas listagens, retrato nos demais. */
 export function defaultOrientation(conteudo: string): 'retrato' | 'paisagem' {
@@ -18,6 +33,7 @@ export const exportContentLabels: Record<(typeof EXPORT_CONTENTS)[number], strin
   medicoes: 'Medições',
   indicadores: 'Indicadores',
   campanha: 'Campanha preventiva',
+  emergencias: 'Emergências',
 }
 
 export const exportFormatLabels: Record<(typeof EXPORT_FORMATS)[number], string> = { pdf: 'PDF', xlsx: 'XLSX', csv: 'CSV' }
@@ -29,6 +45,8 @@ export const exportBuilderSchema = z.object({
   hospitalId: z.string(),
   setorId: z.string(),
   campanhaId: z.string(),
+  tipoOt: z.union([z.enum(OT_TIPO_VALUES), z.literal('')]),
+  statusOt: z.union([z.enum(OT_STATUS_VALUES), z.literal('')]),
   nivel: z.enum(['resumo', 'completo']),
   orientacao: z.enum(['retrato', 'paisagem']),
   formato: z.enum(EXPORT_FORMATS),
@@ -55,7 +73,7 @@ function isoDate(date: Date) {
 export function defaultExportValues(now = new Date()): ExportBuilderValues {
   const from = new Date(now)
   from.setDate(from.getDate() - 29)
-  return { conteudo: 'chamados', desde: isoDate(from), ate: isoDate(now), hospitalId: '', setorId: '', campanhaId: '', nivel: 'completo', orientacao: defaultOrientation('chamados'), formato: 'pdf' }
+  return { conteudo: 'chamados', desde: isoDate(from), ate: isoDate(now), hospitalId: '', setorId: '', campanhaId: '', tipoOt: '', statusOt: '', nivel: 'completo', orientacao: defaultOrientation('chamados'), formato: 'pdf' }
 }
 
 /** Corpo do POST: nível e orientação só para PDF (CSV/XLSX ignoram); o backend aceita qualquer caixa, enviamos maiúsculas. */
@@ -72,6 +90,8 @@ export function buildExportBody(values: ExportBuilderValues): ExportRequest {
     ...layout,
     desde: startOfDay(values.desde),
     ate: endOfDay(values.ate),
+    ...(EXPORT_BACKEND_SUPPORT.filtrosOt && values.conteudo === 'ordens_trabalho' && values.tipoOt ? { tipo: values.tipoOt } : {}),
+    ...(EXPORT_BACKEND_SUPPORT.filtrosOt && values.conteudo === 'ordens_trabalho' && values.statusOt ? { status: values.statusOt } : {}),
     ...(values.hospitalId ? { hospitalId: values.hospitalId } : {}),
     ...(values.hospitalId && values.setorId ? { setorId: values.setorId } : {}),
   }

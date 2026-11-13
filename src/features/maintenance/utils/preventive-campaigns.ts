@@ -46,6 +46,11 @@ const skippedReasonLabels: Record<string, string> = {
 export const skippedReasonLabel = (motivo: string) => skippedReasonLabels[motivo] ?? motivo
 
 /** Opções de formato do relatório da campanha (valores aceitos pelo backend). */
+export const campaignLevelOptions = [
+  { value: 'RESUMO', label: 'Resumo' },
+  { value: 'COMPLETO', label: 'Completo' },
+]
+
 export const campaignExportFormats = [
   { value: 'pdf', label: 'PDF' },
   { value: 'xlsx', label: 'Planilha (XLSX)' },

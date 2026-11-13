@@ -78,7 +78,19 @@ describe('Exportar relatório da campanha (F4.10)', () => {
     if (formato !== 'pdf') await chooseOption(user, 'Formato do relatório', label)
     await user.click(button)
     await waitFor(() => expect(exportPosts()).toHaveLength(1))
-    expect(exportPosts()[0][1]).toEqual({ conteudo: 'campanha', formato, campanhaId: 'camp-1' })
+    expect(exportPosts()[0][1]).toEqual({ conteudo: 'campanha', formato, campanhaId: 'camp-1', ...(formato === 'pdf' ? { nivel: 'COMPLETO' } : {}) })
+  })
+
+  it('seletor de nível (padrão Completo) só vale para PDF e envia RESUMO quando escolhido', async () => {
+    const user = userEvent.setup()
+    renderDetail()
+    const button = await exportButton()
+    await chooseOption(user, 'Nível do relatório', 'Resumo')
+    await user.click(button)
+    await waitFor(() => expect(exportPosts()).toHaveLength(1))
+    expect(exportPosts()[0][1]).toEqual({ conteudo: 'campanha', formato: 'pdf', campanhaId: 'camp-1', nivel: 'RESUMO' })
+    await chooseOption(user, 'Formato do relatório', 'CSV')
+    expect(screen.queryByRole('combobox', { name: 'Nível do relatório' })).not.toBeInTheDocument()
   })
 
   it('acompanha até concluir, baixa sozinho uma vez, oferece baixar de novo e para de consultar', async () => {

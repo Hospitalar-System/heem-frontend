@@ -14,6 +14,9 @@ const TABLES: Record<string, DemoTable> = {
   ordens_trabalho: { title: 'Ordens de trabalho', header: ['Código', 'Tipo', 'Equipamento', 'Status', 'Concluída em'], rows: [['OT-2026-001', 'Corretiva', 'Ventilador pulmonar', 'Concluída', '2026-11-06'], ['OT-2026-002', 'Preventiva', 'Monitor multiparamétrico', 'Em andamento', ''], ['OT-2026-003', 'Preventiva', 'Bomba de infusão', 'Concluída', '2026-11-08']] },
   medicoes: { title: 'Medições', header: ['Equipamento', 'Item', 'Valor', 'Unidade', 'Conforme'], rows: [['Monitor multiparamétrico', 'Tensão de saída', '11,8', 'V', 'Sim'], ['Ventilador pulmonar', 'Pressão máxima', '42', 'cmH2O', 'Sim'], ['Bomba de infusão', 'Vazão', '98', 'mL/h', 'Não']] },
   indicadores: { title: 'Indicadores', header: ['Indicador', 'Valor', 'Unidade'], rows: [['MTTR', '4,2', 'horas'], ['MTBF', '312', 'horas'], ['Disponibilidade', '97,8', '%']] },
+  emergencias: { title: 'Emergências', header: ['Código', 'Equipamento', 'Setor', 'Acionada em', 'Situação'], rows: [['EM-2026-001', 'Ventilador pulmonar', 'UTI Adulto', '2026-11-04', 'Atendida'], ['EM-2026-002', 'Desfibrilador', 'Pronto-socorro', '2026-11-09', 'Em atendimento']] },
+  laudo_ot: { title: 'Laudo da OT', header: ['Campo', 'Valor'], rows: [['OT', 'OT-2026-003'], ['Equipamento', 'Monitor multiparamétrico'], ['Situação', 'Concluída'], ['Parecer', 'Equipamento liberado para uso']] },
+  dossie_equipamento: { title: 'Dossiê do equipamento', header: ['Seção', 'Resumo'], rows: [['Identificação', 'Monitor multiparamétrico'], ['Histórico de OTs', '3 ordens concluídas'], ['Medições', '12 registros conformes']] },
   campanha: { title: 'Campanha preventiva', header: ['Equipamento', 'OT', 'Situação'], rows: [['Monitor multiparamétrico', 'OT-2026-002', 'Gerada'], ['Bomba de infusão', 'OT-2026-003', 'Concluída'], ['Ventilador pulmonar', '', 'Pulada']] },
 }
 
