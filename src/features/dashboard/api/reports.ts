@@ -82,7 +82,7 @@ export const EXPORT_FORMATS = ['pdf', 'xlsx', 'csv'] as const
 
 /**
  * Corpo aceito por POST /relatorios/exportacoes (ExportacaoRequest do backend): conteudo, formato, desde/ate,
- * hospitalId, setorId, agrupar (só indicadores) e campanhaId. Não há ainda nível (resumo/completo) nem orientação.
+ * hospitalId, setorId, agrupar (só indicadores), campanhaId e, só para PDF, nivel (RESUMO|COMPLETO) e orientacao (RETRATO|PAISAGEM).
  * Campanha exige campanhaId e ignora período; os demais exigem desde/ate.
  */
 export const exportRequestSchema = z.object({
@@ -93,6 +93,8 @@ export const exportRequestSchema = z.object({
   campanhaId: z.string().optional(),
   conteudo: z.enum(EXPORT_CONTENTS),
   formato: z.enum(EXPORT_FORMATS),
+  nivel: z.enum(['RESUMO', 'COMPLETO']).optional(),
+  orientacao: z.enum(['RETRATO', 'PAISAGEM']).optional(),
 }).superRefine((value, ctx) => {
   if (value.conteudo === 'campanha') {
     if (!value.campanhaId) ctx.addIssue({ code: 'custom', path: ['campanhaId'], message: 'Escolha a campanha.' })
@@ -111,6 +113,9 @@ export const exportStatusSchema = z.object({
   id: z.string().min(1),
   status: z.enum(['pendente', 'concluido', 'falhou']),
   urlDownload: z.string().url().nullable(),
+  // Efetivos devolvidos pelo backend; tolerantes a ausência e a valores novos.
+  nivel: z.string().nullish(),
+  orientacao: z.string().nullish(),
 })
 
 export type ExportStatus = z.infer<typeof exportStatusSchema>
