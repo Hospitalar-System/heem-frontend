@@ -1,9 +1,9 @@
-import { Download, FileSpreadsheet, FileText, RotateCw } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { useHospitals, useSectors } from '@/features/assets/api/assets'
-import { useReportBacklog, useReportExport, useReportIndicators, useReportTopEquipment, useRequestReportExport, useRiskCompliance } from '../api/reports'
-import type { ExportRequest, ReportFilters, ReportGrouping } from '../api/reports'
+import { useReportBacklog, useReportIndicators, useReportTopEquipment, useRiskCompliance } from '../api/reports'
+import type { ReportFilters, ReportGrouping } from '../api/reports'
+import { ExportBuilder } from '../components/ExportBuilder'
 import { ReportBacklog } from '../components/ReportBacklog'
 import { ReportGroups } from '../components/ReportGroups'
 import { ReportIndicatorCards } from '../components/ReportIndicatorCards'
@@ -13,9 +13,6 @@ import { SectionError, SectionSkeleton } from '../components/report-ui'
 import { Select } from '@/components/ui/Select'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { DatePicker } from '@/components/ui/DatePicker'
-
-type ExportContent = ExportRequest['conteudo']
-type ExportFormat = ExportRequest['formato']
 
 function dateRange() {
   const now = new Date()
@@ -50,8 +47,6 @@ export function ReportsPage() {
   const [hospitalId, setHospitalId] = useState('')
   const [setorId, setSetorId] = useState('')
   const [agrupar, setAgrupar] = useState<ReportGrouping>('hospital')
-  const [conteudo, setConteudo] = useState<ExportContent>('chamados')
-  const [exportId, setExportId] = useState<string | null>(null)
   const hospitals = useHospitals()
   const sectors = useSectors(hospitalId)
   const filters: ReportFilters = {
@@ -64,32 +59,22 @@ export function ReportsPage() {
   const backlog = useReportBacklog({ ...(hospitalId ? { hospitalId } : {}), ...(setorId ? { setorId } : {}) })
   const topEquipment = useReportTopEquipment(filters)
   const compliance = useRiskCompliance(filters)
-  const requestExport = useRequestReportExport()
-  const exportStatus = useReportExport(exportId)
   const invalidRange = !desde || !ate || desde > ate
   const metrics = indicators.data
+  const filtersRef = useRef<HTMLDivElement>(null)
+  const hospitalName = hospitalId ? (hospitals.data ?? []).find((hospital) => hospital.id === hospitalId)?.nome ?? 'Selecionado' : 'Todos'
+  const sectorName = setorId ? (sectors.data ?? []).find((sector) => sector.id === setorId)?.nome ?? 'Selecionado' : 'Todos'
 
-  async function handleExport(formato: ExportFormat) {
-    if (invalidRange) return
-    try {
-      const result = await requestExport.mutateAsync({ ...filters, conteudo, formato })
-      setExportId(result.id)
-    } catch {
-      // Mutation error is surfaced in the page without rejecting the click handler.
-    }
+  function editFilters() {
+    const container = filtersRef.current
+    container?.scrollIntoView?.({ block: 'center' })
+    container?.querySelector<HTMLElement>('button, input, [role="combobox"]')?.focus()
   }
-
-  const exportMessage = exportStatus.data?.status === 'pendente'
-    ? 'Exportação em processamento.'
-    : exportStatus.data?.status === 'falhou'
-      ? 'Não foi possível gerar a exportação.'
-      : exportStatus.data?.status === 'concluido'
-        ? exportStatus.data.urlDownload ? 'Arquivo pronto para download.' : 'Exportação concluída, mas o link de download não foi fornecido.'
-        : null
 
   return (
     <AdminPageShell title="Relatórios & Indicadores" subtitle="Indicadores de manutenção e conformidade">
       <div className="space-y-5">
+        <div ref={filtersRef}>
         <FilterBar label="Filtros do relatório" className="items-end">
           <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
             <span>Desde</span>
@@ -111,31 +96,11 @@ export function ReportsPage() {
             <span>Agrupar por</span>
             <Select size="sm" aria-label="Agrupar por" value={agrupar} onChange={(next) => setAgrupar(next as ReportGrouping)} options={[{ value: 'hospital', label: 'Hospital' }, { value: 'setor', label: 'Setor' }]} />
           </label>
-          <div className="col-span-full flex flex-wrap items-end justify-end gap-2">
-            <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
-              <span>Conteúdo</span>
-              <Select size="sm" aria-label="Conteúdo da exportação" value={conteudo} onChange={(next) => setConteudo(next as ExportContent)} options={[{ value: 'INDICADORES', label: 'Indicadores' }, { value: 'chamados', label: 'Chamados' }, { value: 'ordens_trabalho', label: 'Ordens de trabalho' }, { value: 'medicoes', label: 'Medições' }]} />
-            </label>
-            <button type="button" aria-label="Exportar Excel" disabled={invalidRange || requestExport.isPending} onClick={() => void handleExport('xlsx')} className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
-              <FileSpreadsheet aria-hidden="true" size={14} /> Excel
-            </button>
-            <button type="button" aria-label="Exportar PDF" disabled={invalidRange || requestExport.isPending} onClick={() => void handleExport('pdf')} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand outline-none hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50">
-              <FileText aria-hidden="true" size={14} /> PDF
-            </button>
-          </div>
         </FilterBar>
+        </div>
 
         {invalidRange && <p role="alert" className="text-xs text-danger">Informe um período válido: a data inicial deve ser anterior ou igual à data final.</p>}
-        {requestExport.isError && <p role="alert" className="text-xs text-danger">{getErrorMessage(requestExport.error, 'Falha ao solicitar exportação.')}</p>}
-        {requestExport.isPending && <div role="status" className="flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary"><RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />Solicitando exportação…</div>}
-        {exportStatus.isError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-xs text-text-primary"><span>Não foi possível consultar o andamento da exportação.</span><button type="button" onClick={() => void exportStatus.refetch()} className="rounded-md border border-border bg-surface px-3 py-1.5 font-medium outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary">Tentar novamente</button></div>}
-        {exportMessage && (
-          <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary">
-            <span>{exportMessage}</span>
-            {exportStatus.data?.status === 'pendente' && <RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />}
-            {exportStatus.data?.status === 'concluido' && exportStatus.data.urlDownload && <a href={exportStatus.data.urlDownload} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-medium text-primary hover:underline"><Download aria-hidden="true" size={14} /> Baixar arquivo</a>}
-          </div>
-        )}
+        <ExportBuilder filters={{ desde, ate, hospitalId, setorId, hospitalName, sectorName, invalidRange, onEditFilters: editFilters }} />
 
         {indicators.isLoading ? <ReportSkeleton /> : indicators.isError ? (
           <ReportError message={getErrorMessage(indicators.error, 'Não foi possível carregar os indicadores.')} onRetry={() => void indicators.refetch()} />

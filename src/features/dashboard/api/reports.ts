@@ -77,14 +77,30 @@ export interface RiskCompliance {
   totalMedicoes: number
 }
 
+export const EXPORT_CONTENTS = ['chamados', 'ordens_trabalho', 'medicoes', 'indicadores', 'campanha'] as const
+export const EXPORT_FORMATS = ['pdf', 'xlsx', 'csv'] as const
+
+/**
+ * Corpo aceito por POST /relatorios/exportacoes (ExportacaoRequest do backend): conteudo, formato, desde/ate,
+ * hospitalId, setorId, agrupar (só indicadores) e campanhaId. Não há ainda nível (resumo/completo) nem orientação.
+ * Campanha exige campanhaId e ignora período; os demais exigem desde/ate.
+ */
 export const exportRequestSchema = z.object({
-  desde: z.string().datetime({ offset: true }),
-  ate: z.string().datetime({ offset: true }),
+  desde: z.string().datetime({ offset: true }).optional(),
+  ate: z.string().datetime({ offset: true }).optional(),
   hospitalId: z.string().optional(),
   setorId: z.string().optional(),
-  conteudo: z.enum(['chamados', 'ordens_trabalho', 'medicoes', 'INDICADORES']),
-  formato: z.enum(['xlsx', 'pdf']),
-}).refine(({ desde, ate }) => desde <= ate, { message: 'A data inicial deve ser anterior ou igual à data final.' })
+  campanhaId: z.string().optional(),
+  conteudo: z.enum(EXPORT_CONTENTS),
+  formato: z.enum(EXPORT_FORMATS),
+}).superRefine((value, ctx) => {
+  if (value.conteudo === 'campanha') {
+    if (!value.campanhaId) ctx.addIssue({ code: 'custom', path: ['campanhaId'], message: 'Escolha a campanha.' })
+    return
+  }
+  if (!value.desde || !value.ate) ctx.addIssue({ code: 'custom', path: ['desde'], message: 'Informe o período.' })
+  else if (value.desde > value.ate) ctx.addIssue({ code: 'custom', path: ['desde'], message: 'A data inicial deve ser anterior ou igual à data final.' })
+})
 
 export type ExportRequest = z.infer<typeof exportRequestSchema>
 

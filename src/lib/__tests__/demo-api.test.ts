@@ -111,6 +111,21 @@ describe('modo de demonstração', () => {
     expect(last.comErro).toBe(last.erros.length)
     expect(last.erros.map((error) => error.code)).toContain('CATEGORIA_NAO_ENCONTRADA')
   })
+
+  it('exportação da campanha em PDF baixa a amostra real do backend (public/demo), os outros formatos geram arquivo local', async () => {
+    const pdf = (await apiClient.post('/relatorios/exportacoes', { conteudo: 'campanha', formato: 'pdf', campanhaId: 'c1' })).data as { id: string }
+    await apiClient.get(`/relatorios/exportacoes/${pdf.id}`)
+    const donePdf = (await apiClient.get(`/relatorios/exportacoes/${pdf.id}`)).data as { status: string; urlDownload: string }
+    expect(donePdf.status).toBe('concluido')
+    expect(donePdf.urlDownload.startsWith('http')).toBe(true)
+    expect(donePdf.urlDownload.endsWith('/demo/campanha-completa.pdf')).toBe(true)
+
+    const csv = (await apiClient.post('/relatorios/exportacoes', { conteudo: 'campanha', formato: 'csv', campanhaId: 'c1' })).data as { id: string }
+    await apiClient.get(`/relatorios/exportacoes/${csv.id}`)
+    const doneCsv = (await apiClient.get(`/relatorios/exportacoes/${csv.id}`)).data as { urlDownload: string }
+    expect(doneCsv.urlDownload.startsWith('data:text/csv')).toBe(true)
+  })
+
   it('simula a campanha de preventiva: prévia, criação, progresso por consulta e cancelamento', async () => {
     const body = { hospitalId: 'hospital-demo-1', nome: 'Campanha demo', setorIds: [], categoriaIds: [], dataInicio: '2999-01-01', recorrencia: 'avulsa', modoAtribuicao: 'equilibrado' }
     const preview = (await apiClient.post('/campanhas-preventivas/previa', body)).data as { totalEquipamentos: number; aGerar: number; totalPendencias: number; pendenciasPorMotivo: Record<string, number> }
@@ -219,9 +234,41 @@ describe('modo de demonstração: relatório da campanha', () => {
     expect(first).toEqual(expect.objectContaining({ status: 'pendente', urlDownload: null }))
     const done = (await apiClient.get(`/relatorios/exportacoes/${id}`)).data as { status: string; urlDownload: string }
     expect(done.status).toBe('concluido')
-    expect(done.urlDownload).toBe('https://example.test/demo-relatorio-campanha.xlsx')
+    expect(done.urlDownload).toMatch(/^data:application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet;base64,/)
     const detail = (await apiClient.get('/campanhas-preventivas/campaign-demo-1')).data as { puladasDetalhe: Array<{ motivo: string; otCodigo: string }> }
     expect(detail.puladasDetalhe[0]).toEqual(expect.objectContaining({ motivo: 'JA_TEM_OT_PREVENTIVA_ABERTA', otCodigo: 'OT-2026-001' }))
+  })
+})
+
+describe('modo de demonstração: arquivo de exportação baixável', () => {
+  const decode = (url: string) => Buffer.from(url.split(',')[1], 'base64')
+  const exportUrl = async (formato: string) => {
+    const { data } = await apiClient.post('/relatorios/exportacoes', { conteudo: 'chamados', formato, desde: '2026-10-01T00:00:00.000Z', ate: '2026-10-31T23:59:59.999Z' })
+    return (data as { urlDownload: string }).urlDownload
+  }
+
+  it('csv traz cabeçalho e linhas', async () => {
+    const url = await exportUrl('csv')
+    expect(url).toMatch(/^data:text\/csv/)
+    const text = decode(url).toString('utf-8')
+    expect(text).toContain('Código;Equipamento')
+    expect(text.split('\r\n').length).toBeGreaterThan(3)
+  })
+
+  it('pdf começa com %PDF-1.4 e termina com %%EOF', async () => {
+    const url = await exportUrl('pdf')
+    expect(url).toMatch(/^data:application\/pdf/)
+    const text = decode(url).toString('latin1')
+    expect(text.startsWith('%PDF-1.4')).toBe(true)
+    expect(text.trimEnd().endsWith('%%EOF')).toBe(true)
+  })
+
+  it('xlsx é um zip com as partes do pacote', async () => {
+    const bytes = decode(await exportUrl('xlsx'))
+    expect([...bytes.subarray(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04])
+    const text = bytes.toString('utf-8')
+    expect(text).toContain('xl/worksheets/sheet1.xml')
+    expect(text).toContain('Monitor multiparamétrico')
   })
 })
 
