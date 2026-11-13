@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Info, TriangleAlert } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ChangeEvent, type ReactNode } from 'react'
 import { useForm, type Path } from 'react-hook-form'
 import { Navigate } from 'react-router-dom'
@@ -8,7 +9,7 @@ import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { Field, Modal } from '@/components/ui/Modal'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { maskCep, maskCnpj, onlyDigits } from '@/lib/br-documents'
-import { getCompanyErrorMessage, LOGO_MAX_BYTES, LOGO_TYPES, useCompanyProfile, useDeleteCompanyLogo, useSaveBrandColor, useSaveCompanyProfile, useSetCompanyLogo } from '../api/company'
+import { getCompanyErrorMessage, isCompanyConflict, LOGO_MAX_BYTES, LOGO_TYPES, useCompanyProfile, useDeleteCompanyLogo, useSaveBrandColor, useSaveCompanyProfile, useSetCompanyLogo } from '../api/company'
 import { SettingsNav } from '../components/SettingsNav'
 import { companySchema, type CompanyFormValues } from '../schemas/company.schema'
 import { DEFAULT_BRAND_COLOR, type CompanyProfile, type CompanyProfileInput } from '../types/company'
@@ -80,6 +81,8 @@ function Section({ title, children, id }: { title: string; children: ReactNode; 
 function CompanyForm({ profile, canEdit }: { profile: CompanyProfile; canEdit: boolean }) {
   const save = useSaveCompanyProfile()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [conflict, setConflict] = useState(false)
+  const client = useQueryClient()
   const values = useMemo(() => toFormValues(profile), [profile])
   const form = useForm<CompanyFormValues>({ resolver: zodResolver(companySchema), defaultValues: emptyForm, values })
   const { errors } = form.formState
@@ -89,14 +92,14 @@ function CompanyForm({ profile, canEdit }: { profile: CompanyProfile; canEdit: b
     return <Field label={label} error={errors[name]?.message}><input {...reg} onChange={onChange} type={extra.type ?? 'text'} inputMode={extra.inputMode} autoComplete={extra.autoComplete ?? 'off'} className={`${inputClass} ${extra.className ?? ''}`} aria-invalid={errors[name] ? true : undefined} /></Field>
   }
   const submit = form.handleSubmit(async (data) => {
-    setServerError(null)
+    setServerError(null); setConflict(false)
     try { await save.mutateAsync(toCompanyInput(data)); toast.success('Perfil da empresa salvo.') } catch (error) {
       const message = getCompanyErrorMessage(error, 'Não foi possível salvar o perfil da empresa.')
-      setServerError(message); toast.error(message)
+      setServerError(message); setConflict(isCompanyConflict(error)); toast.error(message)
     }
   })
   return <form onSubmit={submit} noValidate className="space-y-5" aria-label="Cadastro da empresa">
-    {serverError ? <p role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">{serverError}</p> : null}
+    {serverError ? <p role="alert" className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">{serverError}{conflict ? <> <button type="button" className="underline" onClick={() => { setServerError(null); setConflict(false); void client.invalidateQueries({ queryKey: ['company-profile'] }) }}>Recarregar perfil</button></> : null}</p> : null}
     <fieldset disabled={!canEdit || save.isPending} className="min-w-0 space-y-5 border-0 p-0">
       <Section id="sec-ident" title="Identificação"><div className={`${cardClass} grid gap-4 sm:grid-cols-2`}>
         <div className="sm:col-span-2">{text('razaoSocial', 'Razão social')}</div>

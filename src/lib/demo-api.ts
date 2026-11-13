@@ -836,7 +836,7 @@ function handleCompany(method: string, path: string, body: RecordValue): unknown
     if (body.contatoEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(body.contatoEmail))) throw invalid()
     const pick = (field: string) => (body[field] as string | null | undefined) ?? null
     Object.assign(demoCompany, {
-      razaoSocial: razao, cnpj: String(body.cnpj).replace(/\D/g, ''), contatoTelefone: pick('contatoTelefone'), contatoEmail: pick('contatoEmail'),
+      razaoSocial: razao, cnpj: String(body.cnpj).replace(/\D/g, '').replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5'), contatoTelefone: pick('contatoTelefone'), contatoEmail: pick('contatoEmail'),
       responsavelTecnicoNome: pick('responsavelTecnicoNome'), responsavelTecnicoCrea: pick('responsavelTecnicoCrea'), contratoNumero: pick('contratoNumero'),
       endereco: { logradouro: null, numero: null, complemento: null, bairro: null, cidade: null, uf: null, cep: null, ...address }, atualizadoEm: new Date().toISOString(),
     })

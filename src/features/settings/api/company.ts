@@ -34,6 +34,13 @@ export const useSetCompanyLogo = () => useCompanyMutation(async (file: File) => 
 const messages: Record<string, string> = {
   VALIDACAO_FALHOU: 'Os dados não foram aceitos. Revise os campos e tente novamente.',
   ACESSO_NEGADO: 'Seu perfil não pode alterar o perfil da empresa.',
+  PRESTADORA_CONCORRENTE: 'Outra pessoa acabou de cadastrar o perfil da empresa. Recarregue a página e tente de novo.',
+}
+
+/** 409 da primeira gravação concorrente: a UI oferece recarregar o perfil. */
+export function isCompanyConflict(error: unknown): boolean {
+  const response = typeof error === 'object' && error !== null && 'response' in error ? (error as { response?: { data?: { code?: string } } }).response : undefined
+  return response?.data?.code === 'PRESTADORA_CONCORRENTE'
 }
 
 /** Mensagem pt-BR por `code` do backend (ou status), com fallback. */

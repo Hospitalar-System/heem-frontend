@@ -135,6 +135,19 @@ describe('Perfil da empresa: cadastro', () => {
     await user.click(screen.getByRole('button', { name: 'Salvar cadastro' }))
     expect(await screen.findByText('Seu perfil não pode alterar o perfil da empresa.')).toBeInTheDocument()
   })
+
+  it('409 PRESTADORA_CONCORRENTE mostra a mensagem e recarrega o perfil pelo botão', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByDisplayValue('MedServ Ltda')
+    vi.mocked(apiClient.put).mockRejectedValueOnce({ response: { status: 409, data: { code: 'PRESTADORA_CONCORRENTE' } } })
+    await user.click(screen.getByRole('button', { name: 'Salvar cadastro' }))
+    expect(await screen.findByText(/Outra pessoa acabou de cadastrar o perfil da empresa\. Recarregue a página e tente de novo\./)).toBeInTheDocument()
+    const getCalls = vi.mocked(apiClient.get).mock.calls.length
+    await user.click(screen.getByRole('button', { name: 'Recarregar perfil' }))
+    await waitFor(() => expect(vi.mocked(apiClient.get).mock.calls.length).toBeGreaterThan(getCalls))
+    expect(screen.queryByRole('button', { name: 'Recarregar perfil' })).not.toBeInTheDocument()
+  })
 })
 
 describe('Perfil da empresa: cor da marca', () => {

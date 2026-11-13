@@ -244,7 +244,7 @@ describe('demo: perfil da empresa (#209)', () => {
     setAuthSession('t', { id: 'u', name: 'Adm', roles: ['admin_cliente'], tenantId: 'x' })
     await expect(apiClient.put('/prestadora', { ...company, cnpj: '11222333000180' })).rejects.toMatchObject({ response: { status: 400, data: { code: 'VALIDACAO_FALHOU' } } })
     await expect(apiClient.put('/prestadora/marca', { corMarca: 'verde' })).rejects.toMatchObject({ response: { status: 400 } })
-    expect((await apiClient.put('/prestadora', company)).data).toMatchObject({ cadastrada: true, cnpj: '11222333000181' })
+    expect((await apiClient.put('/prestadora', company)).data).toMatchObject({ cadastrada: true, cnpj: '11.222.333/0001-81' })
     expect((await apiClient.put('/prestadora/marca', { corMarca: '#112233' })).data.corMarca).toBe('#112233')
     expect((await apiClient.put('/prestadora/marca', { corMarca: null })).data.corMarca).toBe('#3ED597')
     clearAuthSession()

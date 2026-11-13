@@ -16,10 +16,10 @@ export function useUserHospitalLinks(users: TenantUser[]) {
   return useQueries({ queries: users.map((user) => ({ queryKey: [...key, user.id, 'hospitals'], queryFn: async () => (await apiClient.get<string[]>(`/users/${user.id}/hospitais`)).data })) })
 }
 export function useHospitalChoices() { return useQuery({ queryKey: ['hospitals'], queryFn: async () => (await apiClient.get<Hospital[]>('/hospitais')).data }) }
-/** CREA só existe para técnico (400 nos demais papéis). Na edição, vazio vira null para limpar; no cadastro, vazio é omitido. */
+/** CREA só existe para técnico (400 nos demais papéis). Na edição, vazio vira '' para limpar (null = não mexe no CREA atual); no cadastro, vazio é omitido. */
 function creaField(data: TenantUserInput, editing: boolean) {
   if (data.role !== 'tecnico') return {}
-  const crea = data.crea?.trim() || null
+  const crea = data.crea?.trim() ?? ''
   return crea || editing ? { crea } : {}
 }
 function withoutCrea(data: TenantUserInput) { const rest = { ...data }; delete rest.crea; return rest }
