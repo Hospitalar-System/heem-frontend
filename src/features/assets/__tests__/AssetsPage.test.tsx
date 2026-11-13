@@ -50,7 +50,7 @@ describe('AssetsPage', () => {
     expect(await screen.findByText('Ventilador VentPro')).toBeInTheDocument()
     const row = await screen.findByRole('link', { name: 'Abrir EQ-0471, Ventilador VentPro' })
     expect(within(row).getByText('UTI Adulto')).toBeInTheDocument()
-    expect(within(row).getByText('Ativo')).toBeInTheDocument()
+    expect(within(row).getByText('Apto')).toBeInTheDocument()
     expect(within(row).getAllByText('—')).toHaveLength(2)
     await user.click(row)
     expect(await screen.findByTestId('current-route')).toHaveTextContent('/assets/equipment-1')

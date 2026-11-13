@@ -1,8 +1,8 @@
 export type RiscoSetor = 'CRITICO' | 'SEMI_CRITICO' | 'NAO_CRITICO'
 export type GrupoInstalacao = 'GRUPO_0' | 'GRUPO_1' | 'GRUPO_2'
 
-export interface Hospital { id: string; nome: string; cnpj: string }
-export interface HospitalInput { nome: string; cnpj: string }
+export interface Hospital { id: string; nome: string; cnpj: string; contratoNumero?: string | null }
+export interface HospitalInput { nome: string; cnpj: string; contratoNumero?: string | null }
 export interface Setor {
   id: string; hospitalId: string; codigo: string; nome: string; andar?: string | null; classificacaoRisco: RiscoSetor; grupoInstalacao: GrupoInstalacao
   /** Campos do servidor; ausentes em respostas antigas (tratar como ativo, sem contagem). */
@@ -17,7 +17,9 @@ export interface HospitalMetrics { setores: number; equipamentos: number; ordens
 export interface EquipamentoResumo { id: string }
 export interface OrdemResumo { equipamentoId: string; dataAgendada: string; status: 'AGENDADA' | 'EM_EXECUCAO' }
 
-export type EquipmentLifecycle = 'ATIVO' | 'EM_MANUTENCAO' | 'INATIVO' | 'DESATIVADO' | 'DESCARTADO'
+export type EquipmentLifecycle = 'ATIVO' | 'NAO_APTO' | 'EM_MANUTENCAO' | 'INATIVO' | 'DESATIVADO' | 'DESCARTADO'
+/** Estado do equipamento (contrato heem-backend#208): mesmo enum do ciclo de vida, por nome no JSON. */
+export type EquipmentState = EquipmentLifecycle
 export type EquipmentRiskClass = 'I' | 'II' | 'III' | 'IV'
 export type EquipmentCriticality = 'ALTA' | 'MEDIA' | 'BAIXA'
 export type EquipmentProtection = 'CLASSE_I' | 'CLASSE_II' | 'ALIMENTACAO_INTERNA'
@@ -54,6 +56,25 @@ export interface Equipment {
   proximaValidade?: string | null
   /** Instante da conclusão da última OT do equipamento (lista e ficha); nulo = nunca; ausente em backend antigo. */
   ultimaManutencaoEm?: string | null
+  /** Descrição do estado atual (obrigatória em EM_MANUTENCAO); nula/ausente em backend antigo. */
+  descricaoEstado?: string | null
+  /** Instante da última mudança de estado; nulo/ausente = nunca alterado. */
+  estadoAtualizadoEm?: string | null
+}
+
+export interface ChangeEquipmentStateInput { estado: EquipmentState; descricao?: string | null }
+export type EquipmentStateOrigin = 'MANUAL' | 'ORDEM_TRABALHO'
+export interface EquipmentStateHistoryEntry {
+  id: string
+  /** Pode vir nulo (primeiro registro) ou valor desconhecido (tratar como texto cru). */
+  estadoAnterior: string | null
+  estadoNovo: string
+  descricao: string | null
+  alteradoPorId: string | null
+  alteradoPorNome: string | null
+  alteradoEm: string
+  origem: EquipmentStateOrigin | string
+  ordemTrabalhoId: string | null
 }
 
 export interface EquipmentEditableFields {

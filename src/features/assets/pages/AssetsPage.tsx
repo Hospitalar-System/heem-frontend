@@ -15,11 +15,13 @@ import { useSortParams } from '@/hooks/useSortParams'
 import { useServerSearch } from '@/hooks/useServerSearch'
 
 const inputClass = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
-/** Valores de `status` aceitos por GET /equipamentos (minúsculas). */
+/** Valores de `status` de GET /equipamentos: texto do banco em minúsculas (contrato #208). */
 const lifecycleOptions = [
   { value: '', label: 'Todos os status' },
-  { value: 'ativo', label: 'Ativo' },
+  { value: 'ativo', label: 'Apto' },
+  { value: 'nao_apto', label: 'Não apto' },
   { value: 'em_manutencao', label: 'Em manutenção' },
+  { value: 'desativado', label: 'Desativado' },
   { value: 'inativo', label: 'Inativo' },
   { value: 'descartado', label: 'Descartado' },
 ]

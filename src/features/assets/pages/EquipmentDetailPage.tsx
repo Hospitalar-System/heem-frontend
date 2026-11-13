@@ -3,7 +3,9 @@ import { ArrowLeft, CalendarClock, ClipboardList, Edit3, FileText, Gauge, Histor
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { getAuthState } from '@/features/auth/session'
-import { EquipmentStatusBadge } from '../components/EquipmentStatusBadge'
+import { EquipmentStateControl } from '../components/EquipmentStateControl'
+import { EquipmentStateHistorySection } from '../components/EquipmentStateHistorySection'
+import { stateRole } from '../utils/equipment-state'
 import { EquipmentDocumentsSection } from '../components/EquipmentDocumentsSection'
 import { EquipmentPhotoSection } from '../components/EquipmentPhotoSection'
 import { EquipmentChecklistSection } from '../components/EquipmentChecklistSection'
@@ -13,10 +15,11 @@ import { useEquipment, useEquipmentWorkOrders, useHospital, useSector } from '..
 import type { Equipment } from '../types'
 import { Badge } from '@/components/ui/Badge'
 
-type EquipmentTab = 'dados' | 'medicoes' | 'checklists' | 'ots' | 'documentos' | 'etiquetas'
+type EquipmentTab = 'dados' | 'medicoes' | 'checklists' | 'ots' | 'documentos' | 'etiquetas' | 'estados'
 const tabs: Array<{ id: EquipmentTab; label: string; Icon: typeof Gauge }> = [
   { id: 'dados', label: 'Dados', Icon: Gauge },
   { id: 'medicoes', label: 'Histórico de medições', Icon: History },
+  { id: 'estados', label: 'Histórico de estado', Icon: History },
   { id: 'checklists', label: 'Checklists', Icon: ListChecks },
   { id: 'ots', label: 'OTs', Icon: ClipboardList },
 ]
@@ -31,6 +34,7 @@ export function EquipmentDetailPage() {
   const orders = useEquipmentWorkOrders(id)
   const roles = getAuthState().user?.roles ?? []
   const isAdmin = roles.includes('admin_cliente')
+  const role = stateRole(roles)
   // Backend: documentos só para admin_cliente e tecnico; alterar validade/excluir só admin_cliente.
   const canReadDocuments = isAdmin || roles.includes('tecnico')
   const visibleTabs = [...tabs, ...(canReadDocuments ? [{ id: 'documentos' as const, label: 'Documentos', Icon: FileText }] : []), ...(isAdmin ? [{ id: 'etiquetas' as const, label: 'Etiquetas', Icon: Tag }] : [])]
@@ -49,7 +53,7 @@ export function EquipmentDetailPage() {
       </div>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div><p className="text-xs text-text-muted">{equipment.data.codigo} · {hospital.data?.nome ?? 'Hospital'}{sector.data?.nome ? ` › ${sector.data.nome}` : ''}</p><h2 className="mt-1 text-xl font-semibold">{equipment.data.nome}</h2></div>
-        <EquipmentStatusBadge status={equipment.data.statusCicloVida} />
+        <EquipmentStateControl equipment={equipment.data} role={role} />
       </div>
 
       <div role="tablist" aria-label="Seções do equipamento" className="mt-5 flex max-w-full gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">
@@ -59,6 +63,7 @@ export function EquipmentDetailPage() {
       <section id="equipment-tab-panel" role="tabpanel" aria-labelledby={`equipment-tab-${activeTab}`} className="mt-4 outline-none">
         {activeTab === 'dados' ? <EquipmentData equipment={equipment.data} canWritePhoto={canReadDocuments} order={nextPreventive} ordersLoading={orders.isLoading} isAdmin={isAdmin} /> : null}
         {activeTab === 'medicoes' ? <EquipmentMeasurementsSection equipmentId={id} isAdmin={isAdmin} /> : null}
+        {activeTab === 'estados' ? <EquipmentStateHistorySection equipmentId={id} isAdmin={isAdmin} /> : null}
         {activeTab === 'checklists' ? <EquipmentChecklistSection equipment={equipment.data} isAdmin={isAdmin} /> : null}
         {activeTab === 'ots' ? <WorkOrdersPanel orders={orders.data ?? []} loading={orders.isLoading} error={orders.isError} retry={() => void orders.refetch()} /> : null}
         {activeTab === 'documentos' && canReadDocuments ? <EquipmentDocumentsSection equipmentId={id} canWrite={canReadDocuments} canManage={isAdmin} /> : null}

@@ -15,6 +15,8 @@ export const settingsSections: SettingsSection[] = [
   { label: 'Política de SLA', to: '/settings/sla-policy', canAccess: isTenantAdmin },
   { label: 'Importação em lote', to: '/settings/imports', canAccess: isTenantAdmin },
   { label: 'Usuários e papéis', to: '/settings/users', canAccess: isTenantOrPlatformAdmin },
+  // Edição só do admin; técnico e interno leem pela URL direta (sem item de menu).
+  { label: 'Perfil da empresa', to: '/settings/company', canAccess: isTenantAdmin },
 ]
 
 export function getSettingsSections(roles: readonly UserRole[]) {

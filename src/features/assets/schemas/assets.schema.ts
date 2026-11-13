@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { CreateEquipmentInput } from '../types'
 
-export const hospitalSchema = z.object({ nome: z.string().trim().min(1, 'Informe o nome do hospital.'), cnpj: z.string().trim().min(1, 'Informe o CNPJ.') })
+export const hospitalSchema = z.object({ nome: z.string().trim().min(1, 'Informe o nome do hospital.'), cnpj: z.string().trim().min(1, 'Informe o CNPJ.'), contratoNumero: z.string().trim().max(60, 'Contrato: no máximo 60 caracteres.').nullish() })
 export const setorSchema = z.object({
   codigo: z.string().trim().min(1, 'Informe o código.'),
   nome: z.string().trim().min(1, 'Informe o nome do setor.'),
@@ -20,7 +20,7 @@ export const equipmentSchema = z.object({
   marca: z.string(),
   dadosGerais: z.array(z.object({ key: z.string(), value: z.string() })),
   classeRiscoAnvisa: z.enum(['I', 'II', 'III', 'IV']),
-  statusCicloVida: z.enum(['ATIVO', 'EM_MANUTENCAO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']),
+  statusCicloVida: z.enum(['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']),
   criticidade: z.enum(['ALTA', 'MEDIA', 'BAIXA']),
   tipoProtecao: z.enum(['CLASSE_I', 'CLASSE_II', 'ALIMENTACAO_INTERNA']),
   parteAplicada: z.enum(['TIPO_B', 'TIPO_BF', 'TIPO_CF']),
