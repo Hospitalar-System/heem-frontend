@@ -3,7 +3,7 @@ import { LoaderCircle, LogIn } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import { isDemoMode } from '@/lib/demo-mode'
-import { getAuthProvider } from '../api/auth-provider'
+import { AuthError, getAuthProvider } from '../api/auth-provider'
 import { AccessBlockedError, getLoginErrorMessage, useLogin } from '../hooks/useLogin'
 import { loginSchema, type LoginFormInput, type LoginFormValues } from '../schemas/login.schema'
 import { AccessBlockedScreen } from './AccessBlockedScreen'
@@ -32,9 +32,12 @@ export function LoginForm() {
   }
 
   const errorMessage = mutation.isError ? getLoginErrorMessage(mutation.error) : null
+  const isTimeout = mutation.isError && mutation.error instanceof AuthError && mutation.error.kind === 'timeout'
+  const retryAfterTimeout = () => { mutation.reset(); setTimeout(() => form.setFocus('password'), 0) }
   const errorRegion = (
     <div role="alert">
       {errorMessage && <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">{errorMessage}</p>}
+      {isTimeout && !isDemoMode && <button type="button" onClick={retryAfterTimeout} className="mt-2 w-full rounded-md px-3 py-2 text-sm font-medium text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary">Tentar de novo (o e-mail foi mantido; digite a senha)</button>}
     </div>
   )
   const submitLabel = pending ? 'Conectando…' : isDemoMode ? 'Entrar na demonstração' : 'Entrar'
@@ -97,9 +100,12 @@ export function LoginForm() {
       {errorRegion}
       <div role="status" aria-live="polite">
         {pending && isWaking && (
-          <p className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-secondary">
-            O servidor está acordando, isso pode levar até 1 minuto. Aguarde…
+          <div className="space-y-2 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-secondary">
+            <div aria-hidden="true" className="h-1 overflow-hidden rounded-full bg-border"><div className="h-full w-1/3 animate-pulse rounded-full bg-primary" /></div>
+          <p>
+            O servidor está acordando, isso pode levar até 2 ou 3 minutos na primeira entrada do dia. Aguarde…
           </p>
+          </div>
         )}
       </div>
       <button type="submit" disabled={pending} className={buttonClass}>
