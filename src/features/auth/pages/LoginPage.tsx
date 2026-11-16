@@ -1,10 +1,11 @@
-import { useSyncExternalStore } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { AuthShell } from '../components/AuthShell'
 import { LoginForm } from '../components/LoginForm'
 import { SessionRestoring } from '../components/SessionRestoring'
 import { useAuthRestoring } from '../hooks/useAuthRestoring'
 import { getRoleLandingPath } from '../hooks/useLogin'
+import { wakeBackend } from '@/lib/wake-backend'
 import { safeInternalPath } from '../utils/safe-redirect'
 import { getAuthState, subscribeAuthState } from '../session'
 
@@ -12,6 +13,9 @@ export function LoginPage() {
   const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
   const restoring = useAuthRestoring()
   const location = useLocation()
+
+  // Acorda o backend (partida a frio) enquanto a pessoa digita; no máximo uma vez por visita.
+  useEffect(() => { wakeBackend() }, [])
 
   // Aguarda a restauração da sessão para não piscar o formulário; já autenticado, segue ao destino por papel.
   if (restoring) return <SessionRestoring />

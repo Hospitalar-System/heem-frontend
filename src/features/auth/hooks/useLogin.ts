@@ -10,8 +10,8 @@ import { setAuthSession } from '../session'
 import type { ProblemDetail, UserRole } from '../types'
 import { safeInternalPath } from '../utils/safe-redirect'
 
-/** Prazo total do login: o servidor gratuito pode levar mais de 30 s para acordar. */
-export const LOGIN_TIMEOUT_MS = 40_000
+/** Prazo total do login: a partida a frio do servidor gratuito pode levar ~3 min (acordar o backend e o provedor). */
+export const LOGIN_TIMEOUT_MS = 150_000
 /** Depois disso a tentativa ainda em curso mostra o aviso de "servidor acordando". */
 export const WAKING_NOTICE_MS = 8_000
 

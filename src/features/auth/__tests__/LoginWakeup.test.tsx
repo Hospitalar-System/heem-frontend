@@ -19,7 +19,7 @@ vi.mock('../api/keycloak', async (importOriginal) => ({
 }))
 
 const tokens = { accessToken: 'access-1', refreshToken: 'refresh-1', expiresAt: Date.now() + 900_000 }
-const wakingText = 'O servidor está acordando, isso pode levar até 1 minuto. Aguarde…'
+const wakingText = 'O servidor está acordando, isso pode levar até 2 ou 3 minutos na primeira entrada do dia. Aguarde…'
 const timeoutText = 'O servidor demorou para responder. Ele pode estar acordando; tente novamente em instantes.'
 
 /** Simula o provedor: fica pendente até o signal abortar e então rejeita como o provedor real. */
@@ -124,7 +124,17 @@ describe('LoginForm: servidor acordando', () => {
     expect(getAuthState().isAuthenticated).toBe(false)
   })
 
-  it('estoura em 40 s: mostra a mensagem fixa e não persiste sessão', async () => {
+  it('prazo de 150 s cobre a partida a frio e não estoura antes (ex.: 47 s)', async () => {
+    hangUntilAborted()
+    renderLogin()
+    await submit()
+    await advance(47_500)
+    expect(screen.queryByText(timeoutText)).not.toBeInTheDocument()
+    expect(screen.getByText(wakingText)).toBeInTheDocument()
+    expect(LOGIN_TIMEOUT_MS).toBe(150_000)
+  })
+
+  it('estoura no prazo: mostra a mensagem fixa, oferece Tentar de novo mantendo o e-mail e não persiste sessão', async () => {
     hangUntilAborted()
     renderLogin()
     await submit()
@@ -133,8 +143,13 @@ describe('LoginForm: servidor acordando', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(timeoutText)
     expect(screen.queryByText(wakingText)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Senha')).toHaveValue('')
+    expect(screen.getByLabelText('E-mail')).not.toHaveValue('')
     expect(getAuthState().isAuthenticated).toBe(false)
     expect(window.sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Tentar de novo/ }))
+    await advance(1)
+    expect(screen.queryByText(timeoutText)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('E-mail')).not.toHaveValue('')
   })
 
   it('prazo vencido no /me revoga o refresh token e não persiste sessão', async () => {
