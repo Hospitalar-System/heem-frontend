@@ -67,18 +67,18 @@ export function LandingLayout({ children, onAgendar }: PropsWithChildren<Landing
       <ScrollProgress />
 
       <header className="landing-nav sticky top-0 z-20" data-scrolled={scrolled}>
-        <div className="mx-auto flex h-[72px] w-[min(1120px,100%-32px)] items-center gap-4 md:gap-8">
+        <div className="mx-auto flex h-[72px] w-[min(1120px,100%-32px)] items-center gap-4 lg:gap-8">
           <a href={onAgendar ? '#topo' : '/'} aria-label={`${NOME_PRODUTO}, início da página`} className={`rounded-md ${focusRing}`}>
             <Marca />
           </a>
-          <nav aria-label="Seções da página" className="mx-auto hidden gap-[30px] text-[15px] text-text-secondary md:flex">
+          <nav aria-label="Seções da página" className="mx-auto hidden gap-[30px] text-[15px] text-text-secondary lg:flex">
             {sectionLinks.map((link) => (
               <a key={link.href} href={base + link.href} className={`rounded-md transition hover:text-text-primary ${focusRing}`}>
                 {link.label}
               </a>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2 md:ml-0">
+          <div className="ml-auto flex items-center gap-2 lg:ml-0">
             <ThemeSwitcher />
             <Link to={enter.to} className={`${landingButtonClasses.ghost} px-4`}>{enter.label}</Link>
             {onAgendar ? (
