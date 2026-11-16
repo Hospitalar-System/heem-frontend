@@ -5,7 +5,7 @@ import { NOME_PRODUTO } from '../brand'
 export function Marca({ className = '' }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2.5 text-xl font-bold tracking-tight ${className}`}>
-      <BrandMark height={36} />
+      <BrandMark height={36} alt="" />
       {NOME_PRODUTO}
     </span>
   )

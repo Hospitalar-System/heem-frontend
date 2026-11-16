@@ -94,7 +94,7 @@ export function FormularioLead({ interesseInicial, onConcluir, onEnviando }: For
         <input id="nome" type="text" autoComplete="name" placeholder="Maria Souza" aria-invalid={!!errors.nome} aria-describedby={descrito('nome')} aria-required="true" className={`${campoClasses} ${borda('nome')}`} {...register('nome')} />
       </Campo>
       <Campo id="email" rotulo="E-mail profissional *" erro={errors.email?.message}>
-        <input id="email" type="email" autoComplete="email" placeholder="maria@hospital.org.br" aria-invalid={!!errors.email} aria-describedby={descrito('email')} aria-required="true" className={`${campoClasses} ${borda('email')}`} {...register('email')} />
+        <input id="email" type="email" autoComplete="email" spellCheck={false} placeholder="maria@hospital.org.br" aria-invalid={!!errors.email} aria-describedby={descrito('email')} aria-required="true" className={`${campoClasses} ${borda('email')}`} {...register('email')} />
       </Campo>
       <div className="grid gap-3.5 sm:grid-cols-2">
         <Campo id="organizacao" rotulo="Hospital ou instituição *" erro={errors.organizacao?.message}>
