@@ -135,7 +135,7 @@ describe('Exportar relatório da campanha (F4.10)', () => {
     expect(screen.queryByRole('link', { name: 'Baixar novamente' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Tentar de novo' }))
     await waitFor(() => expect(exportPosts()).toHaveLength(2))
-    expect(exportPosts()[1][1]).toEqual({ conteudo: 'campanha', formato: 'pdf', campanhaId: 'camp-1' })
+    expect(exportPosts()[1][1]).toEqual({ conteudo: 'campanha', formato: 'pdf', campanhaId: 'camp-1', nivel: 'COMPLETO' })
   })
 
   it('não envia duas vezes enquanto solicita', async () => {

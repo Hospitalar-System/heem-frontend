@@ -373,7 +373,7 @@ describe('Campanha de preventiva', () => {
       const row = await screen.findByTestId('campaign-controls')
       expect(row).toHaveClass('flex', 'flex-row', 'flex-wrap', 'items-center', 'justify-end')
       expect(row).not.toHaveClass('flex-col')
-      const select = within(row).getByRole('combobox')
+      const select = within(row).getByRole('combobox', { name: 'Formato do relatório' })
       const [exportButton, cancelButton] = within(row).getAllByRole('button')
       expect(exportButton).toHaveTextContent('Exportar relatório')
       expect(cancelButton).toHaveTextContent('Cancelar campanha')
