@@ -289,10 +289,10 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     const isPdf = body.formato === 'pdf'
     const nivel = String(body.nivel ?? 'COMPLETO').toUpperCase()
     const orientacao = isPdf ? String(body.orientacao ?? (['chamados', 'ordens_trabalho', 'medicoes'].includes(String(body.conteudo)) ? 'PAISAGEM' : 'RETRATO')).toUpperCase() : null
-    if (body.conteudo === 'campanha') {
+    if (['campanha', 'laudo_ot', 'dossie_equipamento'].includes(String(body.conteudo))) {
       // Relatório da campanha: nasce pendente e conclui na consulta seguinte (exercita o polling). Arquivo de exemplo local, sem dado real.
       const format = ['pdf', 'xlsx', 'csv'].includes(body.formato as string) ? body.formato : 'pdf'
-      exportsById.set(id, { id, status: 'pendente', urlDownload: null, polls: 0, format, nivel, orientacao })
+      exportsById.set(id, { id, status: 'pendente', urlDownload: null, polls: 0, format, nivel, orientacao, content: body.conteudo })
       return { id, status: 'pendente', urlDownload: null, nivel, orientacao }
     }
     // Parâmetros extras (hospitalId, setorId, desde, ate, agrupar) são aceitos e ignorados; a extensão segue o formato pedido.
@@ -308,7 +308,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     const { nivel, orientacao } = pendingExport
     if (polls < 2) return { id: pendingExport.id, status: 'pendente', urlDownload: null, nivel, orientacao }
     // PDF da campanha: amostra real do backend (public/demo, sem dado sensível); os demais formatos são arquivos mínimos gerados no cliente.
-    const urlDownload = pendingExport.format === 'pdf' && typeof window !== 'undefined'
+    const urlDownload = pendingExport.content !== 'campanha' ? demoExportDataUrl(String(pendingExport.content), 'pdf') : pendingExport.format === 'pdf' && typeof window !== 'undefined'
       ? `${window.location.origin}/demo/campanha-${pendingExport.nivel === 'RESUMO' ? 'resumo' : 'completa'}.pdf`
       : demoExportDataUrl('campanha', pendingExport.format as DemoExportFormat)
     return { id: pendingExport.id, status: 'concluido', urlDownload, nivel, orientacao }

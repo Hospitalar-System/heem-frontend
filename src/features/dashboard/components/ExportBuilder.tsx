@@ -6,9 +6,10 @@ import { Controller, useForm, useWatch } from 'react-hook-form'
 import { PageAction } from '@/components/ui/PageAction'
 import { Select } from '@/components/ui/Select'
 import { useCampaigns } from '@/features/maintenance/api/preventive-campaigns'
-import { EXPORT_CONTENTS, EXPORT_FORMATS } from '../api/reports'
+import { otStatusOptions, otTipoOptions } from '../api/documents'
+import { EXPORT_FORMATS } from '../api/reports'
 import type { ExportRequest } from '../api/reports'
-import { EXPORT_BACKEND_SUPPORT, buildExportBody, defaultExportValues, defaultOrientation, exportBuilderSchema, exportContentLabels, exportFilename, exportFormatLabels } from './export-builder-model'
+import { EXPORT_BACKEND_SUPPORT, buildExportBody, visibleExportContents, defaultExportValues, defaultOrientation, exportBuilderSchema, exportContentLabels, exportFilename, exportFormatLabels } from './export-builder-model'
 import type { ExportBuilderValues } from './export-builder-model'
 import { useExportDownload } from './use-export-download'
 
@@ -44,6 +45,7 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
   const isPdf = formato === 'pdf'
   const orientationTouched = useRef(false)
   const isCampaign = conteudo === 'campanha'
+  const showOtFilters = EXPORT_BACKEND_SUPPORT.filtrosOt && conteudo === 'ordens_trabalho'
   const campaigns = useCampaigns({ ...(hospitalId ? { hospitalId } : {}), tamanho: 100 }, isCampaign)
   const flow = useExportDownload()
   const [lastBody, setLastBody] = useState<ExportRequest | null>(null)
@@ -92,7 +94,7 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
         <fieldset className="grid gap-1.5">
           <legend className="mb-1 text-xs font-medium text-text-secondary">Tipo de relatório</legend>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-            {EXPORT_CONTENTS.map((value) => <label key={value} className={radioLabel}>
+            {visibleExportContents().map((value) => <label key={value} className={radioLabel}>
               <input type="radio" value={value} className="size-4 accent-primary" {...register('conteudo')} />
               {exportContentLabels[value]}
             </label>)}
@@ -117,6 +119,17 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
             <span className="text-[11px] text-text-muted">O relatório da campanha cobre todas as ordens de trabalho dela.</span>
           </label>
         )}
+
+        {showOtFilters && <div className="grid gap-4 md:grid-cols-2">
+          <label className={fieldLabel}>
+            <span>Tipo da OT</span>
+            <Controller control={control} name="tipoOt" render={({ field }) => <Select size="sm" aria-label="Tipo da OT" value={field.value} onChange={field.onChange} options={[{ value: '', label: 'Todos' }, ...otTipoOptions]} />} />
+          </label>
+          <label className={fieldLabel}>
+            <span>Status da OT</span>
+            <Controller control={control} name="statusOt" render={({ field }) => <Select size="sm" aria-label="Status da OT" value={field.value} onChange={field.onChange} options={[{ value: '', label: 'Todos' }, ...otStatusOptions]} />} />
+          </label>
+        </div>}
 
         {(EXPORT_BACKEND_SUPPORT.nivel || EXPORT_BACKEND_SUPPORT.orientacao) && <div className="grid gap-4 md:grid-cols-2">
           {EXPORT_BACKEND_SUPPORT.nivel && <fieldset className="grid gap-1.5">

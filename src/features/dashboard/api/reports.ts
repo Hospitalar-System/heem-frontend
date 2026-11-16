@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { apiClient } from '@/lib/axios'
+import { EMERGENCIAS_CONTEUDO, OT_STATUS_VALUES, OT_TIPO_VALUES } from './documents'
 
 export interface ReportFilters {
   desde: string
@@ -77,7 +78,7 @@ export interface RiskCompliance {
   totalMedicoes: number
 }
 
-export const EXPORT_CONTENTS = ['chamados', 'ordens_trabalho', 'medicoes', 'indicadores', 'campanha'] as const
+export const EXPORT_CONTENTS = ['chamados', 'ordens_trabalho', 'medicoes', 'indicadores', 'campanha', EMERGENCIAS_CONTEUDO] as const
 export const EXPORT_FORMATS = ['pdf', 'xlsx', 'csv'] as const
 
 /**
@@ -93,6 +94,8 @@ export const exportRequestSchema = z.object({
   campanhaId: z.string().optional(),
   conteudo: z.enum(EXPORT_CONTENTS),
   formato: z.enum(EXPORT_FORMATS),
+  tipo: z.enum(OT_TIPO_VALUES).optional(),
+  status: z.enum(OT_STATUS_VALUES).optional(),
   nivel: z.enum(['RESUMO', 'COMPLETO']).optional(),
   orientacao: z.enum(['RETRATO', 'PAISAGEM']).optional(),
 }).superRefine((value, ctx) => {
@@ -107,7 +110,7 @@ export const exportRequestSchema = z.object({
 export type ExportRequest = z.infer<typeof exportRequestSchema>
 
 export type CampaignExportFormat = 'pdf' | 'xlsx' | 'csv'
-export interface CampaignExportRequest { campanhaId: string; formato: CampaignExportFormat }
+export interface CampaignExportRequest { campanhaId: string; formato: CampaignExportFormat; /** Só PDF. */ nivel?: 'RESUMO' | 'COMPLETO' }
 
 export const exportStatusSchema = z.object({
   id: z.string().min(1),
@@ -170,8 +173,8 @@ export function useRequestReportExport() {
 export function useRequestCampaignExport() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ campanhaId, formato }: CampaignExportRequest) => {
-      const { data } = await apiClient.post<unknown>('/relatorios/exportacoes', { conteudo: 'campanha', formato, campanhaId })
+    mutationFn: async ({ campanhaId, formato, nivel }: CampaignExportRequest) => {
+      const { data } = await apiClient.post<unknown>('/relatorios/exportacoes', { conteudo: 'campanha', formato, campanhaId, ...(nivel ? { nivel } : {}) })
       return exportStatusSchema.parse(data)
     },
     onSuccess: (exportation) => queryClient.setQueryData(['report-export', exportation.id], exportation),

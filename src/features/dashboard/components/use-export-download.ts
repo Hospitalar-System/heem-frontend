@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiClient } from '@/lib/axios'
 import { exportStatusSchema, useRequestReportExport } from '../api/reports'
-import type { ExportRequest } from '../api/reports'
+import type { ExportRequest, ExportStatus } from '../api/reports'
+import { DOCUMENT_ENDPOINT } from '../api/documents'
 import { exportErrorMessage, exportLayoutLabel } from './export-builder-model'
 
 export const EXPORT_POLL_FIRST_MS = 1500
@@ -32,17 +33,32 @@ export function triggerDownload(url: string, filename: string) {
   anchor.remove()
 }
 
+type CreateDocument<B> = (body: B) => Promise<ExportStatus>
+
 /**
  * Fluxo da exportação: cria, acompanha por polling (1,5 s crescendo até 5 s, teto de ~3 min), baixa sozinho UMA vez ao
  * concluir e permite baixar de novo (refazendo o GET para obter URL assinada nova). Cancelar só para o acompanhamento.
  */
 export function useExportDownload() {
   const requestExport = useRequestReportExport()
+  return useDocumentFlow<ExportRequest>(requestExport.mutateAsync)
+}
+
+/** Documento avulso (laudo da OT, dossiê do equipamento): POST arbitrário no mesmo fluxo assíncrono das exportações. */
+export function useGenerateDocument({ path = DOCUMENT_ENDPOINT, body, filename }: { path?: string; body: Record<string, unknown>; filename: string }) {
+  const create = useCallback<CreateDocument<Record<string, unknown>>>(async (payload) => exportStatusSchema.parse((await apiClient.post<unknown>(path, payload)).data), [path])
+  const flow = useDocumentFlow<Record<string, unknown>>(create)
+  const { start } = flow
+  const generate = useCallback(() => start(body, filename), [start, body, filename])
+  return { ...flow, start: generate }
+}
+
+function useDocumentFlow<B>(create: CreateDocument<B>) {
   const [state, setState] = useState<ExportFlowState>({ phase: 'idle', error: null, filename: null })
   const run = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const current = useRef<{ id: string; url: string; filename: string } | null>(null)
-  const mutate = requestExport.mutateAsync
+  const mutate = create
 
   const stop = useCallback(() => {
     run.current += 1
@@ -52,7 +68,7 @@ export function useExportDownload() {
 
   const wait = (ms: number) => new Promise<void>((resolve) => { timer.current = setTimeout(resolve, ms) })
 
-  const start = useCallback(async (body: ExportRequest, filename: string) => {
+  const start = useCallback(async (body: B, filename: string) => {
     stop()
     const token = run.current
     const alive = () => run.current === token

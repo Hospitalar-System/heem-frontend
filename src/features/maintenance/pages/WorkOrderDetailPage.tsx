@@ -11,6 +11,9 @@ import { Select } from '@/components/ui/Select'
 import { getAuthState } from '@/features/auth/session'
 import { WorkOrderPhotosSection } from '../components/WorkOrderPhotosSection'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
+import { laudoOtBody } from '@/features/dashboard/api/documents'
+import { EXPORT_BACKEND_SUPPORT } from '@/features/dashboard/components/export-builder-model'
+import { GenerateDocumentButton } from '@/features/dashboard/components/GenerateDocumentButton'
 
 const statusLabels: Record<string, string> = { AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída', CANCELADA: 'Cancelada', CANCELADO: 'Cancelada' }
 
@@ -60,6 +63,8 @@ export function WorkOrderDetailPage() {
   const items = [...(checklist.data ?? [])].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0))
   const hasExecutionState = items.length > 0 && items.every((item) => typeof item.concluido === 'boolean')
   const completedItems = hasExecutionState ? items.filter((item) => item.concluido).length : 0
+  const roles = getAuthState().user?.roles ?? []
+  const canGenerateLaudo = EXPORT_BACKEND_SUPPORT.laudoOt && canonical(order.data?.status ?? '') === 'CONCLUIDA' && (roles.includes('admin_cliente') || roles.includes('tecnico'))
   const progress = hasExecutionState ? Math.round((completedItems / items.length) * 100) : 0
 
   async function submitReassignment(event: React.FormEvent<HTMLFormElement>) {
@@ -88,7 +93,7 @@ export function WorkOrderDetailPage() {
             <h2 className="mt-3 text-xl font-semibold text-text-primary">{order.data.codigo}</h2>
             <p className="mt-1 text-xs text-text-muted">ID {order.data.id}</p>
           </div>
-          <button type="button" onClick={() => { setTecnicoId(order.data.tecnicoId ?? ''); setIsReassignOpen(true) }} className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-semibold text-text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><UserRound aria-hidden="true" size={14} />Reatribuir técnico</button>
+          <div className="flex flex-wrap items-start justify-end gap-3">{canGenerateLaudo ? <GenerateDocumentButton label="Gerar laudo da OT" body={laudoOtBody(order.data.id)} filename={`laudo-${order.data.codigo}.pdf`} /> : null}<button type="button" onClick={() => { setTecnicoId(order.data.tecnicoId ?? ''); setIsReassignOpen(true) }} className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-semibold text-text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><UserRound aria-hidden="true" size={14} />Reatribuir técnico</button></div>
         </div>
         <div className="mt-5 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-4">
           <Metadata icon={<Wrench size={14} />} label="Equipamento" value={equipment.data ? `${equipment.data.codigo} · ${equipment.data.nome}` : order.data.equipamentoId} />

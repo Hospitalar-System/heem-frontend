@@ -3,7 +3,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { EXPORT_BACKEND_SUPPORT } from '@/features/dashboard/components/export-builder-model'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { apiClient } from '@/lib/axios'
 import { EquipmentDetailPage } from '../pages/EquipmentDetailPage'
@@ -58,5 +59,24 @@ describe('EquipmentDetailPage labels access', () => {
     expect(screen.queryByRole('tab', { name: 'Etiquetas' })).not.toBeInTheDocument()
     expect(apiClient.get).not.toHaveBeenCalledWith('/equipamentos/equipment-1/etiquetas')
     clearAuthSession()
+  })
+
+  describe('botão Gerar dossiê do equipamento', () => {
+    const flagsBefore = { ...EXPORT_BACKEND_SUPPORT }
+    afterEach(() => Object.assign(EXPORT_BACKEND_SUPPORT, flagsBefore))
+
+    it('flag desligada: não aparece', async () => {
+      setAuthSession('token', { id: 'admin-1', name: 'Clara', roles: ['admin_cliente'], tenantId: 'tenant-1' })
+      render(<EquipmentDetailPage />, { wrapper: TestProviders })
+      expect(await screen.findByRole('heading', { name: 'Bomba de infusão', level: 2 })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Gerar dossiê do equipamento' })).not.toBeInTheDocument()
+    })
+
+    it.each([['admin_cliente' as const], ['tecnico' as const]])('flag ligada: aparece para %s', async (role) => {
+      EXPORT_BACKEND_SUPPORT.dossieEquipamento = true
+      setAuthSession('token', { id: 'user-1', name: 'Clara', roles: [role], tenantId: 'tenant-1' })
+      render(<EquipmentDetailPage />, { wrapper: TestProviders })
+      expect(await screen.findByRole('button', { name: 'Gerar dossiê do equipamento' })).toBeInTheDocument()
+    })
   })
 })
