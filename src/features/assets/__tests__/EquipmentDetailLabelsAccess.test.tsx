@@ -66,6 +66,7 @@ describe('EquipmentDetailPage labels access', () => {
     afterEach(() => Object.assign(EXPORT_BACKEND_SUPPORT, flagsBefore))
 
     it('flag desligada: não aparece', async () => {
+      EXPORT_BACKEND_SUPPORT.dossieEquipamento = false
       setAuthSession('token', { id: 'admin-1', name: 'Clara', roles: ['admin_cliente'], tenantId: 'tenant-1' })
       render(<EquipmentDetailPage />, { wrapper: TestProviders })
       expect(await screen.findByRole('heading', { name: 'Bomba de infusão', level: 2 })).toBeInTheDocument()

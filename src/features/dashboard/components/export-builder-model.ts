@@ -16,7 +16,7 @@ export const EXPORT_BACKEND_SUPPORT = {
   /** Botão "Gerar laudo da OT" na ficha da OT concluída. */
   laudoOt: false,
   /** Botão "Gerar dossiê do equipamento" na ficha do equipamento. */
-  dossieEquipamento: false,
+  dossieEquipamento: true,
 }
 
 /** Tipos exibidos na tela, respeitando as flags de suporte do backend. */
@@ -24,7 +24,7 @@ export const visibleExportContents = () => EXPORT_CONTENTS.filter((value) => val
 
 /** Orientação padrão do backend por tipo: paisagem nas listagens, retrato nos demais. */
 export function defaultOrientation(conteudo: string): 'retrato' | 'paisagem' {
-  return ['chamados', 'ordens_trabalho', 'medicoes'].includes(conteudo) ? 'paisagem' : 'retrato'
+  return ['chamados', 'ordens_trabalho'].includes(conteudo) ? 'paisagem' : 'retrato'
 }
 
 export const exportContentLabels: Record<(typeof EXPORT_CONTENTS)[number], string> = {
