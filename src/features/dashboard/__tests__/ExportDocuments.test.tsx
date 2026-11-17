@@ -32,6 +32,7 @@ describe('flags do construtor de exportação', () => {
   afterEach(() => Object.assign(EXPORT_BACKEND_SUPPORT, original))
 
   it('com as flags desligadas esconde Emergências e os filtros de OT e não os envia', async () => {
+    Object.assign(EXPORT_BACKEND_SUPPORT, { emergencias: false, filtrosOt: false })
     const user = userEvent.setup()
     render(<ExportBuilder filters={filters} />, { wrapper: TestProviders })
     expect(screen.queryByRole('radio', { name: 'Emergências' })).not.toBeInTheDocument()

@@ -10,11 +10,11 @@ export const EXPORT_BACKEND_SUPPORT = {
   nivel: true,
   orientacao: true,
   /** Tipo "Emergências" na lista de tipos. */
-  emergencias: false,
+  emergencias: true,
   /** Filtros tipo e status das Ordens de trabalho (PDF, XLSX e CSV). */
-  filtrosOt: false,
+  filtrosOt: true,
   /** Botão "Gerar laudo da OT" na ficha da OT concluída. */
-  laudoOt: false,
+  laudoOt: true,
   /** Botão "Gerar dossiê do equipamento" na ficha do equipamento. */
   dossieEquipamento: true,
 }

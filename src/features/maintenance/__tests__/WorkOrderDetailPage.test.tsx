@@ -113,6 +113,7 @@ describe('WorkOrderDetailPage', () => {
     }
 
     it('flag desligada: não aparece nem em OT concluída', async () => {
+      EXPORT_BACKEND_SUPPORT.laudoOt = false
       withStatus('CONCLUIDA')
       render(<WorkOrderDetailPage />, { wrapper: TestProviders })
       expect(await screen.findByRole('heading', { name: 'OT-2041' })).toBeInTheDocument()
