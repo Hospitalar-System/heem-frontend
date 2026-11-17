@@ -96,11 +96,11 @@ describe('ExportBuilder', () => {
     await user.click(screen.getByRole('radio', { name: 'Indicadores' }))
     expect(screen.getByRole('radio', { name: 'Retrato' })).toBeChecked()
     await user.click(screen.getByRole('radio', { name: 'Medições' }))
-    expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeChecked()
-    await user.click(screen.getByRole('radio', { name: 'Retrato' }))
-    await user.click(screen.getByRole('radio', { name: 'Ordens de trabalho' }))
     expect(screen.getByRole('radio', { name: 'Retrato' })).toBeChecked()
-    expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeEnabled()
+    await user.click(screen.getByRole('radio', { name: 'Paisagem' }))
+    await user.click(screen.getByRole('radio', { name: 'Ordens de trabalho' }))
+    expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Retrato' })).toBeEnabled()
   })
 
   it('período inválido nos filtros bloqueia o envio', async () => {
