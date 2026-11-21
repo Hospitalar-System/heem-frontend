@@ -3,7 +3,7 @@ import { ArrowLeft, CalendarClock, ClipboardList, Edit3, FileText, Gauge, Histor
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { getAuthState } from '@/features/auth/session'
-import { EquipmentStateControl } from '../components/EquipmentStateControl'
+import { EquipmentStateControl, EquipmentStateNote, EquipmentStateSummary } from '../components/EquipmentStateControl'
 import { EquipmentStateHistorySection } from '../components/EquipmentStateHistorySection'
 import { stateRole } from '../utils/equipment-state'
 import { EquipmentDocumentsSection } from '../components/EquipmentDocumentsSection'
@@ -51,15 +51,19 @@ export function EquipmentDetailPage() {
 
   return <AdminPageShell title={equipment.data.nome} subtitle="Detalhe do equipamento">
     <div className="mx-auto max-w-6xl">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4">
         <Link to="/assets" className="inline-flex items-center gap-2 text-xs font-medium text-text-secondary hover:text-text-primary"><ArrowLeft size={14} />Equipamentos</Link>
-        {isAdmin ? <button type="button" onClick={() => navigate(`/assets/${id}/edit`)} className="inline-flex h-8 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium hover:bg-surface"><Edit3 size={14} />Editar</button> : null}
       </div>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div><p className="text-xs text-text-muted">{equipment.data.codigo} · {hospital.data?.nome ?? 'Hospital'}{sector.data?.nome ? ` › ${sector.data.nome}` : ''}</p><h2 className="mt-1 text-xl font-semibold">{equipment.data.nome}</h2></div>
-        <div className="flex flex-wrap items-start justify-end gap-3">
-          {canGenerateDossier ? <GenerateDocumentButton label="Gerar dossiê do equipamento" body={dossieEquipamentoBody(equipment.data.id)} filename={`dossie-${equipment.data.codigo}.pdf`} /> : null}
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0">
+          <p className="text-xs text-text-muted">{equipment.data.codigo} · {hospital.data?.nome ?? 'Hospital'}{sector.data?.nome ? ` › ${sector.data.nome}` : ''}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5"><h2 className="min-w-0 break-words text-xl font-semibold">{equipment.data.nome}</h2><EquipmentStateSummary equipment={equipment.data} /></div>
+          <EquipmentStateNote equipment={equipment.data} />
+        </div>
+        <div role="group" aria-label="Ações do equipamento" className="flex flex-wrap items-start gap-2">
+          {canGenerateDossier ? <GenerateDocumentButton label="Gerar dossiê do equipamento" body={dossieEquipamentoBody(equipment.data.id)} filename={`dossie-${equipment.data.codigo}.pdf`} align="start" /> : null}
           <EquipmentStateControl equipment={equipment.data} role={role} />
+          {isAdmin ? <button type="button" onClick={() => navigate(`/assets/${id}/edit`)} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-border px-3 text-xs font-semibold text-text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Edit3 aria-hidden="true" size={14} />Editar</button> : null}
         </div>
       </div>
 

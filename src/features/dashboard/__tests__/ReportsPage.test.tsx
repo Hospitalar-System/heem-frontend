@@ -88,14 +88,13 @@ describe('ReportsPage', () => {
     expect(screen.queryByText('Tempo médio de atendimento')).not.toBeInTheDocument()
   })
 
-  it('usa um único conjunto de filtros: o construtor mostra o resumo e Alterar filtros foca o primeiro campo', async () => {
-    const user = userEvent.setup()
+  it('usa um único conjunto de filtros e a exportação fica compacta no canto, sem card Gerar relatório', async () => {
     render(<ReportsPage />, { wrapper: TestProviders })
     await screen.findByText('286 h')
     expect(screen.getAllByRole('combobox', { name: 'Hospital' })).toHaveLength(1)
-    expect(screen.getByTestId('export-filters-summary')).toHaveTextContent(/Período \d{2}\/\d{2}\/\d{4} a \d{2}\/\d{2}\/\d{4} · Hospital: Todos · Setor: Todos/)
-    await user.click(screen.getByRole('button', { name: 'Alterar filtros' }))
-    expect(screen.getByRole('button', { name: 'Data inicial' })).toHaveFocus()
+    expect(screen.queryByText('Gerar relatório')).not.toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Conteúdo da exportação' })).toBeInTheDocument()
+    for (const name of ['Exportar Excel', 'Exportar CSV', 'Exportar PDF', 'Opções de exportação']) expect(screen.getByRole('button', { name })).toBeInTheDocument()
   })
 
   it('explica MTTA, MTTR e MTBF e mostra as severidades da disponibilidade', async () => {

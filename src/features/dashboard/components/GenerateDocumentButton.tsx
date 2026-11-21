@@ -11,10 +11,12 @@ interface Props {
   label: string
   body: Record<string, unknown>
   filename: string
+  /** Alinhamento do botão e das mensagens de estado: à direita (padrão) ou no início da linha. */
+  align?: 'end' | 'start'
 }
 
 /** Botão que gera um documento (PDF) pelo fluxo das exportações: gerando com Cancelar, baixado com "Baixar novamente", falha com "Tentar de novo". */
-export function GenerateDocumentButton({ label, body, filename }: Props) {
+export function GenerateDocumentButton({ label, body, filename, align = 'end' }: Props) {
   const flow = useGenerateDocument({ body, filename })
   const cancelRef = useRef<HTMLButtonElement>(null)
   const againRef = useRef<HTMLButtonElement>(null)
@@ -34,8 +36,8 @@ export function GenerateDocumentButton({ label, body, filename }: Props) {
   }
 
   return (
-    <div className="flex min-w-0 flex-col items-end gap-1.5">
-      <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className={`flex min-w-0 flex-col gap-1.5 ${align === 'start' ? 'items-start' : 'items-end'}`}>
+      <div className={`flex flex-wrap items-center gap-2 ${align === 'start' ? 'justify-start' : 'justify-end'}`}>
         <button ref={submitRef} type="button" disabled={busy} onClick={() => void flow.start()} className={primaryButton}>
           {busy ? <RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} /> : <FileDown aria-hidden="true" size={14} />}
           {busy ? 'Gerando…' : label}
