@@ -1,3 +1,4 @@
+import { plural } from '@/lib/plural'
 import { ClipboardPlus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -188,7 +189,7 @@ export function WorkOrdersPage() {
   return <AdminPageShell tabs={<WorkOrdersTabs />} title="Ordens de Trabalho" subtitle="Planejamento e acompanhamento da manutenção" action={<PageAction icon={ClipboardPlus} onClick={() => { resetForm(); setIsCreateOpen(true) }} collapseLabelOnMobile>Nova OT</PageAction>}>
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-text-secondary">{total} ordem(ns)</p>
+        <p className="text-xs text-text-secondary">{plural(total, 'ordem', 'ordens')}</p>
       </div>
 
       <FilterBar label="Filtros de ordens de trabalho">

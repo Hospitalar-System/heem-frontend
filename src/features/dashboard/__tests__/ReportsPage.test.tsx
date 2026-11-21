@@ -120,6 +120,21 @@ describe('ReportsPage', () => {
     expect(legend.getByText(/Severidades consideradas na disponibilidade: ALTA, CRITICA/)).toBeInTheDocument()
   })
 
+  it('conformidade mostra os níveis de risco com rótulo e acento (Alto, Médio, Baixo)', async () => {
+    vi.mocked(apiClient.get).mockImplementation(async (url) => {
+      if (url === '/relatorios/conformidade') return { data: [{ nivelRisco: 'ALTO', percentualConforme: 90, totalMedicoes: 5 }, { nivelRisco: 'MEDIO', percentualConforme: null, totalMedicoes: 0 }, { nivelRisco: 'BAIXO', percentualConforme: null, totalMedicoes: 0 }] } as never
+      if (url === '/relatorios/indicadores') return { data: indicatorsFixture } as never
+      if (url === '/relatorios/backlog') return { data: backlogFixture } as never
+      if (url === '/relatorios/top-equipamentos') return { data: topFixture } as never
+      return { data: [] } as never
+    })
+    render(<ReportsPage />, { wrapper: TestProviders })
+    expect(await screen.findByText('Médio')).toBeInTheDocument()
+    expect(screen.getByText('Alto')).toBeInTheDocument()
+    expect(screen.getByText('Baixo')).toBeInTheDocument()
+    expect(screen.queryByText('MEDIO')).not.toBeInTheDocument()
+  })
+
   it('mostra os KPIs de preventiva', async () => {
     render(<ReportsPage />, { wrapper: TestProviders })
     const section = within(await screen.findByRole('region', { name: 'Ordens de trabalho no período' }))

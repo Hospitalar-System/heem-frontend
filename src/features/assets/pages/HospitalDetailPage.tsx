@@ -36,7 +36,7 @@ function sectorActiveError(error: unknown, activating: boolean) {
     const count = response?.data?.equipamentosAtivos
     return typeof count === 'number'
       ? `Este setor tem ${count} equipamento${count === 1 ? '' : 's'} ativo${count === 1 ? '' : 's'}. Transfira ou desative os equipamentos antes.`
-      : 'Este setor tem equipamento(s) ativo(s). Transfira ou desative os equipamentos antes.'
+      : 'Este setor tem equipamentos ativos. Transfira ou desative os equipamentos antes.'
   }
   if (code === 'HOSPITAL_DESATIVADO') return 'O hospital deste setor está desativado. Reative o hospital antes de reativar o setor.'
   if (response?.status === 403) return 'Você não tem permissão para alterar a situação de setores.'
