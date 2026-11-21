@@ -105,9 +105,10 @@ describe('LandingPage', () => {
   it('alterna o tema pelo seletor', async () => {
     const user = userEvent.setup()
     renderLanding()
-    await user.click(screen.getByRole('button', { name: 'Selecionar tema' }))
-    await user.click(screen.getByRole('menuitemradio', { name: 'Claro' }))
+    await user.click(screen.getByRole('button', { name: 'Mudar para o tema claro' }))
     expect(document.documentElement).toHaveClass('light')
+    await user.click(screen.getByRole('button', { name: 'Mudar para o tema escuro' }))
+    expect(document.documentElement).toHaveClass('dark')
   })
 
   it('mostra a barra de progresso e a omite com prefers-reduced-motion', () => {

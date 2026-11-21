@@ -79,7 +79,7 @@ export function LandingLayout({ children, onAgendar }: PropsWithChildren<Landing
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2 lg:ml-0">
-            <ThemeSwitcher />
+            <ThemeSwitcher variant="landing" />
             <Link to={enter.to} className={`${landingButtonClasses.ghost} px-4`}>{enter.label}</Link>
             {onAgendar ? (
               <button type="button" onClick={() => onAgendar()} className={`${landingButtonClasses.primary} hidden px-4 sm:inline-flex`}>Agendar demonstração</button>

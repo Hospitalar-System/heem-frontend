@@ -198,7 +198,7 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('link', { name: 'x' })).toHaveAttribute('href', '/tickets/x')
   })
 
-  it('abre notificações indisponíveis e oferece os três modos de tema', async () => {
+  it('abre notificações indisponíveis e oferece o botão de alternar o tema', async () => {
     const user = userEvent.setup()
     setAuthSession('access-token', adminUser)
     renderDashboard()
@@ -207,9 +207,7 @@ describe('DashboardPage', () => {
     expect(screen.getByRole('dialog', { name: 'Notificações' })).toBeInTheDocument()
     expect(screen.getByText('Notificações indisponíveis')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Selecionar tema' }))
-    expect(screen.getByRole('menuitemradio', { name: 'Claro' })).toBeInTheDocument()
-    expect(screen.getByRole('menuitemradio', { name: 'Escuro' })).toBeInTheDocument()
-    expect(screen.getByRole('menuitemradio', { name: 'Automático' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Mudar para o tema (claro|escuro)$/ })).toBeInTheDocument()
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 })
