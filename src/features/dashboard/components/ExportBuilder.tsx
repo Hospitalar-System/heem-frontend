@@ -18,7 +18,7 @@ const radioLabel = 'flex min-h-9 cursor-pointer items-center justify-center gap-
 const fieldLabel = 'grid min-w-0 gap-1 text-xs text-text-secondary'
 const alertBox = 'flex flex-wrap items-center justify-between gap-3 rounded-md border border-danger bg-surface px-3 py-2 text-xs text-text-primary'
 const smallButton = 'rounded-md border border-border bg-surface px-3 py-1.5 font-medium outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary'
-const actionBase = 'inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50'
+const actionBase = 'inline-flex h-9 max-[479px]:h-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-semibold outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50'
 const actionSecondary = `${actionBase} border border-border bg-surface text-text-primary hover:bg-bg`
 const actionPrimary = `${actionBase} bg-primary text-bg-brand hover:bg-primary-hover`
 
@@ -76,6 +76,11 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
     else if (flow.phase === 'error') retryRef.current?.focus()
   }, [flow.phase])
 
+  // Ao abrir o popover, o foco vai para a primeira opção.
+  useEffect(() => {
+    if (menuOpen) document.getElementById(`${ids}-menu`)?.querySelector<HTMLElement>('input, button, [role="combobox"]')?.focus()
+  }, [menuOpen, ids])
+
   // Popover: fecha com Esc (devolvendo o foco ao botão) e ao clicar fora.
   useEffect(() => {
     if (!menuOpen) return
@@ -106,7 +111,7 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
 
   return (
     <div className="col-span-full grid gap-2">
-      <div role="group" aria-label="Exportar relatório" className="flex flex-wrap items-end justify-end gap-2">
+      <div className="relative flex flex-wrap items-end justify-end gap-2">
         <label className={`${fieldLabel} w-full min-[480px]:w-auto min-[480px]:min-w-44`}>
           <span>Conteúdo</span>
           <Select size="sm" aria-label="Conteúdo da exportação" value={conteudo} onChange={(next) => { setCampaignError(false); patch({ conteudo: next as ExportBuilderValues['conteudo'] }) }} options={visibleExportContents().map((value) => ({ value, label: exportContentLabels[value] }))} />
@@ -117,8 +122,10 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
             <Select size="sm" aria-label="Campanha" placeholder="Escolha a campanha" value={values.campanhaId} onChange={(next) => { setCampaignError(false); patch({ campanhaId: next }) }} aria-invalid={campaignError} aria-describedby={campaignError ? `${ids}-campanha-error` : undefined} options={(campaigns.data?.items ?? []).map((campaign) => ({ value: campaign.id, label: campaign.nome }))} />
           </label>
         )}
-        <div className="flex flex-wrap items-center gap-2">
-          {hasMenu && <div ref={menuRef} className="relative">
+        <div role="group" aria-label="Exportar" className="grid w-full gap-1 text-xs text-text-secondary min-[480px]:w-auto">
+          <span>Exportar</span>
+          <div className="flex items-center gap-2 max-[479px]:[&>*]:h-11">
+          {hasMenu && <div ref={menuRef}>
             <button ref={optionsButtonRef} type="button" aria-label="Opções de exportação" aria-haspopup="dialog" aria-expanded={menuOpen} aria-controls={`${ids}-menu`} onClick={() => setMenuOpen((open) => !open)} className={`${actionSecondary} w-9 px-0`}>
               <SlidersHorizontal aria-hidden="true" size={14} />
             </button>
@@ -141,7 +148,7 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
                   </label>)}
                 </div>
               </fieldset>}
-              {hasLayout && <p className="text-[11px] text-text-muted">Nível e orientação valem só para PDF; o padrão de orientação depende do conteúdo.</p>}
+              {hasLayout && <p className="text-[11px] text-text-secondary">Nível e orientação valem só para PDF; o padrão de orientação depende do conteúdo.</p>}
               {showOtFilters && <>
                 <label className={fieldLabel}>
                   <span>Tipo da OT</span>
@@ -157,6 +164,7 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
           <button type="button" aria-label="Exportar Excel" disabled={blocked} onClick={() => generate('xlsx')} className={actionSecondary}><FileSpreadsheet aria-hidden="true" size={14} /> Excel</button>
           <button type="button" aria-label="Exportar CSV" disabled={blocked} onClick={() => generate('csv')} className={actionSecondary}><Table2 aria-hidden="true" size={14} /> CSV</button>
           <button ref={pdfRef} type="button" aria-label="Exportar PDF" disabled={blocked} onClick={() => generate('pdf')} className={actionPrimary}><FileText aria-hidden="true" size={14} /> {busy ? 'Gerando…' : 'PDF'}</button>
+          </div>
         </div>
       </div>
       {campaignError && <p id={`${ids}-campanha-error`} role="alert" className="text-right text-xs text-danger">Escolha a campanha.</p>}

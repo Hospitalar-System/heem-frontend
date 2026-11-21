@@ -7,8 +7,9 @@ export const filterInputClass = 'h-9 w-full rounded-md border border-border bg-b
  * Grade responsiva de filtros: colunas iguais (mín. 11rem), quebra sozinha em 360/768/1280 px.
  * Todos os campos devem usar `size="sm"` (altura 36px) para ficarem alinhados.
  */
-export function FilterBar({ label, children, className = '' }: { label: string; children: ReactNode; className?: string }) {
-  return <section aria-label={label} className={`grid grid-cols-[repeat(auto-fill,minmax(min(100%,11rem),1fr))] items-center gap-2 ${className}`}>{children}</section>
+export function FilterBar({ label, children, className = '', dense = false }: { label: string; children: ReactNode; className?: string; /** Colunas a partir de 8rem: 2 colunas em 390 px (telas com muitos filtros). */ dense?: boolean }) {
+  const columns = dense ? 'grid-cols-[repeat(auto-fill,minmax(min(100%,8rem),1fr))] sm:grid-cols-[repeat(auto-fill,minmax(min(100%,11rem),1fr))]' : 'grid-cols-[repeat(auto-fill,minmax(min(100%,11rem),1fr))]'
+  return <section aria-label={label} className={`grid ${columns} items-center gap-2 ${className}`}>{children}</section>
 }
 
 /** Campo largo (busca): ocupa duas colunas quando houver espaço. */
