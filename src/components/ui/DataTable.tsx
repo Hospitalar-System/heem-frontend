@@ -1,6 +1,8 @@
 import type { HTMLAttributes, KeyboardEvent, ReactNode } from 'react'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { Pagination, type PaginationProps } from './Pagination'
+import { ColumnsMenu } from './DataTableColumns'
+import { useColumnVisibility, type ToggleableColumn } from './useColumnVisibility'
 import { RowActionsMenu, type RowAction } from './RowActionsMenu'
 
 export type SortDirection = 'asc' | 'desc'
@@ -24,6 +26,12 @@ export type DataColumn<T> = {
   className?: string
   /** Classes do cabeçalho (ex.: `uppercase`). */
   headerClassName?: string
+  /** Com `storageKey` na tabela: coluna que a pessoa não pode esconder (código/nome). Colunas sem título (ações) também são sempre visíveis. */
+  essential?: boolean
+  /** Com `storageKey`: começa escondida; a pessoa pode ligá-la em "Colunas". */
+  defaultHidden?: boolean
+  /** Nome da coluna no menu "Colunas" (padrão: o cabeçalho, quando é texto). */
+  menuLabel?: string
 }
 
 export type DataTableEmpty = {
@@ -64,6 +72,8 @@ export type DataTableProps<T> = {
   pagination?: PaginationProps
   /** Largura mínima da tabela antes de rolar na horizontal (ex.: '900px'). */
   minWidth?: string
+  /** Liga o menu "Colunas" (escolha lembrada neste navegador sob esta chave, ex.: 'chamados'). */
+  storageKey?: string
   /** Altura das linhas (padrão `h-12`). */
   rowHeightClass?: string
   className?: string
@@ -79,9 +89,17 @@ function cellClass<T>(column: DataColumn<T>) {
 
 /** Tabela padrão das listas (formato da lista de Categorias): colunas, selos e ações configuráveis. */
 export function DataTable<T>({
-  columns, rows, getRowId, label, caption, onRowClick, rowActions, rowLabel, rowActionsHeader = 'Ações', selection, rowClassName, rowProps,
-  sort, onSortChange, isLoading = false, loadingLabel, loadingRows = 6, empty, error, pagination, minWidth = '720px', rowHeightClass = 'h-12', className = '',
+  rows, getRowId, label, caption, onRowClick, rowActions, rowLabel, rowActionsHeader = 'Ações', selection, rowClassName, rowProps,
+  sort, onSortChange, isLoading = false, loadingLabel, loadingRows = 6, empty, error, pagination, minWidth = '720px', rowHeightClass = 'h-12', className = '', storageKey, columns: allColumns,
 }: DataTableProps<T>) {
+  const toggleable = allColumns.map<ToggleableColumn>((column) => ({
+    key: column.key,
+    label: column.menuLabel ?? (typeof column.header === 'string' && column.header ? column.header : column.srHeader ?? column.key),
+    essential: column.essential || column.header === '',
+    defaultHidden: column.defaultHidden,
+  }))
+  const visibility = useColumnVisibility(storageKey, toggleable)
+  const columns = storageKey ? allColumns.filter((column) => !visibility.hidden.has(column.key)) : allColumns
   if (error) {
     return <section role="alert" className={`rounded-lg border border-danger/40 bg-surface p-5 text-sm text-text-primary ${className}`}>
       <p>{error.message}</p>
@@ -95,9 +113,9 @@ export function DataTable<T>({
   if (isLoading) {
     return <div aria-label={loadingLabel ?? `Carregando ${label.toLocaleLowerCase('pt-BR')}`} aria-busy="true" className={`${shell} ${className}`}>
       <table aria-hidden="true" className="w-full border-collapse text-left" style={{ minWidth }}>
-        <thead><tr className="table-head h-12 text-[11px]">{columns.map((column) => <th key={column.key} scope="col" style={{ width: column.width }} className={`px-4 font-medium ${column.headerClassName ?? ''} ${cellClass(column)}`}>{column.header}</th>)}{hasActions ? <th scope="col" className="w-12 px-4 font-medium" /> : null}</tr></thead>
+        <thead><tr className="table-head h-12 text-[11px]">{columns.map((column) => <th key={column.key} scope="col" style={{ width: column.width }} className={`px-3 font-medium ${column.headerClassName ?? ''} ${cellClass(column)}`}>{column.header}</th>)}{hasActions ? <th scope="col" className="w-12 px-3 font-medium" /> : null}</tr></thead>
         <tbody>{Array.from({ length: loadingRows }, (_, row) => <tr key={row} data-skeleton-row className={`row-idle row-divider ${rowHeightClass}`}>
-          {Array.from({ length: columnCount }, (__, cell) => <td key={cell} className={`px-4 ${columns[cell] ? cellClass(columns[cell]) : ''}`}><div className="h-4 w-3/4 animate-pulse rounded bg-bg" /></td>)}
+          {Array.from({ length: columnCount }, (__, cell) => <td key={cell} className={`px-3 ${columns[cell] ? cellClass(columns[cell]) : ''}`}><div className="h-4 w-3/4 animate-pulse rounded bg-bg" /></td>)}
         </tr>)}</tbody>
       </table>
     </div>
@@ -124,6 +142,7 @@ export function DataTable<T>({
   }
 
   return <div className={className}>
+    {storageKey ? <div className="mb-1.5 flex justify-end"><ColumnsMenu columns={toggleable} hidden={visibility.hidden} onToggle={visibility.toggle} onReset={visibility.reset} isDefault={visibility.isDefault} /></div> : null}
     <div className={shell}>
       <table aria-label={label} className="w-full border-collapse text-left" style={{ minWidth }}>
         {caption ? <caption className="sr-only">{caption}</caption> : null}
@@ -132,13 +151,13 @@ export function DataTable<T>({
             const active = sort?.key === column.key ? sort : null
             const ariaSort = column.sortable ? (active ? (active.direction === 'asc' ? 'ascending' : 'descending') : 'none') : undefined
             const Icon = active ? (active.direction === 'asc' ? ArrowUp : ArrowDown) : ChevronsUpDown
-            return <th key={column.key} scope="col" aria-sort={ariaSort} style={{ width: column.width }} className={`px-4 font-medium ${column.headerClassName ?? ''} ${cellClass(column)}`}>
+            return <th key={column.key} scope="col" aria-sort={ariaSort} style={{ width: column.width }} className={`px-3 font-medium ${column.headerClassName ?? ''} ${cellClass(column)}`}>
               {column.sortable
                 ? <button type="button" onClick={() => onSortChange?.(column.key)} className="inline-flex items-center gap-1 rounded font-medium outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-primary">{column.header}<Icon aria-hidden="true" size={12} /></button>
                 : column.header || (column.srHeader ? <span className="sr-only">{column.srHeader}</span> : null)}
             </th>
           })}
-          {hasActions ? <th scope="col" className="w-12 px-4 font-medium"><span className="sr-only">{rowActionsHeader}</span></th> : null}
+          {hasActions ? <th scope="col" className="w-12 px-3 font-medium"><span className="sr-only">{rowActionsHeader}</span></th> : null}
         </tr></thead>
         <tbody>{rows.map((row) => {
           const id = getRowId(row)
@@ -153,8 +172,8 @@ export function DataTable<T>({
             onClick={onRowClick ? (event) => { if (!(event.target as HTMLElement).closest('a,button,input,select,textarea,[role="menu"]')) onRowClick(row) } : undefined}
             onKeyDown={onRowClick ? (event) => onKeyDown(event, row) : undefined}
           >
-            {columns.map((column) => <td key={column.key} className={`px-4 ${cellClass(column)}`}>{column.cell(row)}</td>)}
-            {rowActions ? <td className="px-4"><div className="flex justify-end">{(() => { const actions = rowActions(row); return actions.length ? <RowActionsMenu label={rowLabel ? rowLabel(row) : id} actions={actions} /> : null })()}</div></td> : null}
+            {columns.map((column) => <td key={column.key} className={`px-3 ${cellClass(column)}`}>{column.cell(row)}</td>)}
+            {rowActions ? <td className="px-3"><div className="flex justify-end">{(() => { const actions = rowActions(row); return actions.length ? <RowActionsMenu label={rowLabel ? rowLabel(row) : id} actions={actions} /> : null })()}</div></td> : null}
           </tr>
         })}</tbody>
       </table>

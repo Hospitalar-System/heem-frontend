@@ -147,25 +147,34 @@ export function TicketsPage() {
   }
 
   const ticketColumns: DataColumn<Ticket>[] = [
-    { key: 'chamado', header: 'Chamado', className: 'min-w-[230px] max-w-[320px]', cell: (ticket) => <>
+    { key: 'chamado', header: 'Chamado', essential: true, className: 'min-w-[200px] max-w-[300px]', cell: (ticket) => <>
       <Link to={`/tickets/${ticket.id}`} aria-label={`Abrir chamado ${ticketCode(ticket)}`} className="whitespace-nowrap text-sm font-semibold text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">Chamado {ticketCode(ticket)}</Link>
-      <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-secondary">{ticket.descricao || 'Sem descrição'}</p>
+      <p title={ticket.descricao || undefined} className="mt-0.5 line-clamp-2 text-xs leading-5 text-text-secondary">{ticket.descricao || 'Sem descrição'}</p>
     </> },
     { key: 'severidade', header: 'Severidade', cell: (ticket) => <StatusBadge tone={severityTone(ticket.severidade)}>{severityText[ticket.severidade] ?? 'Severidade não informada'}</StatusBadge> },
     { key: 'status', header: 'Status', cell: (ticket) => { const status = canonicalStatus(ticket.status); return <StatusBadge tone="neutral">{statusText[status] ?? ticket.status}</StatusBadge> } },
     { key: 'sla', header: 'SLA', cell: (ticket) => <TicketSlaBadge status={ticket.slaStatus} /> },
-    { key: 'equipamento', header: 'Equipamento', cell: (ticket) => { const equip = equipmentById.get(ticket.equipamentoId); return <span className="text-sm font-medium text-text-primary">{equip ? `${equip.codigo} · ${equip.nome}` : 'Equipamento —'}</span> } },
-    { key: 'local', header: 'Local', cell: (ticket) => { const hospital = hospitalById.get(ticket.hospitalId); const sector = sectorById.get(ticket.setorId); return <span className="text-[11px] text-text-muted">{hospital?.nome ?? 'Hospital —'}{sector?.nome ? ` · ${sector.nome}` : ''}</span> } },
-    { key: 'aberto', header: 'Aberto em', cell: (ticket) => <time dateTime={ticket.abertoEm} className="text-[11px] text-text-muted">{relativeTime(ticket.abertoEm)} · {new Date(ticket.abertoEm).toLocaleString('pt-BR')}</time> },
+    { key: 'equipamento', header: 'Equipamento', menuLabel: 'Equipamento e local', className: 'max-w-[220px]', cell: (ticket) => {
+      const equip = equipmentById.get(ticket.equipamentoId)
+      const hospital = hospitalById.get(ticket.hospitalId)
+      const sector = sectorById.get(ticket.setorId)
+      const equipText = equip ? `${equip.codigo} · ${equip.nome}` : 'Equipamento —'
+      const localText = `${hospital?.nome ?? 'Hospital —'}${sector?.nome ? ` · ${sector.nome}` : ''}`
+      return <>
+        <span title={equipText} className="block truncate text-xs font-medium text-text-primary">{equipText}</span>
+        <span title={localText} className="block truncate text-[11px] text-text-muted">{localText}</span>
+      </>
+    } },
+    { key: 'aberto', header: 'Aberto em', className: 'whitespace-nowrap', cell: (ticket) => <time dateTime={ticket.abertoEm} title={new Date(ticket.abertoEm).toLocaleString('pt-BR')} className="block text-[11px] tabular-nums text-text-muted"><span className="block text-xs text-text-secondary">{relativeTime(ticket.abertoEm)}</span>{new Date(ticket.abertoEm).toLocaleDateString('pt-BR')}</time> },
     { key: 'acoes', header: '', srHeader: 'Ações', align: 'right', cell: (ticket) => {
       const status = canonicalStatus(ticket.status)
       const canGenerate = status === 'ABERTO' || status === 'AGUARDANDO_PECA'
-      // Duas posições fixas: "Detalhes" e "Gerar OT corretiva" têm a mesma largura em todas as linhas.
-      return <div className="flex items-center justify-end gap-2">
+      // Duas posições fixas e compactas: "Gerar OT" e o ícone de detalhes ficam alinhados em todas as linhas.
+      return <div className="flex items-center justify-end gap-1.5">
         {canGenerate
-          ? <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} className="inline-flex h-9 w-[10.5rem] items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT corretiva</button>
-          : <span aria-hidden="true" className="inline-block h-9 w-[10.5rem]" />}
-        <Link to={`/tickets/${ticket.id}`} className="inline-flex h-9 w-24 items-center justify-center gap-1 whitespace-nowrap rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Detalhes <ArrowUpRight aria-hidden="true" size={13} /></Link>
+          ? <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} aria-label="Gerar OT corretiva" title="Gerar OT corretiva" className="inline-flex h-8 w-24 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-2 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT</button>
+          : <span aria-hidden="true" className="inline-block h-8 w-24" />}
+        <Link to={`/tickets/${ticket.id}`} aria-label={`Detalhes do chamado ${ticketCode(ticket)}`} title="Detalhes" className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ArrowUpRight aria-hidden="true" size={14} /></Link>
       </div>
     } },
   ]
@@ -207,7 +216,8 @@ export function TicketsPage() {
         rows={visibleTickets}
         getRowId={(ticket) => ticket.id}
         rowHeightClass="h-16"
-        minWidth="1100px"
+        minWidth="820px"
+        storageKey="chamados"
         rowClassName={(ticket) => ticket.severidade === 'CRITICA' ? 'shadow-[inset_4px_0_0_var(--danger)]' : ticket.severidade === 'ALTA' ? 'shadow-[inset_4px_0_0_var(--warning)]' : ''}
         isLoading={tickets.isLoading}
         loadingLabel="Carregando chamados"
