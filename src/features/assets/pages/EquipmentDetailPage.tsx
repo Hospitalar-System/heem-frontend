@@ -140,6 +140,8 @@ function ScrollableTabs({ activeTab, children }: { activeTab: string; children: 
     if (!list || typeof ResizeObserver === 'undefined') return undefined
     const observer = new ResizeObserver(update)
     observer.observe(list)
+    Array.from(list.children).forEach((child) => observer.observe(child))
+    void document.fonts?.ready.then(update)
     return () => observer.disconnect()
   }, [update])
   useEffect(() => {
