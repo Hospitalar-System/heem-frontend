@@ -62,7 +62,7 @@ export function DashboardPage() {
                 placeholder="Buscar equipamento, OT, chamado…"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                className="h-full w-full rounded-md border border-border bg-surface pl-8 pr-3 text-[11px] text-text-primary outline-none placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="h-full w-full rounded-md border border-border bg-surface pl-8 pr-3 text-[13px] text-text-primary outline-none placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </label>
             <NotificationsPopover />

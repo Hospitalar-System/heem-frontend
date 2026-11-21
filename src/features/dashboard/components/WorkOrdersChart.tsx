@@ -19,7 +19,7 @@ export function WorkOrdersChart({ data }: { data: DashboardSummary['workOrdersBy
       <div role="img" aria-label={`Ordens de trabalho por status: ${data.map(({ label, count }) => `${label}: ${count}`).join(', ')}`} className="h-[190px] xl:h-[224px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 20, right: 2, left: 2, bottom: 0 }}>
-            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} interval={0} />
+            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} interval={0} />
             <Tooltip {...chartTooltipProps} formatter={(value) => [value, 'Ordens']} />
             <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={108}>
               <LabelList dataKey="count" position="top" fill="var(--text-primary)" fontSize={10} fontWeight={600} />
