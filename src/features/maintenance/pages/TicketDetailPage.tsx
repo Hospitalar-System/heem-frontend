@@ -15,6 +15,7 @@ import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import { formatSlaDeadline } from '../utils/sla'
 import { ticketCauseCategories, ticketCauseLabels, type TicketCauseCategory, type TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
+import { ticketCode } from '../utils/ticket-code'
 import { Badge, type BadgeVariant } from '@/components/ui/Badge'
 
 const fieldClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
@@ -204,7 +205,7 @@ export function TicketDetailPage() {
       <section className="rounded-lg border border-border bg-surface p-5 xl:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2"><p className="text-xs font-medium text-text-muted">Chamado {ticket.data.id}</p><Badge variant={severityTone(ticket.data.severidade)}>{severityLabel[ticket.data.severidade] ?? 'Severidade não informada'}</Badge><Badge variant={statusTone(normalizedStatus)}>{statusLabel[normalizedStatus] ?? ticket.data.status}</Badge></div>
+            <div className="flex flex-wrap items-center gap-2"><p className="text-xs font-medium text-text-muted">Chamado {ticketCode(ticket.data)}</p><Badge variant={severityTone(ticket.data.severidade)}>{severityLabel[ticket.data.severidade] ?? 'Severidade não informada'}</Badge><Badge variant={statusTone(normalizedStatus)}>{statusLabel[normalizedStatus] ?? ticket.data.status}</Badge></div>
             <h2 className="mt-3 text-xl font-semibold text-text-primary">{equipment.data?.nome ?? 'Chamado de emergência'}</h2>
             <p className="mt-1 text-sm text-text-secondary">{equipment.data?.codigo ?? ticket.data.equipamentoId}</p>
           </div>
@@ -273,7 +274,7 @@ export function TicketDetailPage() {
       </section>
     </div>
 
-    {isCreateOpen && <Modal title="Gerar OT corretiva" description={`Chamado ${ticket.data.id}`} busy={createWorkOrder.isPending} onClose={() => setIsCreateOpen(false)}>
+    {isCreateOpen && <Modal title="Gerar OT corretiva" description={`Chamado ${ticketCode(ticket.data)}`} busy={createWorkOrder.isPending} onClose={() => setIsCreateOpen(false)}>
       <form className="space-y-4" onSubmit={(event) => void submitCorrectiveWorkOrder(event)}>
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Código da OT<input autoFocus required maxLength={40} value={codigo} onChange={(event) => setCodigo(event.target.value)} placeholder="Ex.: OT-2042" className={fieldClass} /></label>
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<Select required value={tecnicoId} onChange={setTecnicoId} placeholder="Selecione um técnico" options={activeTechnicians.map((user) => ({ value: user.id, label: user.nome }))} /></label>
@@ -283,14 +284,14 @@ export function TicketDetailPage() {
         <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" disabled={createWorkOrder.isPending} onClick={() => setIsCreateOpen(false)} className="h-9 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg">Cancelar</button><button type="submit" disabled={!codigo.trim() || !tecnicoId || createWorkOrder.isPending} className="h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{createWorkOrder.isPending ? 'Criando…' : 'Criar OT'}</button></div>
       </form>
     </Modal>}
-    {dialog === 'assign' && <Modal title="Atribuir responsável" description={`Chamado ${ticket.data.id}`} busy={assignResponsible.isPending} onClose={closeDialog}>
+    {dialog === 'assign' && <Modal title="Atribuir responsável" description={`Chamado ${ticketCode(ticket.data)}`} busy={assignResponsible.isPending} onClose={closeDialog}>
       <form className="space-y-4" onSubmit={(event) => void submitAssign(event)}>
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<Select required value={responsibleId} onChange={setResponsibleId} placeholder="Selecione um técnico" options={activeTechnicians.map((user) => ({ value: user.id, label: user.nome }))} /></label>
         {!users.isLoading && !hospitalLinks.some((query) => query.isLoading) && activeTechnicians.length === 0 && <p role="status" className="text-xs text-warning">Não há técnicos ativos vinculados ao hospital deste chamado.</p>}
         <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Atribuir" pendingLabel="Atribuindo…" disabled={!responsibleId} />
       </form>
     </Modal>}
-    {dialog === 'resolve' && <Modal title="Resolver chamado" description={`Chamado ${ticket.data.id}`} busy={changeStatus.isPending} onClose={closeDialog}>
+    {dialog === 'resolve' && <Modal title="Resolver chamado" description={`Chamado ${ticketCode(ticket.data)}`} busy={changeStatus.isPending} onClose={closeDialog}>
       <form className="space-y-4" onSubmit={(event) => void submitResolve(event)}>
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Solução aplicada<textarea autoFocus required maxLength={4000} value={solucao} onChange={(event) => setSolucao(event.target.value)} placeholder="Descreva o que foi feito para resolver" className={textareaClass} /></label>
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Causa (opcional)<Select value={causa} onChange={setCausa} placeholder="Não informada" options={[{ value: '', label: 'Não informada' }, ...ticketCauseCategories.map((value) => ({ value, label: ticketCauseLabels[value] }))]} /></label>
@@ -303,7 +304,7 @@ export function TicketDetailPage() {
         <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Confirmar cancelamento" pendingLabel="Cancelando…" disabled={!motivo.trim()} danger />
       </form>
     </Modal>}
-    {dialog === 'reopen' && <Modal title="Reabrir chamado" description={`Chamado ${ticket.data.id}`} busy={reopenTicket.isPending} onClose={closeDialog}>
+    {dialog === 'reopen' && <Modal title="Reabrir chamado" description={`Chamado ${ticketCode(ticket.data)}`} busy={reopenTicket.isPending} onClose={closeDialog}>
       <form className="space-y-4" onSubmit={(event) => void submitReopen(event)}>
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Motivo da reabertura<textarea autoFocus required maxLength={1000} value={motivo} onChange={(event) => setMotivo(event.target.value)} className={textareaClass} /></label>
         <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Reabrir chamado" pendingLabel="Reabrindo…" disabled={!motivo.trim()} />

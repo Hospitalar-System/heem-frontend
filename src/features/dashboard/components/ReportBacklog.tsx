@@ -1,4 +1,7 @@
 import { useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import { backlogTicketsPath } from '@/features/maintenance/utils/ticket-filters'
+import type { TicketAge } from '@/features/maintenance/utils/ticket-filters'
 import type { BacklogReport, BacklogSeverity } from '../api/reports'
 import { formatCount, useSortedRows } from './report-format'
 import { SectionEmpty, SortableHeader } from './report-ui'
@@ -6,9 +9,17 @@ import { SectionEmpty, SortableHeader } from './report-ui'
 type BacklogSortKey = 'severidade' | 'ate24h' | 'de1a3Dias' | 'maisDe3Dias' | 'total'
 
 const severityLabels: Record<string, string> = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta', CRITICA: 'Crítica' }
+const bands: { key: 'ate24h' | 'de1a3Dias' | 'maisDe3Dias'; idade: TicketAge; label: string }[] = [
+  { key: 'ate24h', idade: 'ate24h', label: 'até 24 h' },
+  { key: 'de1a3Dias', idade: 'de1a3dias', label: '1 a 3 dias' },
+  { key: 'maisDe3Dias', idade: 'maisde3dias', label: 'mais de 3 dias' },
+]
 const severityRank: Record<string, number> = { BAIXA: 0, MEDIA: 1, ALTA: 2, CRITICA: 3 }
 
-export function ReportBacklog({ backlog }: { backlog: BacklogReport }) {
+const cellLink = 'block rounded px-1 py-0.5 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary'
+
+/** Backlog por severidade e idade; severidade, faixas e total levam à lista de chamados já filtrada (mesmo hospital e setor). */
+export function ReportBacklog({ backlog, hospitalId, setorId }: { backlog: BacklogReport; hospitalId?: string; setorId?: string }) {
   const getValue = useCallback((row: BacklogSeverity, key: BacklogSortKey) => key === 'severidade' ? severityRank[row.severidade] ?? -1 : row[key], [])
   const { sorted, sort, toggle } = useSortedRows(backlog.porSeveridade, getValue, { key: 'severidade', direction: 'desc' })
   return (
@@ -33,11 +44,9 @@ export function ReportBacklog({ backlog }: { backlog: BacklogReport }) {
             <tbody>
               {sorted.map((row) => (
                 <tr key={row.severidade} className="row-divider">
-                  <th scope="row" className="px-4 py-2 text-left font-medium text-text-primary">{severityLabels[row.severidade] ?? row.severidade}</th>
-                  <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{formatCount(row.ate24h)}</td>
-                  <td className="px-4 py-2 text-right tabular-nums text-text-secondary">{formatCount(row.de1a3Dias)}</td>
-                  <td className={`px-4 py-2 text-right tabular-nums ${row.maisDe3Dias > 0 ? 'font-semibold text-danger' : 'text-text-secondary'}`}>{formatCount(row.maisDe3Dias)}</td>
-                  <td className="px-4 py-2 text-right font-semibold tabular-nums text-text-primary">{formatCount(row.total)}</td>
+                  <th scope="row" className="px-3 py-1.5 text-left font-medium text-text-primary"><Link to={backlogTicketsPath({ severidade: row.severidade, hospitalId, setorId })} className={cellLink} aria-label={`Ver chamados pendentes de severidade ${severityLabels[row.severidade] ?? row.severidade}`}>{severityLabels[row.severidade] ?? row.severidade}</Link></th>
+                  {bands.map(({ key, idade, label }) => <td key={key} className={`px-3 py-1.5 text-right tabular-nums ${key === 'maisDe3Dias' && row[key] > 0 ? 'font-semibold text-danger' : 'text-text-secondary'}`}><Link to={backlogTicketsPath({ severidade: row.severidade, idade, hospitalId, setorId })} className={cellLink} aria-label={`Ver ${formatCount(row[key])} chamados ${severityLabels[row.severidade] ?? row.severidade} com ${label}`}>{formatCount(row[key])}</Link></td>)}
+                  <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-text-primary"><Link to={backlogTicketsPath({ severidade: row.severidade, hospitalId, setorId })} className={cellLink} aria-label={`Ver ${formatCount(row.total)} chamados pendentes de severidade ${severityLabels[row.severidade] ?? row.severidade}`}>{formatCount(row.total)}</Link></td>
                 </tr>
               ))}
             </tbody>
