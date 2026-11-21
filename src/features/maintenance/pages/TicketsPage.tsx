@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowUpRight, ClipboardPlus, Search } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, ClipboardPlus, Search, X } from 'lucide-react'
 import { useMemo, useState, useSyncExternalStore } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -14,12 +14,15 @@ import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import type { Ticket, TicketSeverity, TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
 import { FilterBar } from '@/components/ui/FilterBar'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Pagination } from '@/components/ui/Pagination'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
 import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 import { DEFAULT_TICKET_SORT, orderingErrorMessage, ticketSortChoicesFor, ticketSortFromUrl } from '../utils/ordering'
 import { useOrderingFallback } from '../utils/useOrderingFallback'
+import { ticketCode } from '../utils/ticket-code'
+import { ageLabels, parseAge, parseSituation } from '../utils/ticket-filters'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const severityText: Record<string, string> = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }
@@ -55,11 +58,23 @@ export function TicketsPage() {
   const pagination = usePaginationParams()
   const statusFilter = searchParams.get('status') ?? ''
   const severityFilter = searchParams.get('severidade') ?? ''
+  const hospitalFilter = searchParams.get('hospitalId') ?? ''
+  const sectorFilter = searchParams.get('setorId') ?? ''
+  const sinceFilter = searchParams.get('abertoDe') ?? ''
+  const untilFilter = searchParams.get('abertoAte') ?? ''
+  const situationFilter = parseSituation(searchParams.get('situacao'))
+  const ageFilter = parseAge(searchParams.get('idade'))
+  const invalidDates = Boolean(sinceFilter && untilFilter && sinceFilter > untilFilter)
   const sortChoices = useMemo(() => ticketSortChoicesFor(auth.user?.roles ?? []), [auth.user?.roles])
   const sortValue = ticketSortFromUrl(searchParams.get('ordenar'), searchParams.get('direcao'), sortChoices)
   const sortChoice = sortChoices.find((choice) => choice.value === sortValue) ?? sortChoices[0]
-  // Status e ordem vão para o servidor; busca e severidade (que o backend não filtra) valem para a página carregada.
-  const tickets = useTicketsPage({ ...pagination.apiParams, status: statusFilter || undefined, ordenar: sortChoice.field, direcao: sortChoice.direction })
+  // Status, severidade, local, datas, pendentes, idade e ordem vão para o servidor; só a busca vale para a página carregada.
+  const tickets = useTicketsPage({
+    ...pagination.apiParams, status: statusFilter || undefined, severidade: severityFilter || undefined,
+    hospitalId: hospitalFilter || undefined, setorId: sectorFilter || undefined,
+    abertoDe: sinceFilter || undefined, abertoAte: invalidDates ? undefined : untilFilter || undefined,
+    situacao: situationFilter, idade: ageFilter, ordenar: sortChoice.field, direcao: sortChoice.direction,
+  })
   const orderingFallback = useOrderingFallback(
     tickets.error, sortValue !== DEFAULT_TICKET_SORT, () => pagination.setFilters({ ordenar: undefined, direcao: undefined }), sortValue,
   )
@@ -88,21 +103,29 @@ export function TicketsPage() {
   const visibleTickets = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('pt-BR')
     return (tickets.data?.items ?? [])
-      .filter((ticket) => !severityFilter || ticket.severidade === severityFilter)
       .filter((ticket) => {
         if (!term) return true
         const equip = equipmentById.get(ticket.equipamentoId)
         const hospital = hospitalById.get(ticket.hospitalId)
         const sector = sectorById.get(ticket.setorId)
-        return [ticket.id, ticket.descricao, equip?.codigo, equip?.nome, hospital?.nome, sector?.nome]
+        return [ticket.codigo, ticket.id, ticket.descricao, equip?.codigo, equip?.nome, hospital?.nome, sector?.nome]
           .some((value) => value?.toLocaleLowerCase('pt-BR').includes(term))
       })
-  }, [equipmentById, hospitalById, search, sectorById, severityFilter, tickets.data])
+  }, [equipmentById, hospitalById, search, sectorById, tickets.data])
 
   const total = tickets.data?.total ?? 0
   usePageClamp(pagination, tickets.data?.total, !tickets.isPlaceholderData)
   const urgentOpenCount = urgent.data ?? 0
-  const filtersActive = Boolean(search || statusFilter || severityFilter)
+  const serverFilters = [
+    statusFilter && { key: 'status', label: `Status: ${statusText[statusFilter] ?? statusFilter}` },
+    severityFilter && { key: 'severidade', label: `Severidade: ${severityText[severityFilter] ?? severityFilter}` },
+    hospitalFilter && { key: 'hospitalId', label: `Hospital: ${hospitalById.get(hospitalFilter)?.nome ?? 'selecionado'}` },
+    sectorFilter && { key: 'setorId', label: `Setor: ${sectorById.get(sectorFilter)?.nome ?? 'selecionado'}` },
+    situationFilter && { key: 'situacao', label: 'Somente pendentes' },
+    ageFilter && { key: 'idade', label: `Idade: ${ageLabels[ageFilter]}` },
+  ].filter((item): item is { key: string; label: string } => Boolean(item))
+  const filtersActive = Boolean(search || serverFilters.length || sinceFilter || untilFilter)
+  const clearAll = () => { setSearch(''); pagination.setFilters({ status: undefined, severidade: undefined, hospitalId: undefined, setorId: undefined, abertoDe: undefined, abertoAte: undefined, situacao: undefined, idade: undefined }) }
   const eligibleTechnicians = selectedTicket
     ? technicians.filter((technician) => technician.hospitalId === selectedTicket.hospitalId)
     : []
@@ -122,8 +145,8 @@ export function TicketsPage() {
   }
 
   const ticketColumns: DataColumn<Ticket>[] = [
-    { key: 'chamado', header: 'Chamado', className: 'max-w-[320px]', cell: (ticket) => <>
-      <Link to={`/tickets/${ticket.id}`} aria-label={`Abrir chamado ${ticket.id}`} className="text-sm font-semibold text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">Chamado {ticket.id.slice(0, 8)}</Link>
+    { key: 'chamado', header: 'Chamado', className: 'min-w-[260px] max-w-[380px]', cell: (ticket) => <>
+      <Link to={`/tickets/${ticket.id}`} aria-label={`Abrir chamado ${ticketCode(ticket)}`} className="whitespace-nowrap text-sm font-semibold text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">Chamado {ticketCode(ticket)}</Link>
       <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-secondary">{ticket.descricao || 'Sem descrição'}</p>
     </> },
     { key: 'severidade', header: 'Severidade', cell: (ticket) => <StatusBadge tone={severityTone(ticket.severidade)}>{severityText[ticket.severidade] ?? 'Severidade não informada'}</StatusBadge> },
@@ -135,9 +158,12 @@ export function TicketsPage() {
     { key: 'acoes', header: '', srHeader: 'Ações', align: 'right', cell: (ticket) => {
       const status = canonicalStatus(ticket.status)
       const canGenerate = status === 'ABERTO' || status === 'AGUARDANDO_PECA'
+      // Duas posições fixas: "Detalhes" e "Gerar OT corretiva" têm a mesma largura em todas as linhas.
       return <div className="flex items-center justify-end gap-2">
-        <Link to={`/tickets/${ticket.id}`} className="inline-flex h-9 items-center gap-1 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Detalhes <ArrowUpRight aria-hidden="true" size={13} /></Link>
-        {canGenerate && <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT corretiva</button>}
+        {canGenerate
+          ? <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} className="inline-flex h-9 w-44 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT corretiva</button>
+          : <span aria-hidden="true" className="inline-block h-9 w-44" />}
+        <Link to={`/tickets/${ticket.id}`} className="inline-flex h-9 w-28 items-center justify-center gap-1 whitespace-nowrap rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Detalhes <ArrowUpRight aria-hidden="true" size={13} /></Link>
       </div>
     } },
   ]
@@ -155,8 +181,18 @@ export function TicketsPage() {
         </label>
         <label className="min-w-0"><span className="sr-only">Filtrar por status</span><Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={(next) => pagination.setFilters({ status: next })} options={[{ value: '', label: 'Todos os status' }, { value: 'ABERTO', label: 'Aberto' }, { value: 'EM_ANDAMENTO', label: 'Em andamento' }, { value: 'AGUARDANDO_PECA', label: 'Aguardando peça' }, { value: 'RESOLVIDO', label: 'Resolvido' }, { value: 'CANCELADO', label: 'Cancelado' }]} /></label>
         <label className="min-w-0"><span className="sr-only">Ordenar chamados</span><Select size="sm" aria-label="Ordenar chamados" value={sortValue} onChange={(next) => { orderingFallback.dismiss(); const [ordenar, direcao] = next.split(':'); pagination.setFilters(next === DEFAULT_TICKET_SORT ? { ordenar: undefined, direcao: undefined } : { ordenar, direcao }) }} options={sortChoices.map(({ value, label }) => ({ value, label }))} /></label>
+        <label className="grid min-w-0 gap-1 text-xs text-text-secondary"><span>Desde</span><DatePicker size="sm" aria-label="Aberto desde" value={sinceFilter} max={untilFilter || undefined} onChange={(next) => pagination.setFilters({ abertoDe: next || undefined })} /></label>
+        <label className="grid min-w-0 gap-1 text-xs text-text-secondary"><span>Até</span><DatePicker size="sm" aria-label="Aberto até" value={untilFilter} min={sinceFilter || undefined} onChange={(next) => pagination.setFilters({ abertoAte: next || undefined })} /></label>
         <label className="min-w-0"><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={(next) => pagination.setFilters({ severidade: next })} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
       </FilterBar>
+
+      {(serverFilters.length > 0 || sinceFilter || untilFilter) && <section aria-label="Filtros aplicados" className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="text-text-secondary">Filtros aplicados:</span>
+        {serverFilters.map((item) => <button key={item.key} type="button" aria-label={`Remover filtro ${item.label}`} onClick={() => pagination.setFilters({ [item.key]: undefined })} className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 text-text-primary outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary">{item.label}<X aria-hidden="true" size={12} /></button>)}
+        {(sinceFilter || untilFilter) && <span className="inline-flex h-7 items-center rounded-full border border-border bg-surface px-2.5 text-text-primary">Aberto {sinceFilter ? `desde ${sinceFilter.split('-').reverse().join('/')}` : ''}{sinceFilter && untilFilter ? ' ' : ''}{untilFilter ? `até ${untilFilter.split('-').reverse().join('/')}` : ''}</span>}
+        <button type="button" onClick={clearAll} className="h-7 rounded-md px-2 font-medium text-primary outline-none hover:bg-bg focus-visible:ring-2 focus-visible:ring-primary">Limpar filtros</button>
+      </section>}
+      {invalidDates && <p role="alert" className="text-xs text-danger">A data inicial deve ser anterior ou igual à data final.</p>}
 
       {orderingFallback.message && <p role="alert" className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-text-primary">{orderingFallback.message}</p>}
 
@@ -174,17 +210,17 @@ export function TicketsPage() {
         empty={{
           title: total > 0 || filtersActive ? 'Nenhum chamado encontrado' : 'Nenhum chamado registrado',
           description: total > 0 || filtersActive ? 'Ajuste a busca ou os filtros.' : 'Novos chamados aparecerão aqui quando forem abertos.',
-          action: filtersActive ? <button type="button" onClick={() => { setSearch(''); pagination.setFilters({ status: undefined, severidade: undefined }) }} className="rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button> : undefined,
+          action: filtersActive ? <button type="button" onClick={clearAll} className="rounded-md px-3 py-2 text-xs font-medium text-primary hover:bg-bg">Limpar filtros</button> : undefined,
         }}
       />
       {!tickets.isLoading && !tickets.isError && <>
-        {(search || severityFilter) && total > 0 && <p className="text-[11px] text-text-muted">Busca e severidade filtram apenas os chamados desta página.</p>}
+        {search && total > 0 && <p className="text-[11px] text-text-muted">A busca filtra apenas os chamados desta página.</p>}
         <Pagination className="rounded-lg border border-border bg-surface" page={pagination.page} size={pagination.size} total={total} onPageChange={pagination.setPage} onSizeChange={pagination.setSize} />
       </>}
     </div>
 
     {showNewTicket && <NewTicketModal onClose={() => setShowNewTicket(false)} />}
-    {selectedTicket && <Modal title="Gerar OT corretiva" description={`Chamado ${selectedTicket.id.slice(0, 8)}`} busy={createWorkOrder.isPending} onClose={() => setSelectedTicket(null)}>
+    {selectedTicket && <Modal title="Gerar OT corretiva" description={`Chamado ${ticketCode(selectedTicket)}`} busy={createWorkOrder.isPending} onClose={() => setSelectedTicket(null)}>
         <form className="space-y-4" onSubmit={(event) => void submitCorrectiveWorkOrder(event)}>
           <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Código da OT<input autoFocus required maxLength={40} value={codigo} onChange={(event) => setCodigo(event.target.value)} placeholder="Ex.: OT-2042" className={`${inputClass} w-full`} /></label>
           <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<Select required value={tecnicoId} onChange={setTecnicoId} placeholder="Selecione um técnico" options={eligibleTechnicians.map((technician) => ({ value: technician.id, label: technician.nome }))} /></label>
