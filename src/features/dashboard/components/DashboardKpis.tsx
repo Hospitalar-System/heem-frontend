@@ -53,7 +53,7 @@ export function DashboardKpis({ data }: { data: DashboardSummary }) {
             </span>
           </div>
           <p className={`mt-1 text-[26px] font-semibold leading-8 tracking-tight ${tone === 'danger' ? 'text-danger' : 'text-text-primary'}`}>{value}</p>
-          <p className={`mt-1 flex items-center gap-1 text-[10px] font-medium ${note ? noteTone : 'text-text-muted'}`}>
+          <p className={`mt-1 flex items-center gap-1 text-[11px] font-medium ${note ? noteTone : 'text-text-muted'}`}>
             {note ?? '—'}
           </p>
         </article>

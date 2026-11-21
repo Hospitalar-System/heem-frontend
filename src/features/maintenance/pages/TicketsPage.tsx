@@ -11,17 +11,18 @@ import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/a
 import { useCreateCorrectiveWorkOrder, useTicketsPage, useUrgentTicketCount } from '../api/tickets'
 import { NewTicketModal } from '../components/NewTicketModal'
 import { TicketSlaBadge } from '../components/TicketSlaBadge'
-import type { Ticket, TicketSeverity, TicketStatus } from '../types'
+import type { Ticket, TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { Pagination } from '@/components/ui/Pagination'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 import { DEFAULT_TICKET_SORT, orderingErrorMessage, ticketSortChoicesFor, ticketSortFromUrl } from '../utils/ordering'
 import { useOrderingFallback } from '../utils/useOrderingFallback'
 import { ticketCode } from '../utils/ticket-code'
+import { severityTone, ticketStatusTone } from '@/lib/status-tones'
 import { ageLabels, parseAge, parseSituation } from '../utils/ticket-filters'
 
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
@@ -30,13 +31,6 @@ const statusText: Record<string, string> = { ABERTO: 'Aberto', EM_ANDAMENTO: 'Em
 
 function canonicalStatus(status: TicketStatus) {
   return status.toLocaleUpperCase('pt-BR').replace('Ç', 'C')
-}
-
-function severityTone(severity: TicketSeverity): StatusTone {
-  if (severity === 'CRITICA') return 'danger'
-  if (severity === 'ALTA') return 'warning'
-  if (severity === 'BAIXA') return 'success'
-  return 'neutral'
 }
 
 function relativeTime(value: string) {
@@ -152,7 +146,7 @@ export function TicketsPage() {
       <p title={ticket.descricao || undefined} className="mt-0.5 line-clamp-2 text-xs leading-5 text-text-secondary">{ticket.descricao || 'Sem descrição'}</p>
     </> },
     { key: 'severidade', header: 'Severidade', cell: (ticket) => <StatusBadge tone={severityTone(ticket.severidade)}>{severityText[ticket.severidade] ?? 'Severidade não informada'}</StatusBadge> },
-    { key: 'status', header: 'Status', cell: (ticket) => { const status = canonicalStatus(ticket.status); return <StatusBadge tone="neutral">{statusText[status] ?? ticket.status}</StatusBadge> } },
+    { key: 'status', header: 'Status', cell: (ticket) => { const status = canonicalStatus(ticket.status); return <StatusBadge tone={ticketStatusTone(ticket.status)}>{statusText[status] ?? ticket.status}</StatusBadge> } },
     { key: 'sla', header: 'SLA', cell: (ticket) => ticket.slaStatus ? <TicketSlaBadge status={ticket.slaStatus} /> : <span className="text-text-muted" aria-label="Sem SLA">—</span> },
     { key: 'equipamento', header: 'Equipamento', menuLabel: 'Equipamento e local', className: 'w-full min-w-[160px] max-w-0', cell: (ticket) => {
       const equip = equipmentById.get(ticket.equipamentoId)
@@ -172,7 +166,7 @@ export function TicketsPage() {
       // Duas posições fixas e compactas: "Gerar OT" e o ícone de detalhes ficam alinhados em todas as linhas.
       return <div className="flex items-center justify-end gap-1.5">
         {canGenerate
-          ? <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} aria-label="Gerar OT corretiva" title="Gerar OT corretiva" className="inline-flex h-8 w-24 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-2 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT</button>
+          ? <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} aria-label="Gerar OT corretiva" title="Gerar OT corretiva" className="inline-flex h-8 w-24 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-primary bg-transparent px-2 text-xs font-semibold text-primary hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT</button>
           : <span aria-hidden="true" className="inline-block h-8 w-24" />}
         <Link to={`/tickets/${ticket.id}`} aria-label={`Detalhes do chamado ${ticketCode(ticket)}`} title="Detalhes" className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ArrowUpRight aria-hidden="true" size={14} /></Link>
       </div>

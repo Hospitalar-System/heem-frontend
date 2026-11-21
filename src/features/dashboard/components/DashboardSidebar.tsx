@@ -61,8 +61,8 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <div data-testid="sidebar-menu" className="min-h-0 flex-1 overflow-y-auto pb-3">
-      {isSuperAdmin && <div className="mb-3 mt-3 space-y-1 px-3"><p className="mb-2 px-[14px] text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">Administração</p><NavLink to="/platform/clients" onClick={onNavigate} className={({ isActive }) => `flex min-h-[39px] items-center gap-3 rounded-md px-3 text-[14px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive ? 'bg-primary/15 text-primary' : 'text-text-secondary hover:bg-surface hover:text-text-primary'}`}><BriefcaseBusiness aria-hidden="true" className="size-[14px] shrink-0" strokeWidth={1.8} /><span>Clientes</span></NavLink><NavLink to="/platform/users" onClick={onNavigate} className={({ isActive }) => `flex min-h-[39px] items-center gap-3 rounded-md px-3 text-[14px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive ? 'bg-primary/15 text-primary' : 'text-text-secondary hover:bg-surface hover:text-text-primary'}`}><UsersRound aria-hidden="true" className="size-[14px] shrink-0" strokeWidth={1.8} /><span>Usuários da Plataforma</span></NavLink></div>}
-      <p className="mb-2 mt-3 px-[26px] text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">Operação</p>
+      {isSuperAdmin && <div className="mb-3 mt-3 space-y-1 px-3"><p className="mb-2 px-[14px] text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">Administração</p><NavLink to="/platform/clients" onClick={onNavigate} className={({ isActive }) => `flex min-h-[39px] items-center gap-3 rounded-md px-3 text-[14px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive ? 'bg-primary/15 text-primary' : 'text-text-secondary hover:bg-surface hover:text-text-primary'}`}><BriefcaseBusiness aria-hidden="true" className="size-[14px] shrink-0" strokeWidth={1.8} /><span>Clientes</span></NavLink><NavLink to="/platform/users" onClick={onNavigate} className={({ isActive }) => `flex min-h-[39px] items-center gap-3 rounded-md px-3 text-[14px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive ? 'bg-primary/15 text-primary' : 'text-text-secondary hover:bg-surface hover:text-text-primary'}`}><UsersRound aria-hidden="true" className="size-[14px] shrink-0" strokeWidth={1.8} /><span>Usuários da Plataforma</span></NavLink></div>}
+      <p className="mb-2 mt-3 px-[26px] text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">Operação</p>
       <nav className="space-y-1 px-3">
         {navItems.filter(({ to }) => to !== '/settings' || canSeeSettings(user?.roles ?? [])).map(({ label, to, Icon }) => (
           <NavLink
@@ -81,10 +81,10 @@ export function DashboardSidebar({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <div className="flex min-h-[60px] shrink-0 items-center gap-2 border-t border-border px-3">
-        <span aria-hidden="true" className="grid size-[34px] shrink-0 place-items-center rounded-full bg-primary text-[10px] font-semibold text-bg-brand">{getInitials(personName || roleLabel)}</span>
+        <span aria-hidden="true" className="grid size-[34px] shrink-0 place-items-center rounded-full bg-primary text-[11px] font-semibold text-bg-brand">{getInitials(personName || roleLabel)}</span>
         <span className="min-w-0 flex-1">
-          <span title={user?.email || undefined} className="block truncate text-[10px] font-semibold text-text-primary">{displayName}</span>
-          {personName ? <span className="block truncate text-[9px] text-text-muted">{roleLabel}</span> : null}
+          <span title={user?.email || undefined} className="block truncate text-[11px] font-semibold text-text-primary">{displayName}</span>
+          {personName ? <span className="block truncate text-[11px] text-text-muted">{roleLabel}</span> : null}
         </span>
         <button type="button" aria-label="Sair" title="Sair" onClick={handleLogout} className="grid size-8 shrink-0 place-items-center rounded-md text-text-secondary outline-none hover:bg-surface hover:text-danger focus-visible:ring-2 focus-visible:ring-primary">
           <LogOut aria-hidden="true" size={15} />

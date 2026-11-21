@@ -8,9 +8,11 @@ export type StatusBadgeProps = {
   /** O texto é sempre renderizado: o tom nunca é a única informação. */
   children: ReactNode
   className?: string
+  /** Contorno na cor do texto (SLA em risco). */
+  outline?: boolean
 }
 
 /** Casca fina: mapeia o status da linha para a variante do `Badge` compartilhado. */
-export function StatusBadge({ tone = 'neutral', children, className }: StatusBadgeProps) {
-  return <Badge variant={tone} className={className}>{children}</Badge>
+export function StatusBadge({ tone = 'neutral', children, className, outline }: StatusBadgeProps) {
+  return <Badge variant={tone} outline={outline} className={className}>{children}</Badge>
 }

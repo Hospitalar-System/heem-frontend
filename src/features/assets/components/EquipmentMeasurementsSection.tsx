@@ -85,8 +85,8 @@ function TrendChart({ rows }: { rows: MeasurementRow[] }) {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={points} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
           <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-          <XAxis dataKey="time" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={(value: number) => formatDate(value)} axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} />
-          <YAxis domain={['auto', 'auto']} width={40} axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} />
+          <XAxis dataKey="time" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={(value: number) => formatDate(value)} axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+          <YAxis domain={['auto', 'auto']} width={40} axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
           <Tooltip {...chartTooltipProps} labelFormatter={(value) => formatDate(Number(value))} formatter={(value) => [`${numberFormat.format(Number(value))}${unit}`, latest.descricao]} />
           {latest.faixaMin !== null ? <ReferenceLine y={latest.faixaMin} stroke="var(--warning)" strokeDasharray="4 4" /> : null}
           {latest.faixaMax !== null ? <ReferenceLine y={latest.faixaMax} stroke="var(--warning)" strokeDasharray="4 4" /> : null}
