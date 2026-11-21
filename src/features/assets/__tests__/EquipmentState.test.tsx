@@ -135,6 +135,25 @@ describe('ficha: estado atual', () => {
     expect(screen.getByRole('button', { name: 'Alterar estado' })).toBeInTheDocument()
   })
 
+  it.each([
+    ['estado nulo', { statusCicloVida: null }],
+    ['descrição e data do estado ausentes', { statusCicloVida: 'NAO_APTO', descricaoEstado: null, estadoAtualizadoEm: null }],
+    ['sem categoria nem foto', { categoriaId: null, categoriaNome: null, fotoVersao: null, fotoUrl: null }],
+    ['Em manutenção sem descrição', { statusCicloVida: 'EM_MANUTENCAO', descricaoEstado: undefined }],
+  ])('a ficha abre sem erro: %s', async (_nome, equipment) => {
+    setup({ equipment })
+    expect(await screen.findByRole('heading', { level: 2, name: base.nome })).toBeInTheDocument()
+    expect(screen.queryByText(/Não foi possível carregar este equipamento/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Gerar dossiê do equipamento' })).toBeInTheDocument()
+  })
+
+  it('cartão Indicadores mostra só o texto compreensível, sem cartões vazios com traço', async () => {
+    setup()
+    expect(await screen.findByText(/Os indicadores deste equipamento ainda não estão disponíveis/)).toBeInTheDocument()
+    expect(screen.queryByText('Disponibilidade')).not.toBeInTheDocument()
+    expect(screen.queryByText('OTs no ano')).not.toBeInTheDocument()
+  })
+
   it('tolera estado desconhecido no cabeçalho', async () => {
     setup({ equipment: { statusCicloVida: 'QUARENTENA' } })
     expect(await screen.findByText('QUARENTENA')).toBeInTheDocument()
