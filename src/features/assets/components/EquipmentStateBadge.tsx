@@ -23,5 +23,5 @@ export function EquipmentStateBadge({ state, className = '' }: { state: string |
   const known = isKnownState(state)
   const tone = known ? equipmentStateTone(state) : 'neutral'
   const Icon = known ? icons[state] : null
-  return <Badge variant={tone} icon={Icon ? <Icon size={12} strokeWidth={2} /> : undefined} data-state={state ?? ''} data-tone={tone} className={className}>{equipmentStateLabel(state)}</Badge>
+  return <Badge variant={tone} icon={Icon ? <Icon size={14} strokeWidth={2} /> : undefined} data-state={state ?? ''} data-tone={tone} className={className}>{equipmentStateLabel(state)}</Badge>
 }
