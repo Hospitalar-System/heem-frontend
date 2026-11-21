@@ -1,104 +1,52 @@
-import { Monitor, Moon, Sun } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import { Moon, Sun } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTheme } from './use-theme'
-import type { ThemeMode } from './theme-mode'
 
-const options: { mode: ThemeMode; label: string; Icon: typeof Sun }[] = [
-  { mode: 'light', label: 'Claro', Icon: Sun },
-  { mode: 'dark', label: 'Escuro', Icon: Moon },
-  { mode: 'auto', label: 'Automático', Icon: Monitor },
-]
-
-export function ThemeSwitcher() {
-  const { mode, setMode } = useTheme()
-  const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const activeOption = options.find((option) => option.mode === mode) ?? options[1]
-  const ActiveIcon = activeOption.Icon
-
+/** Tema que está sendo mostrado agora: o modo "auto" (valor antigo salvo) vale o tema do sistema operacional. */
+function useResolvedTheme(): 'dark' | 'light' {
+  const { mode } = useTheme()
+  const [systemDark, setSystemDark] = useState(() => typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches)
   useEffect(() => {
-    if (!open) return
-    const closeOutside = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
-    }
-    document.addEventListener('pointerdown', closeOutside)
-    optionRefs.current[options.findIndex((option) => option.mode === mode)]?.focus()
-    return () => document.removeEventListener('pointerdown', closeOutside)
-  }, [mode, open])
+    if (mode !== 'auto' || typeof window.matchMedia !== 'function') return undefined
+    const query = window.matchMedia('(prefers-color-scheme: dark)')
+    const sync = () => setSystemDark(query.matches)
+    sync()
+    query.addEventListener?.('change', sync)
+    return () => query.removeEventListener?.('change', sync)
+  }, [mode])
+  return mode === 'auto' ? (systemDark ? 'dark' : 'light') : mode
+}
 
-  function openMenu() {
-    setOpen(true)
-  }
+// Só transform e opacity, 250 ms: o sol sai girando para -90° e a lua entra de +90°. Com prefers-reduced-motion não há giro nem escala, só um fade curto.
+const iconBase = 'absolute inset-0 m-auto transition-[transform,opacity] duration-[250ms] ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:rotate-0 motion-reduce:scale-100 motion-reduce:duration-100'
+const shown = 'rotate-0 scale-100 opacity-100'
 
-  function handleMenuKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const currentIndex = optionRefs.current.findIndex((option) => option === document.activeElement)
-    let nextIndex: number | undefined
-    if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % options.length
-    if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + options.length) % options.length
-    if (event.key === 'Home') nextIndex = 0
-    if (event.key === 'End') nextIndex = options.length - 1
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      setOpen(false)
-      triggerRef.current?.focus()
-    }
-    if (nextIndex !== undefined) {
-      event.preventDefault()
-      optionRefs.current[nextIndex]?.focus()
-    }
-  }
+const variants = {
+  /** Painel e login: mesmo tamanho, raio e borda do sino de notificações (38 px). */
+  panel: 'size-[38px] rounded-md border border-border bg-surface',
+  /** Landing: redondo, borda fina e sem fundo, no estilo do botão "Entrar". */
+  landing: 'size-11 rounded-full border border-border bg-transparent hover:border-text-secondary',
+} as const
 
+/**
+ * Botão único de tema: alterna claro/escuro (sol ↔ lua). O rótulo diz a ação, o ícone anima só com transform/opacity e
+ * em ponteiro grosso o alvo vai a 44 px.
+ */
+export function ThemeSwitcher({ variant = 'panel' }: { variant?: keyof typeof variants }) {
+  const { setMode } = useTheme()
+  const theme = useResolvedTheme()
+  const dark = theme === 'dark'
   return (
-    <div ref={rootRef} className="relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label="Selecionar tema"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        onKeyDown={(event) => {
-          if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault()
-            openMenu()
-          }
-        }}
-        className="grid size-8 place-items-center rounded-md text-text-primary outline-none transition hover:bg-surface focus-visible:ring-2 focus-visible:ring-primary"
-      >
-        <ActiveIcon aria-hidden="true" size={17} strokeWidth={1.8} />
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          aria-label="Tema da interface"
-          onKeyDown={handleMenuKeyDown}
-          className="absolute right-0 top-[calc(100%+4px)] z-50 w-48 rounded-md border border-border bg-surface p-1 shadow-lg"
-        >
-          {options.map(({ mode: optionMode, label, Icon }, index) => (
-            <button
-              key={optionMode}
-              ref={(element) => { optionRefs.current[index] = element }}
-              type="button"
-              role="menuitemradio"
-              aria-checked={mode === optionMode}
-              tabIndex={mode === optionMode ? 0 : -1}
-              onClick={() => {
-                setMode(optionMode)
-                setOpen(false)
-                triggerRef.current?.focus()
-              }}
-              className={`flex min-h-9 w-full items-center gap-2.5 rounded px-2 text-left text-sm text-text-primary outline-none transition focus-visible:ring-2 focus-visible:ring-primary ${mode === optionMode ? 'bg-bg' : 'hover:bg-bg/70'}`}
-            >
-              <Icon aria-hidden="true" size={16} strokeWidth={1.8} />
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <button
+      type="button"
+      aria-label={dark ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
+      onClick={() => setMode(dark ? 'light' : 'dark')}
+      className={`relative grid shrink-0 place-items-center text-text-secondary outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg [@media(pointer:coarse)]:size-11 ${variants[variant]}`}
+    >
+      <span aria-hidden="true" className="relative block size-[18px]">
+        <Sun size={18} strokeWidth={1.8} data-icon="sun" className={`${iconBase} ${dark ? '-rotate-90 scale-50 opacity-0' : shown}`} />
+        <Moon size={18} strokeWidth={1.8} data-icon="moon" className={`${iconBase} ${dark ? shown : 'rotate-90 scale-50 opacity-0'}`} />
+      </span>
+    </button>
   )
 }
