@@ -1,3 +1,4 @@
+import { workOrderStatusTone } from '@/lib/status-tones'
 import { AlertCircle, ArrowLeft, CalendarClock, ClipboardCheck, Gauge, MapPin, UserRound, Wrench } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -10,7 +11,7 @@ import { useReassignWorkOrderTechnician, useWorkOrder, useWorkOrderChecklistItem
 import { Select } from '@/components/ui/Select'
 import { getAuthState } from '@/features/auth/session'
 import { WorkOrderPhotosSection } from '../components/WorkOrderPhotosSection'
-import { Badge, type BadgeVariant } from '@/components/ui/Badge'
+import { Badge } from '@/components/ui/Badge'
 import { laudoOtBody } from '@/features/dashboard/api/documents'
 import { EXPORT_BACKEND_SUPPORT } from '@/features/dashboard/components/export-builder-model'
 import { GenerateDocumentButton } from '@/features/dashboard/components/GenerateDocumentButton'
@@ -18,14 +19,7 @@ import { GenerateDocumentButton } from '@/features/dashboard/components/Generate
 const statusLabels: Record<string, string> = { AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída', CANCELADA: 'Cancelada', CANCELADO: 'Cancelada' }
 
 function canonical(value: string) { return value.toLocaleUpperCase('pt-BR').replaceAll('Ç', 'C').replaceAll('Ã', 'A') }
-function statusTone(value: string): BadgeVariant {
-  const status = canonical(value)
-  if (status === 'AGENDADA') return 'warning'
-  if (status === 'EM_EXECUCAO' || status === 'EM_ANDAMENTO') return 'success'
-  if (status === 'CANCELADA' || status === 'CANCELADO') return 'neutral'
-  if (status === 'CONCLUIDA' || status === 'CONCLUIDO') return 'success'
-  return 'neutral'
-}
+const statusTone = workOrderStatusTone
 function formatDate(value: string | null) {
   if (!value || !Number.isFinite(Date.parse(value))) return '—'
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))

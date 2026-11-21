@@ -13,7 +13,7 @@ const severityTones: Record<TicketSeverity, string> = {
   critical: 'text-danger',
   high: 'text-warning',
   medium: 'text-text-secondary',
-  low: 'text-primary',
+  low: 'text-text-secondary',
 }
 
 export function DashboardAttention({ data }: { data: DashboardSummary }) {
