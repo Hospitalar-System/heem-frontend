@@ -1,13 +1,13 @@
 import type { SortDirection } from './report-format'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 
-export function SortableHeader<K extends string>({ label, sortKey, sort, onToggle, align = 'right' }: { label: string; sortKey: K; sort: { key: K; direction: SortDirection }; onToggle: (key: K) => void; align?: 'left' | 'right' }) {
+export function SortableHeader<K extends string>({ label, shortLabel, sortKey, sort, onToggle, align = 'right' }: { label: string; /** Rótulo visual abaixo de `sm`; o nome acessível continua sendo `label`. */ shortLabel?: string; sortKey: K; sort: { key: K; direction: SortDirection }; onToggle: (key: K) => void; align?: 'left' | 'right' }) {
   const active = sort.key === sortKey
   const Icon = !active ? ChevronsUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown
   return (
-    <th scope="col" aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'} className={`px-4 py-2 font-medium ${align === 'left' ? 'text-left' : 'text-right'}`}>
+    <th scope="col" aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'} className={`px-2 py-2 font-medium sm:px-4 ${align === 'left' ? 'text-left' : 'text-right'}`}>
       <button type="button" onClick={() => onToggle(sortKey)} className="inline-flex items-center gap-1 rounded-sm outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-primary">
-        {label}<Icon aria-hidden="true" size={12} />
+        {shortLabel ? <><span className="max-sm:hidden">{label}</span><span aria-hidden="true" className="sm:hidden">{shortLabel}</span></> : label}<Icon aria-hidden="true" size={12} />
       </button>
     </th>
   )
