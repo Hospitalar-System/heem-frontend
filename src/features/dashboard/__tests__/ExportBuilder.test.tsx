@@ -63,6 +63,7 @@ describe('ExportBuilder', () => {
     expect(screen.queryByRole('radio')).not.toBeInTheDocument()
     await openOptions(user)
     const menu = within(screen.getByRole('dialog', { name: 'Opções de exportação' }))
+    expect(menu.getByRole('radio', { name: 'Resumo' })).toHaveFocus()
     expect(menu.getByRole('radio', { name: 'Completo' })).toBeChecked()
     expect(menu.getByRole('radio', { name: 'Paisagem' })).toBeChecked()
     await user.keyboard('{Escape}')

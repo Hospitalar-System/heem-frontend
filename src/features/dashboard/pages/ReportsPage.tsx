@@ -65,7 +65,7 @@ export function ReportsPage() {
   return (
     <AdminPageShell title="Relatórios & Indicadores" subtitle="Indicadores de manutenção e conformidade">
       <div className="space-y-5">
-        <FilterBar label="Filtros do relatório" className="items-end">
+        <FilterBar label="Filtros do relatório" className="items-end" dense>
           <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
             <span>Desde</span>
             <DatePicker size="sm" required aria-label="Data inicial" value={desde} max={ate || undefined} onChange={setDesde} />
