@@ -13,7 +13,7 @@ import { NewTicketModal } from '../components/NewTicketModal'
 import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import type { Ticket, TicketSeverity, TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
-import { FilterBar } from '@/components/ui/FilterBar'
+import { FilterBar, FilterRange } from '@/components/ui/FilterBar'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { Pagination } from '@/components/ui/Pagination'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
@@ -145,7 +145,7 @@ export function TicketsPage() {
   }
 
   const ticketColumns: DataColumn<Ticket>[] = [
-    { key: 'chamado', header: 'Chamado', className: 'min-w-[260px] max-w-[380px]', cell: (ticket) => <>
+    { key: 'chamado', header: 'Chamado', className: 'min-w-[230px] max-w-[320px]', cell: (ticket) => <>
       <Link to={`/tickets/${ticket.id}`} aria-label={`Abrir chamado ${ticketCode(ticket)}`} className="whitespace-nowrap text-sm font-semibold text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">Chamado {ticketCode(ticket)}</Link>
       <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-secondary">{ticket.descricao || 'Sem descrição'}</p>
     </> },
@@ -161,9 +161,9 @@ export function TicketsPage() {
       // Duas posições fixas: "Detalhes" e "Gerar OT corretiva" têm a mesma largura em todas as linhas.
       return <div className="flex items-center justify-end gap-2">
         {canGenerate
-          ? <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} className="inline-flex h-9 w-44 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT corretiva</button>
-          : <span aria-hidden="true" className="inline-block h-9 w-44" />}
-        <Link to={`/tickets/${ticket.id}`} className="inline-flex h-9 w-28 items-center justify-center gap-1 whitespace-nowrap rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Detalhes <ArrowUpRight aria-hidden="true" size={13} /></Link>
+          ? <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} className="inline-flex h-9 w-[10.5rem] items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT corretiva</button>
+          : <span aria-hidden="true" className="inline-block h-9 w-[10.5rem]" />}
+        <Link to={`/tickets/${ticket.id}`} className="inline-flex h-9 w-24 items-center justify-center gap-1 whitespace-nowrap rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Detalhes <ArrowUpRight aria-hidden="true" size={13} /></Link>
       </div>
     } },
   ]
@@ -181,10 +181,10 @@ export function TicketsPage() {
         </label>
         <label className="min-w-0"><span className="sr-only">Filtrar por status</span><Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={(next) => pagination.setFilters({ status: next })} options={[{ value: '', label: 'Todos os status' }, { value: 'ABERTO', label: 'Aberto' }, { value: 'EM_ANDAMENTO', label: 'Em andamento' }, { value: 'AGUARDANDO_PECA', label: 'Aguardando peça' }, { value: 'RESOLVIDO', label: 'Resolvido' }, { value: 'CANCELADO', label: 'Cancelado' }]} /></label>
         <label className="min-w-0"><span className="sr-only">Ordenar chamados</span><Select size="sm" aria-label="Ordenar chamados" value={sortValue} onChange={(next) => { orderingFallback.dismiss(); const [ordenar, direcao] = next.split(':'); pagination.setFilters(next === DEFAULT_TICKET_SORT ? { ordenar: undefined, direcao: undefined } : { ordenar, direcao }) }} options={sortChoices.map(({ value, label }) => ({ value, label }))} /></label>
-        <label className="grid min-w-0 gap-1 text-xs text-text-secondary"><span>Desde</span><DatePicker size="sm" aria-label="Aberto desde" value={sinceFilter} max={untilFilter || undefined} onChange={(next) => pagination.setFilters({ abertoDe: next || undefined })} /></label>
-        <label className="grid min-w-0 gap-1 text-xs text-text-secondary"><span>Até</span><DatePicker size="sm" aria-label="Aberto até" value={untilFilter} min={sinceFilter || undefined} onChange={(next) => pagination.setFilters({ abertoAte: next || undefined })} /></label>
         <label className="min-w-0"><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={(next) => pagination.setFilters({ severidade: next })} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
       </FilterBar>
+
+      <FilterRange label="Aberto entre" from={<DatePicker size="sm" aria-label="Aberto desde" value={sinceFilter} max={untilFilter || undefined} onChange={(next) => pagination.setFilters({ abertoDe: next || undefined })} />} to={<DatePicker size="sm" aria-label="Aberto até" value={untilFilter} min={sinceFilter || undefined} onChange={(next) => pagination.setFilters({ abertoAte: next || undefined })} />} />
 
       {(serverFilters.length > 0 || sinceFilter || untilFilter) && <section aria-label="Filtros aplicados" className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-text-secondary">Filtros aplicados:</span>
