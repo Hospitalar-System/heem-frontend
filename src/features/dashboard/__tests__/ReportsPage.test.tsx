@@ -146,11 +146,11 @@ describe('ReportsPage', () => {
     const links = within(critical).getAllByRole('link')
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/tickets?situacao=pendentes&severidade=CRITICA',
-      '/tickets?situacao=pendentes&severidade=CRITICA&idade=ate24h',
       '/tickets?situacao=pendentes&severidade=CRITICA&idade=de1a3dias',
-      '/tickets?situacao=pendentes&severidade=CRITICA&idade=maisde3dias',
       '/tickets?situacao=pendentes&severidade=CRITICA',
     ])
+    // células com 0 não são links
+    expect(within(critical).getAllByText('0', { selector: 'span' })).toHaveLength(2)
     await chooseOption(user, 'Hospital', 'Santa Casa')
     await chooseOption(user, 'Setor', 'UTI Adulto')
     await waitFor(() => expect(within(screen.getByRole('table', { name: /Backlog de chamados/ })).getAllByRole('link')[0].getAttribute('href'))

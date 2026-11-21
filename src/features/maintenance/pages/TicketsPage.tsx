@@ -13,7 +13,7 @@ import { NewTicketModal } from '../components/NewTicketModal'
 import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import type { Ticket, TicketSeverity, TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
-import { FilterBar, FilterRange } from '@/components/ui/FilterBar'
+import { FilterBar } from '@/components/ui/FilterBar'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { Pagination } from '@/components/ui/Pagination'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
@@ -184,7 +184,10 @@ export function TicketsPage() {
         <label className="min-w-0"><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={(next) => pagination.setFilters({ severidade: next })} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
       </FilterBar>
 
-      <FilterRange label="Aberto entre" from={<DatePicker size="sm" aria-label="Aberto desde" value={sinceFilter} max={untilFilter || undefined} onChange={(next) => pagination.setFilters({ abertoDe: next || undefined })} />} to={<DatePicker size="sm" aria-label="Aberto até" value={untilFilter} min={sinceFilter || undefined} onChange={(next) => pagination.setFilters({ abertoAte: next || undefined })} />} />
+      <div role="group" aria-label="Aberto entre" className="grid max-w-md grid-cols-2 gap-2">
+        <label className="grid min-w-0 gap-1 text-xs text-text-secondary"><span>Aberto de</span><DatePicker size="sm" aria-label="Aberto desde" value={sinceFilter} max={untilFilter || undefined} onChange={(next) => pagination.setFilters({ abertoDe: next || undefined })} /></label>
+        <label className="grid min-w-0 gap-1 text-xs text-text-secondary"><span>Até</span><DatePicker size="sm" aria-label="Aberto até" value={untilFilter} min={sinceFilter || undefined} onChange={(next) => pagination.setFilters({ abertoAte: next || undefined })} /></label>
+      </div>
 
       {(serverFilters.length > 0 || sinceFilter || untilFilter) && <section aria-label="Filtros aplicados" className="flex flex-wrap items-center gap-2 text-xs">
         <span className="text-text-secondary">Filtros aplicados:</span>
