@@ -101,7 +101,7 @@ describe('tokens da landing', () => {
     })
   })
 
-  it('o tom muted global do tema claro reprovaria (prova de que o ajuste é necessário)', () => {
-    expect(razaoContraste(hex(base.claro['--text-muted']), hex(base.claro['--bg']))).toBeLessThan(4.5)
+  it('o tom muted global do tema claro passa em AA sobre o fundo da página (o painel usa o mesmo token)', () => {
+    expect(razaoContraste(hex(base.claro['--text-muted']), hex(base.claro['--bg']))).toBeGreaterThanOrEqual(4.5)
   })
 })

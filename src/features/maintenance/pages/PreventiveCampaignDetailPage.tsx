@@ -80,7 +80,7 @@ export function PreventiveCampaignDetailPage() {
 
         <section aria-label="Progresso da geração" className="rounded-lg border border-border bg-surface p-4 md:p-5">
           <h2 className="text-sm font-semibold text-text-primary">Última execução</h2>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-bg" role="progressbar" aria-label="Progresso da geração de OTs" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}><div className="h-full bg-primary transition-all" style={{ width: `${percent}%` }} /></div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-bg" role="progressbar" aria-label="Progresso da geração de OTs" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}><div className="h-full bg-primary transition-[width]" style={{ width: `${percent}%` }} /></div>
           <p role="status" aria-live="polite" className="mt-2 text-xs text-text-secondary">
             {data.status === 'falhou' ? 'A geração falhou. Entre em contato com o suporte.' : data.status === 'cancelada' ? 'A campanha foi cancelada.' : running ? 'Gerando OTs… ' : 'Geração concluída. '}
             {processed} de {totalEquipment} equipamentos processados · {data.execucao.geradas} OTs geradas · {data.execucao.puladas} puladas · {data.execucao.pendencias} pendências
