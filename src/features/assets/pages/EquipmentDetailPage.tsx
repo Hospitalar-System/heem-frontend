@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowLeft, CalendarClock, ClipboardList, Edit3, FileText, Gauge, History, ListChecks, Tag } from 'lucide-react'
+import { ArrowLeft, CalendarClock, ClipboardList, Edit3, FileText, Gauge, History, ListChecks, Tag, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { getAuthState } from '@/features/auth/session'
@@ -149,8 +149,8 @@ function ScrollableTabs({ activeTab, children }: { activeTab: string; children: 
   }, [activeTab])
   return <div className="relative mt-5">
     <div ref={listRef} role="tablist" aria-label="Seções do equipamento" onScroll={update} className="flex max-w-full gap-1 overflow-x-auto rounded-lg border border-border bg-surface p-1">{children}</div>
-    {edges.left ? <span aria-hidden="true" className="pointer-events-none absolute inset-y-px left-px w-8 rounded-l-lg bg-gradient-to-r from-surface to-transparent" /> : null}
-    {edges.right ? <span aria-hidden="true" className="pointer-events-none absolute inset-y-px right-px w-8 rounded-r-lg bg-gradient-to-l from-surface to-transparent" /> : null}
+    {edges.left ? <span aria-hidden="true" className="pointer-events-none absolute inset-y-px left-px flex w-14 items-center justify-start rounded-l-lg bg-gradient-to-r from-surface via-surface to-transparent pl-1"><button type="button" tabIndex={-1} onClick={() => listRef.current?.scrollBy({ left: -160, behavior: 'smooth' })} className="pointer-events-auto grid size-7 place-items-center rounded-md text-text-secondary hover:bg-bg"><ChevronLeft size={14} /></button></span> : null}
+    {edges.right ? <span aria-hidden="true" className="pointer-events-none absolute inset-y-px right-px flex w-14 items-center justify-end rounded-r-lg bg-gradient-to-l from-surface via-surface to-transparent pr-1"><button type="button" tabIndex={-1} onClick={() => listRef.current?.scrollBy({ left: 160, behavior: 'smooth' })} className="pointer-events-auto grid size-7 place-items-center rounded-md text-text-secondary hover:bg-bg"><ChevronRight size={14} /></button></span> : null}
   </div>
 }
 
