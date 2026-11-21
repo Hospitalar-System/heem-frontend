@@ -135,6 +135,17 @@ describe('TicketsPage: ordenação no servidor', () => {
     expect(screen.queryByRole('region', { name: 'Filtros aplicados' })).not.toBeInTheDocument()
   })
 
+  it('filtra por equipamento vindo da URL e mostra o equipamento aplicado como chip removível', async () => {
+    const user = userEvent.setup()
+    renderPage(<TicketsPage />, '/tickets?equipamentoId=e1&abertoDe=2026-11-01&abertoAte=2026-11-30')
+    await waitFor(() => expect(lastParams('/chamados')).toMatchObject({ equipamentoId: 'e1', abertoDe: '2026-11-01', abertoAte: '2026-11-30' }))
+    const applied = within(await screen.findByRole('region', { name: 'Filtros aplicados' }))
+    expect(applied.getByText(/^Equipamento:/)).toBeInTheDocument()
+    await user.click(applied.getByRole('button', { name: /Remover filtro Equipamento/ }))
+    await waitFor(() => expect(lastParams('/chamados')).not.toHaveProperty('equipamentoId'))
+    expect(lastParams('/chamados')).toMatchObject({ abertoDe: '2026-11-01' })
+  })
+
   it('ORDENACAO_INDISPONIVEL: mostra a mensagem e volta à ordem padrão', async () => {
     rejectOrdering = 'slaResolucaoAte'
     renderPage(<TicketsPage />, '/tickets?ordenar=slaResolucaoAte&direcao=asc')

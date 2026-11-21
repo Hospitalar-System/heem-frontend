@@ -11,6 +11,14 @@ export function parseSituation(value: string | null): 'pendentes' | undefined {
   return value === 'pendentes' ? 'pendentes' : undefined
 }
 
+/** Link da lista de chamados de um equipamento no período do relatório (datas yyyy-MM-dd, inclusive). */
+export function equipmentTicketsPath(options: { equipamentoId: string; desde?: string; ate?: string }) {
+  const params = new URLSearchParams({ equipamentoId: options.equipamentoId })
+  if (options.desde) params.set('abertoDe', options.desde)
+  if (options.ate) params.set('abertoAte', options.ate)
+  return `/tickets?${params.toString()}`
+}
+
 /** Link da lista de chamados para uma célula do backlog (severidade e faixa opcionais) mantendo hospital e setor. */
 export function backlogTicketsPath(options: { severidade?: string; idade?: TicketAge; hospitalId?: string; setorId?: string }) {
   const params = new URLSearchParams({ situacao: 'pendentes' })

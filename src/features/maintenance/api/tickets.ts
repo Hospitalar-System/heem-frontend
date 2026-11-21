@@ -11,6 +11,7 @@ export interface TicketListFilters {
   severidade?: string
   hospitalId?: string
   setorId?: string
+  equipamentoId?: string
   abertoDe?: string
   abertoAte?: string
   situacao?: 'pendentes'
