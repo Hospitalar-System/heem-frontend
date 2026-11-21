@@ -92,7 +92,7 @@ export function ColumnsMenu({ columns, hidden, onToggle, onReset, isDefault }: {
             onClick={() => onToggle(column.key)}
             className={`${itemBase} cursor-pointer ${active === index ? 'bg-surface-hi' : ''}`}
           >
-            <span aria-hidden="true" className={`relative inline-grid size-4 shrink-0 place-items-center rounded border ${checked ? 'border-primary bg-primary' : 'border-border bg-bg'}`}>
+            <span aria-hidden="true" className={`relative inline-grid size-4 shrink-0 place-items-center rounded-[4px] border ${checked ? 'border-primary bg-primary' : 'border-text-muted bg-bg'}`}>
               {checked ? <Check strokeWidth={3} size={12} className="text-bg-brand" /> : null}
             </span>
             <span className="min-w-0 flex-1 truncate">{column.label}</span>
