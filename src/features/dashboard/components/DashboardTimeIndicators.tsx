@@ -47,7 +47,7 @@ export function DashboardTimeIndicators({ query, windowDays }: { query: Indicato
               </span>
             </div>
             <p className="mt-1 text-[26px] font-semibold leading-8 tracking-tight text-text-primary">{formatHours(value)}</p>
-            <p className="mt-1 text-[10px] font-medium text-text-muted">{value === null ? 'Sem dados no período' : `Últimos ${windowDays} dias`}</p>
+            <p className="mt-1 text-[11px] font-medium text-text-muted">{value === null ? 'Sem dados no período' : `Últimos ${windowDays} dias`}</p>
           </article>
         )
       })}

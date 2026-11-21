@@ -45,8 +45,8 @@ export function ReportGroups({ groups, grouping }: { groups: IndicatorGroup[]; g
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                 <CartesianGrid vertical={false} stroke="var(--border)" />
-                <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} interval={0} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} unit=" h" width={48} />
+                <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} interval={0} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} unit=" h" width={48} />
                 <Tooltip {...chartTooltipProps} formatter={(value) => `${Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} h`} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="MTTA" fill="var(--warning)" radius={[4, 4, 0, 0]} maxBarSize={36} />

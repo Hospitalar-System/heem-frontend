@@ -166,7 +166,7 @@ export function TicketsPage() {
       // Duas posições fixas e compactas: "Gerar OT" e o ícone de detalhes ficam alinhados em todas as linhas.
       return <div className="flex items-center justify-end gap-1.5">
         {canGenerate
-          ? <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} aria-label="Gerar OT corretiva" title="Gerar OT corretiva" className="inline-flex h-8 w-24 items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-2 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT</button>
+          ? <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} aria-label="Gerar OT corretiva" title="Gerar OT corretiva" className="inline-flex h-8 w-24 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-primary bg-transparent px-2 text-xs font-semibold text-primary hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT</button>
           : <span aria-hidden="true" className="inline-block h-8 w-24" />}
         <Link to={`/tickets/${ticket.id}`} aria-label={`Detalhes do chamado ${ticketCode(ticket)}`} title="Detalhes" className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ArrowUpRight aria-hidden="true" size={14} /></Link>
       </div>

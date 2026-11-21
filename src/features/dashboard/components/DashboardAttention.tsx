@@ -46,7 +46,7 @@ export function DashboardAttention({ data }: { data: DashboardSummary }) {
               <Icon aria-hidden="true" size={15} />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-[10px] text-text-secondary">{label}</p>
+              <p title={label} className="text-[11px] leading-4 text-text-secondary">{label}</p>
               <p className="mt-0.5 text-lg font-semibold leading-5 tabular-nums text-text-primary">{count.toLocaleString('pt-BR')}</p>
             </div>
             </>

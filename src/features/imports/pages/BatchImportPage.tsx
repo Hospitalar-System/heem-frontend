@@ -93,7 +93,7 @@ export function BatchImportPage() {
         </div>
         <details className="mt-3 rounded-md border border-border bg-bg px-3 py-2">
           <summary className="cursor-pointer text-[11px] font-medium text-text-secondary">Colunas do modelo</summary>
-          <p className="mt-2 break-words font-mono text-[10px] leading-5 text-text-muted">{selectedType.headers.join(';')}</p>
+          <p className="mt-2 break-words font-mono text-[11px] leading-5 text-text-muted">{selectedType.headers.join(';')}</p>
           {'requiredNote' in selectedType ? <p className="mt-2 text-xs leading-5 text-text-secondary">{selectedType.requiredNote}</p> : null}
           {type === 'equipamentos' ? <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] leading-4 text-text-secondary">{Object.entries(batchImportErrorMessages).map(([code, message]) => <li key={code}><code className="text-text-primary">{code}</code>: {message}</li>)}</ul> : null}
         </details>
@@ -104,10 +104,10 @@ export function BatchImportPage() {
         <input ref={inputRef} type="file" accept=".csv,text/csv" aria-label="Selecionar arquivo CSV" onChange={(event) => selectFile(event.target.files?.[0])} className="sr-only" />
         {file ? <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-bg p-3">
           <FileSpreadsheet aria-hidden="true" size={18} className="shrink-0 text-primary" />
-          <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium text-text-primary">{file.name}</span><span className="mt-0.5 block text-[10px] text-text-muted">{formatFileSize(file.size)}</span></span>
+          <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium text-text-primary">{file.name}</span><span className="mt-0.5 block text-[11px] text-text-muted">{formatFileSize(file.size)}</span></span>
           <button type="button" onClick={removeFile} disabled={inProgress} aria-label="Remover arquivo" title="Remover arquivo" className="grid size-8 place-items-center rounded-md text-text-secondary hover:bg-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><X aria-hidden="true" size={15} /></button>
         </div> : <button type="button" onClick={() => inputRef.current?.click()} disabled={inProgress} className="flex min-h-28 w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border bg-bg px-4 py-5 text-center outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-primary">
-          <Upload aria-hidden="true" size={18} className="text-text-secondary" /><span className="text-xs font-medium text-text-primary">Selecionar arquivo CSV</span><span className="text-[10px] text-text-muted">Extensão aceita: .csv</span>
+          <Upload aria-hidden="true" size={18} className="text-text-secondary" /><span className="text-xs font-medium text-text-primary">Selecionar arquivo CSV</span><span className="text-[11px] text-text-muted">Extensão aceita: .csv</span>
         </button>}
         {fileError && <p role="alert" className="mt-2 text-xs text-danger">{fileError}</p>}
       </section>
