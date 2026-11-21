@@ -147,7 +147,7 @@ export function TicketsPage() {
   }
 
   const ticketColumns: DataColumn<Ticket>[] = [
-    { key: 'chamado', header: 'Chamado', essential: true, className: 'min-w-[200px] max-w-[300px]', cell: (ticket) => <>
+    { key: 'chamado', header: 'Chamado', essential: true, className: 'min-w-[260px] max-w-[400px]', cell: (ticket) => <>
       <Link to={`/tickets/${ticket.id}`} aria-label={`Abrir chamado ${ticketCode(ticket)}`} className="whitespace-nowrap text-sm font-semibold text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">Chamado {ticketCode(ticket)}</Link>
       <p title={ticket.descricao || undefined} className="mt-0.5 line-clamp-2 text-xs leading-5 text-text-secondary">{ticket.descricao || 'Sem descrição'}</p>
     </> },
