@@ -13,7 +13,7 @@ const severityLabels: Record<string, string> = { BAIXA: 'Baixa', MEDIA: 'Média'
 const bands: { key: 'ate24h' | 'de1a3Dias' | 'maisDe3Dias'; idade: TicketAge; label: string; tone: string }[] = [
   { key: 'ate24h', idade: 'ate24h', label: 'até 24 h', tone: 'font-semibold text-primary' },
   { key: 'de1a3Dias', idade: 'de1a3dias', label: '1 a 3 dias', tone: 'font-semibold text-[color-mix(in_srgb,var(--warning)_65%,var(--text-primary))]' },
-  { key: 'maisDe3Dias', idade: 'maisde3dias', label: 'mais de 3 dias', tone: 'font-semibold text-danger' },
+  { key: 'maisDe3Dias', idade: 'maisde3dias', label: 'mais de 3 dias', tone: 'font-semibold text-[var(--danger-text)]' },
 ]
 const severityRank: Record<string, number> = { BAIXA: 0, MEDIA: 1, ALTA: 2, CRITICA: 3 }
 

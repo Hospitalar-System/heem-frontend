@@ -1,3 +1,4 @@
+import { ChevronRight } from 'lucide-react'
 import { useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { equipmentTicketsPath } from '@/features/maintenance/utils/ticket-filters'
@@ -23,14 +24,16 @@ export function ReportTopEquipment({ items, desde, ate }: { items: TopEquipment[
                 <SortableHeader label="Equipamento" sortKey="nome" sort={sort} onToggle={toggle} align="left" />
                 <SortableHeader label="Chamados" sortKey="qtdChamados" sort={sort} onToggle={toggle} />
                 <SortableHeader label="MTBF" sortKey="mtbfHoras" sort={sort} onToggle={toggle} />
+                <th scope="col" className="w-8"><span className="sr-only">Ver chamados</span></th>
               </tr>
             </thead>
             <tbody>
               {sorted.map((item) => (
-                <tr key={item.equipamentoId} className="row-divider relative hover:bg-bg">
-                  <th scope="row" className="px-4 py-2 text-left font-medium text-text-primary"><Link to={equipmentTicketsPath({ equipamentoId: item.equipamentoId, desde, ate })} aria-label={`Ver os ${formatCount(item.qtdChamados)} chamados de ${item.nome ?? 'equipamento excluído'}${item.codigo ? ` (${item.codigo})` : ''} no período`} className="rounded-sm outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-primary">{item.nome ?? 'Equipamento excluído'}{item.codigo && <span className="ml-2 whitespace-nowrap font-normal text-text-muted">{item.codigo}</span>}</Link></th>
+                <tr key={item.equipamentoId} className="row-divider relative cursor-pointer hover:bg-surface-hi">
+                  <th scope="row" className="px-4 py-2 text-left font-medium text-text-primary"><Link to={equipmentTicketsPath({ equipamentoId: item.equipamentoId, desde, ate })} aria-label={`${item.nome ?? 'Equipamento excluído'}${item.codigo ? `, ${item.codigo}` : ''}, ${formatCount(item.qtdChamados)} ${item.qtdChamados === 1 ? 'chamado' : 'chamados'}`} className="rounded-sm underline decoration-dotted decoration-1 underline-offset-4 outline-none after:absolute after:inset-0 focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-primary">{item.nome ?? 'Equipamento excluído'}{item.codigo && <span className="ml-2 whitespace-nowrap font-normal text-text-muted">{item.codigo}</span>}</Link></th>
                   <td className="px-4 py-2 text-right font-semibold tabular-nums text-text-primary">{formatCount(item.qtdChamados)}</td>
                   <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-text-secondary">{formatHours(item.mtbfHoras)}</td>
+                  <td aria-hidden="true" className="w-8 pr-3 text-text-muted"><ChevronRight size={14} /></td>
                 </tr>
               ))}
             </tbody>

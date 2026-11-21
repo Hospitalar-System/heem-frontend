@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { endOfSystemDay, startOfSystemDay } from '@/lib/system-day'
 import { EMERGENCIAS_CONTEUDO, OT_STATUS_VALUES, OT_TIPO_VALUES } from '../api/documents'
 import { EXPORT_CONTENTS, EXPORT_FORMATS } from '../api/reports'
 import type { ExportRequest } from '../api/reports'
@@ -62,8 +63,8 @@ export const exportBuilderSchema = z.object({
 
 export type ExportBuilderValues = z.infer<typeof exportBuilderSchema>
 
-const startOfDay = (value: string) => new Date(`${value}T00:00:00.000Z`).toISOString()
-const endOfDay = (value: string) => new Date(`${value}T23:59:59.999Z`).toISOString()
+const startOfDay = startOfSystemDay
+const endOfDay = endOfSystemDay
 
 function isoDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`

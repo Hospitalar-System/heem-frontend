@@ -87,6 +87,14 @@ describe('ReportsPage', () => {
     expect(screen.queryByText(/API ainda não disponibiliza essa agregação/)).not.toBeInTheDocument()
   })
 
+  it('pede o período do relatório em limites de dia do fuso do sistema (início 03:00 UTC, fim 02:59:59.999 UTC do dia seguinte)', async () => {
+    render(<ReportsPage />, { wrapper: TestProviders })
+    await screen.findByText('286 h')
+    const params = vi.mocked(apiClient.get).mock.calls.find(([url]) => url === '/relatorios/top-equipamentos')?.[1]?.params as { desde: string; ate: string }
+    expect(params.desde).toMatch(/^\d{4}-\d{2}-01T03:00:00\.000Z$/)
+    expect(params.ate).toMatch(/^\d{4}-\d{2}-\d{2}T02:59:59\.999Z$/)
+  })
+
   it('pede os indicadores com agrupar=hospital e não usa campos deprecated', async () => {
     render(<ReportsPage />, { wrapper: TestProviders })
     await screen.findByText('286 h')
@@ -168,7 +176,7 @@ describe('ReportsPage', () => {
     const [ate24, de1a3, maisDe3] = within(alta).getAllByRole('cell')
     expect(ate24.className).toContain('text-primary')
     expect(de1a3.className).toContain('--warning')
-    expect(maisDe3.className).toContain('text-danger')
+    expect(maisDe3.className).toContain('--danger-text')
     expect(de1a3).toHaveAttribute('title', 'Faixa 1 a 3 dias')
     // zero fica neutro, sem título de faixa
     const critical = within(table).getByRole('row', { name: /Crítica/ })
@@ -181,7 +189,8 @@ describe('ReportsPage', () => {
     const user = userEvent.setup()
     render(<ReportsPage />, { wrapper: TestProviders })
     const table = await screen.findByRole('table', { name: 'Equipamentos com mais chamados no período' })
-    const link = within(table).getByRole('link', { name: /Ver os 3 chamados de Ventilador \(EQ-1\) no período/ })
+    const link = within(table).getByRole('link', { name: 'Ventilador, EQ-1, 3 chamados' })
+    expect(within(table).getAllByRole('link')).toHaveLength(3)
     expect(link.getAttribute('href')).toMatch(/^\/tickets\?equipamentoId=eq-1&abertoDe=\d{4}-\d{2}-01&abertoAte=\d{4}-\d{2}-\d{2}$/)
     await user.click(link)
     expect(screen.getByTestId('location').textContent).toMatch(/^\/tickets\?equipamentoId=eq-1&abertoDe=\d{4}-\d{2}-01&abertoAte=/)
