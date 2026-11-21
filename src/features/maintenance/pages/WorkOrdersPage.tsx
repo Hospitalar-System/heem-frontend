@@ -1,4 +1,5 @@
 import { plural } from '@/lib/plural'
+import { workOrderStatusTone } from '@/lib/status-tones'
 import { ClipboardPlus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
@@ -20,7 +21,7 @@ import { DateTimePicker } from '@/components/ui/DateTimePicker'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Pagination } from '@/components/ui/Pagination'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 import { orderingErrorMessage, parseDirection, parseWorkOrderSort, sortDirectionOptions, workOrderSortFields } from '../utils/ordering'
 import { useOrderingFallback } from '../utils/useOrderingFallback'
@@ -36,13 +37,7 @@ function formatDate(value: string | null) {
   if (!value || !Number.isFinite(Date.parse(value))) return '—'
   return new Intl.DateTimeFormat('pt-BR').format(new Date(value))
 }
-function statusTone(value: string): StatusTone {
-  const status = normalized(value)
-  if (status === 'AGENDADA') return 'warning'
-  if (status === 'EM_EXECUCAO' || status === 'EM_ANDAMENTO') return 'success'
-  if (status === 'CANCELADA' || status === 'CANCELADO') return 'danger'
-  return 'neutral'
-}
+const statusTone = workOrderStatusTone
 function isOverdue(order: { status: string; dataAgendada: string | null; atrasada?: boolean }) {
   if (typeof order.atrasada === 'boolean') return order.atrasada
   const status = normalized(order.status)

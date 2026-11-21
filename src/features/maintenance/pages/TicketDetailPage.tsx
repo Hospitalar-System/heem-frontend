@@ -16,7 +16,8 @@ import { formatSlaDeadline } from '../utils/sla'
 import { ticketCauseCategories, ticketCauseLabels, type TicketCauseCategory, type TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
 import { ticketCode } from '../utils/ticket-code'
-import { Badge, type BadgeVariant } from '@/components/ui/Badge'
+import { severityTone, ticketStatusTone } from '@/lib/status-tones'
+import { Badge } from '@/components/ui/Badge'
 
 const fieldClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const severityLabel: Record<string, string> = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }
@@ -31,19 +32,7 @@ function normalizeStatus(status: TicketStatus) {
   return status.toLocaleUpperCase('pt-BR').replace('Ç', 'C')
 }
 
-function severityTone(value: string): BadgeVariant {
-  if (value === 'CRITICA') return 'danger'
-  if (value === 'ALTA') return 'warning'
-  if (value === 'BAIXA') return 'success'
-  return 'neutral'
-}
-
-function statusTone(status: string): BadgeVariant {
-  if (status === 'RESOLVIDO') return 'success'
-  if (status === 'ABERTO' || status === 'AGUARDANDO_PECA') return 'warning'
-  if (status === 'EM_ANDAMENTO') return 'neutral'
-  return 'neutral'
-}
+const statusTone = ticketStatusTone
 
 export function TicketDetailPage() {
   const { id = '' } = useParams()

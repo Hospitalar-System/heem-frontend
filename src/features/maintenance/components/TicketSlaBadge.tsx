@@ -1,4 +1,5 @@
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { slaTones } from '@/lib/status-tones'
 import type { TicketSlaStatus } from '../types'
 
 const labels: Record<Exclude<TicketSlaStatus, null>, string> = {
@@ -7,13 +8,8 @@ const labels: Record<Exclude<TicketSlaStatus, null>, string> = {
   vencido: 'SLA vencido',
 }
 
-const tones: Record<Exclude<TicketSlaStatus, null>, StatusTone> = {
-  no_prazo: 'success',
-  em_risco: 'warning',
-  vencido: 'danger',
-}
 
 export function TicketSlaBadge({ status }: { status?: TicketSlaStatus }) {
   if (!status) return null
-  return <StatusBadge tone={tones[status]}>{labels[status]}</StatusBadge>
+  return <StatusBadge tone={slaTones[status].tone} outline={slaTones[status].outline}>{labels[status]}</StatusBadge>
 }
