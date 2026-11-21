@@ -31,7 +31,7 @@ export function AccessBlockedScreen({ reason, onBack }: { reason: AccessBlockedR
     <div role="alert" className="w-full space-y-4 rounded-lg border border-border bg-surface p-6">
       <ShieldAlert aria-hidden="true" className="size-6 text-danger" />
       <div className="space-y-1.5">
-        <h3 ref={headingRef} tabIndex={-1} className="text-base font-semibold text-text-primary outline-none">{title}</h3>
+        <h3 ref={headingRef} tabIndex={-1} className="text-base font-semibold text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-primary">{title}</h3>
         <p className="text-sm leading-6 text-text-secondary">{message}</p>
       </div>
       <button

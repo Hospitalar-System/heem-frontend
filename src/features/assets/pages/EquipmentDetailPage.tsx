@@ -71,7 +71,7 @@ export function EquipmentDetailPage() {
         {visibleTabs.map(({ id: tabId, label, Icon }, index) => <button key={tabId} type="button" role="tab" id={`equipment-tab-${tabId}`} aria-selected={activeTab === tabId} aria-controls="equipment-tab-panel" tabIndex={activeTab === tabId ? 0 : -1} onClick={() => setActiveTab(tabId)} onKeyDown={(event) => handleTabKeyDown(event, index, setActiveTab, visibleTabs)} className={`inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === tabId ? 'bg-primary text-bg-brand' : 'text-text-secondary hover:bg-bg hover:text-text-primary'}`}><Icon size={14} />{label}</button>)}
       </ScrollableTabs>
 
-      <section id="equipment-tab-panel" role="tabpanel" aria-labelledby={`equipment-tab-${activeTab}`} className="mt-4 outline-none">
+      <section id="equipment-tab-panel" role="tabpanel" aria-labelledby={`equipment-tab-${activeTab}`} className="mt-4 outline-none focus-visible:ring-2 focus-visible:ring-primary">
         {activeTab === 'dados' ? <EquipmentData equipment={equipment.data} canWritePhoto={canReadDocuments} order={nextPreventive} ordersLoading={orders.isLoading} isAdmin={isAdmin} /> : null}
         {activeTab === 'medicoes' ? <EquipmentMeasurementsSection equipmentId={id} isAdmin={isAdmin} /> : null}
         {activeTab === 'estados' ? <EquipmentStateHistorySection equipmentId={id} isAdmin={isAdmin} /> : null}

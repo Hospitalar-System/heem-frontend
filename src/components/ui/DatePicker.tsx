@@ -141,7 +141,6 @@ export function DatePicker({
       aria-expanded={open}
       aria-controls={open ? `${autoId}-dialog` : undefined}
       aria-invalid={ariaInvalid || undefined}
-      aria-required={required || undefined}
       aria-describedby={ariaDescribedBy}
       disabled={disabled}
       onClick={() => (open ? close() : openPicker())}
