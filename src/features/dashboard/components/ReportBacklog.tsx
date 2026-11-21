@@ -9,10 +9,11 @@ import { SectionEmpty, SortableHeader } from './report-ui'
 type BacklogSortKey = 'severidade' | 'ate24h' | 'de1a3Dias' | 'maisDe3Dias' | 'total'
 
 const severityLabels: Record<string, string> = { BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta', CRITICA: 'Crítica' }
-const bands: { key: 'ate24h' | 'de1a3Dias' | 'maisDe3Dias'; idade: TicketAge; label: string }[] = [
-  { key: 'ate24h', idade: 'ate24h', label: 'até 24 h' },
-  { key: 'de1a3Dias', idade: 'de1a3dias', label: '1 a 3 dias' },
-  { key: 'maisDe3Dias', idade: 'maisde3dias', label: 'mais de 3 dias' },
+// Cor por faixa só quando há chamados: verde (sucesso), amarelo (aviso, misturado ao texto para manter contraste no claro) e vermelho (perigo).
+const bands: { key: 'ate24h' | 'de1a3Dias' | 'maisDe3Dias'; idade: TicketAge; label: string; tone: string }[] = [
+  { key: 'ate24h', idade: 'ate24h', label: 'até 24 h', tone: 'font-semibold text-primary' },
+  { key: 'de1a3Dias', idade: 'de1a3dias', label: '1 a 3 dias', tone: 'font-semibold text-[color-mix(in_srgb,var(--warning)_65%,var(--text-primary))]' },
+  { key: 'maisDe3Dias', idade: 'maisde3dias', label: 'mais de 3 dias', tone: 'font-semibold text-danger' },
 ]
 const severityRank: Record<string, number> = { BAIXA: 0, MEDIA: 1, ALTA: 2, CRITICA: 3 }
 
@@ -45,7 +46,7 @@ export function ReportBacklog({ backlog, hospitalId, setorId }: { backlog: Backl
               {sorted.map((row) => (
                 <tr key={row.severidade} className="row-divider">
                   <th scope="row" className="px-2 py-1.5 text-left font-medium text-text-primary sm:px-3"><Link to={backlogTicketsPath({ severidade: row.severidade, hospitalId, setorId })} className={cellLink} aria-label={`Ver chamados pendentes de severidade ${severityLabels[row.severidade] ?? row.severidade}`}>{severityLabels[row.severidade] ?? row.severidade}</Link></th>
-                  {bands.map(({ key, idade, label }) => <td key={key} className={`px-2 py-1.5 text-right tabular-nums sm:px-3 ${key === 'maisDe3Dias' && row[key] > 0 ? 'font-semibold text-danger' : 'text-text-secondary'}`}>{row[key] > 0 ? <Link to={backlogTicketsPath({ severidade: row.severidade, idade, hospitalId, setorId })} className={cellLink} aria-label={`Ver ${formatCount(row[key])} chamados ${severityLabels[row.severidade] ?? row.severidade} com ${label}`}>{formatCount(row[key])}</Link> : <span className="px-1">{formatCount(row[key])}</span>}</td>)}
+                  {bands.map(({ key, idade, label, tone }) => <td key={key} title={row[key] > 0 ? `Faixa ${label}` : undefined} className={`px-2 py-1.5 text-right tabular-nums sm:px-3 ${row[key] > 0 ? tone : 'text-text-secondary'}`}>{row[key] > 0 ? <Link to={backlogTicketsPath({ severidade: row.severidade, idade, hospitalId, setorId })} className={cellLink} aria-label={`Ver ${formatCount(row[key])} chamados ${severityLabels[row.severidade] ?? row.severidade} com ${label}`}>{formatCount(row[key])}</Link> : <span className="px-1">{formatCount(row[key])}</span>}</td>)}
                   <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-text-primary sm:px-3">{row.total > 0 ? <Link to={backlogTicketsPath({ severidade: row.severidade, hospitalId, setorId })} className={cellLink} aria-label={`Ver ${formatCount(row.total)} chamados pendentes de severidade ${severityLabels[row.severidade] ?? row.severidade}`}>{formatCount(row.total)}</Link> : <span className="px-1">{formatCount(row.total)}</span>}</td>
                 </tr>
               ))}

@@ -1,11 +1,14 @@
 import { useCallback } from 'react'
+import { Link } from 'react-router-dom'
+import { equipmentTicketsPath } from '@/features/maintenance/utils/ticket-filters'
 import type { TopEquipment } from '../api/reports'
 import { formatCount, formatHours, useSortedRows } from './report-format'
 import { SectionEmpty, SortableHeader } from './report-ui'
 
 type TopSortKey = 'nome' | 'qtdChamados' | 'mtbfHoras'
 
-export function ReportTopEquipment({ items }: { items: TopEquipment[] }) {
+/** Top 10; cada linha é um link (nome do equipamento, área esticada) para os chamados dele no mesmo período do relatório. */
+export function ReportTopEquipment({ items, desde, ate }: { items: TopEquipment[]; desde?: string; ate?: string }) {
   const getValue = useCallback((row: TopEquipment, key: TopSortKey) => row[key], [])
   const { sorted, sort, toggle } = useSortedRows(items, getValue, { key: 'qtdChamados', direction: 'desc' })
   return (
@@ -24,8 +27,8 @@ export function ReportTopEquipment({ items }: { items: TopEquipment[] }) {
             </thead>
             <tbody>
               {sorted.map((item) => (
-                <tr key={item.equipamentoId} className="row-divider">
-                  <th scope="row" className="px-4 py-2 text-left font-medium text-text-primary">{item.nome ?? 'Equipamento excluído'}{item.codigo && <span className="ml-2 whitespace-nowrap font-normal text-text-muted">{item.codigo}</span>}</th>
+                <tr key={item.equipamentoId} className="row-divider relative hover:bg-bg">
+                  <th scope="row" className="px-4 py-2 text-left font-medium text-text-primary"><Link to={equipmentTicketsPath({ equipamentoId: item.equipamentoId, desde, ate })} aria-label={`Ver os ${formatCount(item.qtdChamados)} chamados de ${item.nome ?? 'equipamento excluído'}${item.codigo ? ` (${item.codigo})` : ''} no período`} className="rounded-sm outline-none after:absolute after:inset-0 focus-visible:ring-2 focus-visible:ring-primary">{item.nome ?? 'Equipamento excluído'}{item.codigo && <span className="ml-2 whitespace-nowrap font-normal text-text-muted">{item.codigo}</span>}</Link></th>
                   <td className="px-4 py-2 text-right font-semibold tabular-nums text-text-primary">{formatCount(item.qtdChamados)}</td>
                   <td className="whitespace-nowrap px-4 py-2 text-right tabular-nums text-text-secondary">{formatHours(item.mtbfHoras)}</td>
                 </tr>

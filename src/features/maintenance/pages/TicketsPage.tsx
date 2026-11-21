@@ -60,6 +60,7 @@ export function TicketsPage() {
   const severityFilter = searchParams.get('severidade') ?? ''
   const hospitalFilter = searchParams.get('hospitalId') ?? ''
   const sectorFilter = searchParams.get('setorId') ?? ''
+  const equipmentFilter = searchParams.get('equipamentoId') ?? ''
   const sinceFilter = searchParams.get('abertoDe') ?? ''
   const untilFilter = searchParams.get('abertoAte') ?? ''
   const situationFilter = parseSituation(searchParams.get('situacao'))
@@ -71,7 +72,7 @@ export function TicketsPage() {
   // Status, severidade, local, datas, pendentes, idade e ordem vão para o servidor; só a busca vale para a página carregada.
   const tickets = useTicketsPage({
     ...pagination.apiParams, status: statusFilter || undefined, severidade: severityFilter || undefined,
-    hospitalId: hospitalFilter || undefined, setorId: sectorFilter || undefined,
+    hospitalId: hospitalFilter || undefined, setorId: sectorFilter || undefined, equipamentoId: equipmentFilter || undefined,
     abertoDe: sinceFilter || undefined, abertoAte: invalidDates ? undefined : untilFilter || undefined,
     situacao: situationFilter, idade: ageFilter, ordenar: sortChoice.field, direcao: sortChoice.direction,
   })
@@ -121,11 +122,12 @@ export function TicketsPage() {
     severityFilter && { key: 'severidade', label: `Severidade: ${severityText[severityFilter] ?? severityFilter}` },
     hospitalFilter && { key: 'hospitalId', label: `Hospital: ${hospitalById.get(hospitalFilter)?.nome ?? 'selecionado'}` },
     sectorFilter && { key: 'setorId', label: `Setor: ${sectorById.get(sectorFilter)?.nome ?? 'selecionado'}` },
+    equipmentFilter && { key: 'equipamentoId', label: `Equipamento: ${equipmentById.get(equipmentFilter) ? `${equipmentById.get(equipmentFilter)?.codigo} · ${equipmentById.get(equipmentFilter)?.nome}` : 'selecionado'}` },
     situationFilter && { key: 'situacao', label: 'Somente pendentes' },
     ageFilter && { key: 'idade', label: `Idade: ${ageLabels[ageFilter]}` },
   ].filter((item): item is { key: string; label: string } => Boolean(item))
   const filtersActive = Boolean(search || serverFilters.length || sinceFilter || untilFilter)
-  const clearAll = () => { setSearch(''); pagination.setFilters({ status: undefined, severidade: undefined, hospitalId: undefined, setorId: undefined, abertoDe: undefined, abertoAte: undefined, situacao: undefined, idade: undefined }) }
+  const clearAll = () => { setSearch(''); pagination.setFilters({ status: undefined, severidade: undefined, hospitalId: undefined, setorId: undefined, equipamentoId: undefined, abertoDe: undefined, abertoAte: undefined, situacao: undefined, idade: undefined }) }
   const eligibleTechnicians = selectedTicket
     ? technicians.filter((technician) => technician.hospitalId === selectedTicket.hospitalId)
     : []

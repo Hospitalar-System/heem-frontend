@@ -135,7 +135,7 @@ export function ReportsPage() {
 
         {topEquipment.isLoading ? <SectionSkeleton label="Carregando equipamentos com mais chamados" /> : topEquipment.isError ? (
           <SectionError message={getErrorMessage(topEquipment.error, 'Não foi possível carregar os equipamentos com mais chamados.')} onRetry={() => void topEquipment.refetch()} />
-        ) : topEquipment.data && <ReportTopEquipment items={topEquipment.data} />}
+        ) : topEquipment.data && <ReportTopEquipment items={topEquipment.data} desde={invalidRange ? undefined : desde} ate={invalidRange ? undefined : ate} />}
       </div>
     </AdminPageShell>
   )

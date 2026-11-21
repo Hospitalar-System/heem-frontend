@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
@@ -15,9 +15,14 @@ vi.mock('@/components/layout/AdminPageShell', () => ({
   AdminPageShell: ({ title, children }: PropsWithChildren<{ title: string }>) => <main><h1>{title}</h1>{children}</main>,
 }))
 
+function LocationProbe() {
+  const location = useLocation()
+  return <output data-testid="location">{location.pathname}{location.search}</output>
+}
+
 function TestProviders({ children }: PropsWithChildren) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
-  return <QueryClientProvider client={client}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>
+  return <QueryClientProvider client={client}><MemoryRouter>{children}<LocationProbe /></MemoryRouter></QueryClientProvider>
 }
 
 const preventiva = { atrasadas: 2, concluidasNoPrazo: 19, concluidasForaDoPrazo: 3, percentualNoPrazo: 86.4, canceladas: 1 }
@@ -155,6 +160,32 @@ describe('ReportsPage', () => {
     await chooseOption(user, 'Setor', 'UTI Adulto')
     await waitFor(() => expect(within(screen.getByRole('table', { name: /Backlog de chamados/ })).getAllByRole('link')[0].getAttribute('href'))
       .toContain('hospitalId=hospital-1&setorId=sector-1'))
+  })
+
+  it('backlog: só células com chamados ganham cor por faixa (verde, amarelo, vermelho) e o rótulo da faixa fica acessível', async () => {
+    render(<ReportsPage />, { wrapper: TestProviders })
+    const table = await screen.findByRole('table', { name: /Backlog de chamados/ })
+    const alta = within(table).getByRole('row', { name: /Alta/ })
+    const [ate24, de1a3, maisDe3] = within(alta).getAllByRole('cell')
+    expect(ate24.className).toContain('text-primary')
+    expect(de1a3.className).toContain('--warning')
+    expect(maisDe3.className).toContain('text-danger')
+    expect(de1a3).toHaveAttribute('title', 'Faixa 1 a 3 dias')
+    // zero fica neutro, sem título de faixa
+    const critical = within(table).getByRole('row', { name: /Crítica/ })
+    const [zero24] = within(critical).getAllByRole('cell')
+    expect(zero24.className).toContain('text-text-secondary')
+    expect(zero24).not.toHaveAttribute('title')
+  })
+
+  it('top de equipamentos: o nome é um link que leva aos chamados do equipamento no período do relatório', async () => {
+    const user = userEvent.setup()
+    render(<ReportsPage />, { wrapper: TestProviders })
+    const table = await screen.findByRole('table', { name: 'Equipamentos com mais chamados no período' })
+    const link = within(table).getByRole('link', { name: /Ver os 3 chamados de Ventilador \(EQ-1\) no período/ })
+    expect(link.getAttribute('href')).toMatch(/^\/tickets\?equipamentoId=eq-1&abertoDe=\d{4}-\d{2}-01&abertoAte=\d{4}-\d{2}-\d{2}$/)
+    await user.click(link)
+    expect(screen.getByTestId('location').textContent).toMatch(/^\/tickets\?equipamentoId=eq-1&abertoDe=\d{4}-\d{2}-01&abertoAte=/)
   })
 
   it('renderiza o top de equipamentos, ordena e trata equipamento excluído e MTBF nulo', async () => {
