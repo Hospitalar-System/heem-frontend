@@ -107,7 +107,7 @@ export function PreventiveRoutinesPage() {
 
   const columns: DataColumn<Routine>[] = [
     { key: 'rotina', header: 'Rotina', cell: (routine) => {
-      if (routine.kind === 'campanha') return <><Link to={`/work-orders/campanhas/${routine.campaign.id}`} className={`font-medium text-primary hover:underline ${focusRing}`}>{routine.campaign.nome}</Link><span className="block text-[10px] text-text-muted">Campanha · {recurrenceLabel(routine.campaign.recorrencia, routine.campaign.intervalo)}</span></>
+      if (routine.kind === 'campanha') return <><Link to={`/work-orders/campanhas/${routine.campaign.id}`} className={`inline-flex min-h-6 items-center font-medium text-primary hover:underline ${focusRing}`}>{routine.campaign.nome}</Link><span className="block text-[10px] text-text-muted">Campanha · {recurrenceLabel(routine.campaign.recorrencia, routine.campaign.intervalo)}</span></>
       const equipment = planEquipment(routine.plan)
       const { intervaloDias } = routine.plan
       return <><span className="block font-medium text-text-primary">{equipment?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equipment?.codigo ?? ''} · Plano · A cada {intervaloDias} {intervaloDias === 1 ? 'dia' : 'dias'}</span>
@@ -123,7 +123,7 @@ export function PreventiveRoutinesPage() {
     { key: 'situacao', header: 'Situação', cell: (routine) => <StatusBadge tone={routineSituationTones[routine.situation]}>{routineSituationLabels[routine.situation]}</StatusBadge> },
     { key: 'progresso', header: 'Progresso', cell: (routine) => <span className="text-text-secondary">{routine.concluidas}/{routine.total} concluídas
       <span role="progressbar" aria-label={`Progresso de ${routineName(routine)}`} aria-valuemin={0} aria-valuemax={routine.total} aria-valuenow={routine.concluidas} className="mt-1 block h-1 w-24 overflow-hidden rounded-full bg-border"><span className="block h-full bg-primary" style={{ width: `${routine.total ? Math.round((routine.concluidas / routine.total) * 100) : 0}%` }} /></span></span> },
-    { key: 'ots', header: 'OTs geradas', cell: (routine) => <><span className="block text-text-secondary">{routine.total}</span><Link to={routineOtsLink(routine)} aria-label={`Ver OTs de ${routineName(routine)}`} className={`text-[11px] font-medium text-primary hover:underline ${focusRing}`}>Ver OTs</Link></> },
+    { key: 'ots', header: 'OTs geradas', cell: (routine) => <><span className="block text-text-secondary">{routine.total}</span><Link to={routineOtsLink(routine)} aria-label={`Ver OTs de ${routineName(routine)}`} className={`inline-flex min-h-6 items-center text-[11px] font-medium text-primary hover:underline ${focusRing}`}>Ver OTs</Link></> },
   ]
   const clearFilters = () => pagination.setFilters({ escopo: undefined, status: undefined, equipamento: undefined })
   const errorMessage = forbidden

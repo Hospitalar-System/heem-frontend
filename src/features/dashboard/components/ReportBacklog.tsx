@@ -17,7 +17,7 @@ const bands: { key: 'ate24h' | 'de1a3Dias' | 'maisDe3Dias'; idade: TicketAge; la
 ]
 const severityRank: Record<string, number> = { BAIXA: 0, MEDIA: 1, ALTA: 2, CRITICA: 3 }
 
-const cellLink = 'inline-block rounded px-1 py-0.5 underline decoration-dotted decoration-1 underline-offset-4 outline-none hover:decoration-solid focus-visible:ring-2 focus-visible:ring-primary'
+const cellLink = 'inline-block rounded px-1 py-1 underline decoration-dotted decoration-1 underline-offset-4 outline-none hover:decoration-solid focus-visible:ring-2 focus-visible:ring-primary'
 
 /** Backlog por severidade e idade; severidade, faixas e total levam à lista de chamados já filtrada (mesmo hospital e setor). */
 export function ReportBacklog({ backlog, hospitalId, setorId }: { backlog: BacklogReport; hospitalId?: string; setorId?: string }) {
@@ -31,7 +31,7 @@ export function ReportBacklog({ backlog, hospitalId, setorId }: { backlog: Backl
       </div>
       {backlog.total === 0 ? <div className="p-5"><SectionEmpty>Nenhum chamado em aberto para os filtros selecionados.</SectionEmpty></div> : (
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="tabular-nums w-full text-xs">
             <caption className="sr-only">Backlog de chamados por severidade e faixa de idade</caption>
             <thead className="text-text-secondary">
               <tr className="table-head">

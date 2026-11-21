@@ -20,7 +20,7 @@ export function HospitalsPage() {
   const metricValue = (value: number | null | undefined) => (metrics.isLoading ? '—' : value ?? '—')
 
   const columns: DataColumn<Hospital>[] = [
-    { key: 'nome', header: 'Hospital', className: 'max-w-[320px]', cell: (hospital) => <Link to={detailPath(hospital)} className="block truncate rounded text-sm font-medium text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">{hospital.nome}</Link> },
+    { key: 'nome', header: 'Hospital', className: 'max-w-[320px]', cell: (hospital) => <Link to={detailPath(hospital)} className="block min-h-6 truncate rounded py-0.5 text-sm font-medium text-text-primary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">{hospital.nome}</Link> },
     { key: 'cnpj', header: 'CNPJ', cell: (hospital) => <span className="text-text-secondary">{formatCnpj(hospital.cnpj) || '—'}</span> },
     { key: 'setores', header: 'Setores', cell: (hospital) => <span className="tabular-nums">{metricValue(metrics.data?.[hospital.id]?.setores)}</span> },
     { key: 'equipamentos', header: 'Equipamentos', cell: (hospital) => <span className="tabular-nums">{metricValue(metrics.data?.[hospital.id]?.equipamentos)}</span> },

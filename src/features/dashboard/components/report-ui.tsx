@@ -6,7 +6,7 @@ export function SortableHeader<K extends string>({ label, shortLabel, sortKey, s
   const Icon = !active ? ChevronsUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown
   return (
     <th scope="col" aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'} className={`px-2 py-2 font-medium sm:px-4 ${align === 'left' ? 'text-left' : 'text-right'}`}>
-      <button type="button" onClick={() => onToggle(sortKey)} className="inline-flex items-center gap-1 rounded-sm outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-primary">
+      <button type="button" onClick={() => onToggle(sortKey)} className="inline-flex min-h-6 items-center gap-1 rounded-sm outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-primary">
         {shortLabel ? <><span className="max-sm:hidden">{label}</span><span aria-hidden="true" className="sm:hidden">{shortLabel}</span></> : label}<Icon aria-hidden="true" size={12} />
       </button>
     </th>

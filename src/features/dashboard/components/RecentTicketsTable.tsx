@@ -23,12 +23,12 @@ export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicke
     <section aria-labelledby="recent-tickets-title" className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex h-12 items-center justify-between border-b border-border px-4 2xl:h-[58px] 2xl:px-5">
         <h2 id="recent-tickets-title" className="text-sm font-semibold text-text-primary">Chamados recentes</h2>
-        <Link to="/tickets" className="inline-flex items-center gap-1 rounded text-xs font-medium text-primary outline-none hover:text-primary-hover focus-visible:ring-2 focus-visible:ring-primary">
+        <Link to="/tickets" className="inline-flex min-h-6 items-center gap-1 rounded text-xs font-medium text-primary outline-none hover:text-primary-hover focus-visible:ring-2 focus-visible:ring-primary">
           Ver todos <ArrowRight aria-hidden="true" size={13} />
         </Link>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] border-collapse text-left text-xs">
+        <table className="tabular-nums w-full min-w-[640px] border-collapse text-left text-xs">
           <thead className="table-head text-[10px]">
             <tr className="h-9 2xl:h-12">
               <th scope="col" className="px-5 font-medium">Chamado</th>
@@ -44,7 +44,7 @@ export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicke
               return (
                 <tr key={ticket.id} className="row-divider h-10 transition hover:bg-surface-hi 2xl:h-12">
                   <td className="px-5">
-                    <Link to={`/tickets/${ticket.id}`} className="rounded text-text-secondary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">{ticket.code}</Link>
+                    <Link to={`/tickets/${ticket.id}`} className="inline-flex min-h-6 items-center rounded text-text-secondary outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-primary">{ticket.code}</Link>
                   </td>
                   <td className="px-4 text-text-primary">{ticket.statusLabel}</td>
                   <td className="px-4">

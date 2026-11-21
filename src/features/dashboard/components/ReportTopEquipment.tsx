@@ -17,7 +17,7 @@ export function ReportTopEquipment({ items, desde, ate }: { items: TopEquipment[
       <div className="border-b border-border px-5 py-4"><h2 id="top-equipment-title" className="text-sm font-semibold text-text-primary">Equipamentos com mais chamados</h2><p className="mt-1 text-xs text-text-muted">Top 10 do período, com o MTBF de cada equipamento</p></div>
       {items.length === 0 ? <div className="p-5"><SectionEmpty>Nenhum chamado aberto no período para os filtros selecionados.</SectionEmpty></div> : (
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="tabular-nums w-full text-xs">
             <caption className="sr-only">Equipamentos com mais chamados no período</caption>
             <thead className="text-text-secondary">
               <tr className="table-head">

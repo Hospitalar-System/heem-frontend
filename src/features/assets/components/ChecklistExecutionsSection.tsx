@@ -75,7 +75,7 @@ function ExecutionCard({ execution, isAdmin }: { execution: ChecklistExecution; 
     </button>
     {open ? <div id={panelId} className="mt-2 overflow-x-auto rounded-md border border-border">
       {execution.itens.length === 0 ? <p className="px-3 py-3 text-xs text-text-muted">Esta execução não registrou itens.</p>
-        : <table className="w-full text-left text-xs">
+        : <table className="tabular-nums w-full text-left text-xs">
           <caption className="sr-only">Itens da execução {execution.otCodigo}</caption>
           <thead className="bg-bg text-text-muted"><tr><th scope="col" className="px-3 py-2 font-medium">Item</th><th scope="col" className="px-3 py-2 font-medium">Valor medido</th><th scope="col" className="px-3 py-2 font-medium">Esperado</th><th scope="col" className="px-3 py-2 font-medium">Resultado</th></tr></thead>
           <tbody className="divide-y divide-border">{execution.itens.map((item) => <tr key={item.itemId}>

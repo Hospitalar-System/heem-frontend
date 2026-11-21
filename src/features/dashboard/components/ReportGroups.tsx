@@ -55,7 +55,7 @@ export function ReportGroups({ groups, grouping }: { groups: IndicatorGroup[]; g
             </ResponsiveContainer>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="tabular-nums w-full text-xs">
               <caption className="sr-only">{title}</caption>
               <thead className="text-text-secondary">
                 <tr className="table-head">

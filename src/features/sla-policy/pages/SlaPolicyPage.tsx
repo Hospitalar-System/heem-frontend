@@ -91,7 +91,7 @@ export function SlaPolicyPage() {
 
         {policy.data && <form onSubmit={form.handleSubmit(submit)}>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[680px] border-collapse text-left">
+            <table className="tabular-nums w-full min-w-[680px] border-collapse text-left">
               <thead><tr className="table-head text-[10px]">
                 <th scope="col" className="px-3 py-3">Severidade</th>
                 <th scope="col" className="px-3 py-3">Prazo de atendimento</th>

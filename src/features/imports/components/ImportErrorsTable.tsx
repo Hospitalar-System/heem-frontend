@@ -49,7 +49,7 @@ export function ImportErrorsTable({ errors, inProgress, truncated, totalWithErro
     </div>
     {truncated && <p className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-[11px] leading-4 text-text-secondary">O relatório guarda apenas parte dos erros ({errors.length.toLocaleString('pt-BR')} de {totalWithError.toLocaleString('pt-BR')}). Corrija esses e envie o arquivo de novo para ver os demais.</p>}
     <div className="overflow-x-auto rounded-md border border-border">
-      <table className="w-full min-w-[560px] text-left text-xs">
+      <table className="tabular-nums w-full min-w-[560px] text-left text-xs">
         <caption className="sr-only">Erros por linha da importação</caption>
         <thead className="bg-bg text-[11px] text-text-secondary"><tr><th scope="col" className="px-3 py-2 font-medium">Linha</th><th scope="col" className="px-3 py-2 font-medium">Código</th><th scope="col" className="px-3 py-2 font-medium">Campo</th><th scope="col" className="px-3 py-2 font-medium">Motivo</th></tr></thead>
         <tbody>{visible.map((error, index) => <tr key={`${error.linha}-${error.code}-${index}`} className="row-idle row-divider">
