@@ -126,6 +126,11 @@
  * Selos de condição (F6.7): fundo suave na cor do aviso, texto misturado ao texto principal do tema
  * (clareia no escuro, escurece no claro) para manter contraste AA, sem borda.
  */
+/* Troca de tema instantânea: sem transições de cor no resto da página (o ícone do botão de tema continua animando). */
+:root[data-theme-switching] *:not(svg[data-icon]) {
+  transition: none !important;
+}
+
 @layer components {
   .badge-neutral {
     background-color: color-mix(in srgb, var(--text-muted) 18%, transparent);

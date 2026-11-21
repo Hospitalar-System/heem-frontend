@@ -17,6 +17,16 @@ function useResolvedTheme(): 'dark' | 'light' {
   return mode === 'auto' ? (systemDark ? 'dark' : 'light') : mode
 }
 
+/**
+ * A troca de tema é instantânea: por 2 quadros o <html> recebe data-theme-switching, que desliga as transições de cor
+ * do resto da página (sem cor intermediária nem piscar). Só o ícone (svg[data-icon]) segue animando.
+ */
+function pauseTransitions() {
+  const root = document.documentElement
+  root.setAttribute('data-theme-switching', '')
+  requestAnimationFrame(() => requestAnimationFrame(() => root.removeAttribute('data-theme-switching')))
+}
+
 // Só transform e opacity, 250 ms: o sol sai girando para -90° e a lua entra de +90°. Com prefers-reduced-motion não há giro nem escala, só um fade curto.
 const iconBase = 'absolute inset-0 m-auto transition-[transform,opacity] duration-[250ms] ease-[cubic-bezier(.2,.8,.2,1)] motion-reduce:rotate-0 motion-reduce:scale-100 motion-reduce:duration-100'
 const shown = 'rotate-0 scale-100 opacity-100'
@@ -40,7 +50,7 @@ export function ThemeSwitcher({ variant = 'panel' }: { variant?: keyof typeof va
     <button
       type="button"
       aria-label={dark ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
-      onClick={() => setMode(dark ? 'light' : 'dark')}
+      onClick={() => { pauseTransitions(); setMode(dark ? 'light' : 'dark') }}
       className={`relative grid shrink-0 place-items-center text-text-secondary outline-none transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg [@media(pointer:coarse)]:size-11 ${variants[variant]}`}
     >
       <span aria-hidden="true" className="relative block size-[18px]">

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from '../theme-provider'
@@ -41,6 +41,14 @@ describe('ThemeSwitcher (botão sol/lua)', () => {
     renderSwitcher()
     await user.click(screen.getByRole('button', { name: 'Mudar para o tema claro' }))
     expect(localStorage.getItem('heem-theme-mode')).toBe('light')
+  })
+
+  it('desliga as transições do resto da página só durante a troca (2 quadros), sem deixar o atributo preso', async () => {
+    const user = userEvent.setup()
+    renderSwitcher()
+    await user.click(screen.getByRole('button', { name: 'Mudar para o tema claro' }))
+    expect(document.documentElement.hasAttribute('data-theme-switching')).toBe(true)
+    await waitFor(() => expect(document.documentElement.hasAttribute('data-theme-switching')).toBe(false))
   })
 
   it('funciona por teclado (Enter e Espaço)', async () => {
