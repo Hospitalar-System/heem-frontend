@@ -153,8 +153,8 @@ export function TicketsPage() {
     </> },
     { key: 'severidade', header: 'Severidade', cell: (ticket) => <StatusBadge tone={severityTone(ticket.severidade)}>{severityText[ticket.severidade] ?? 'Severidade não informada'}</StatusBadge> },
     { key: 'status', header: 'Status', cell: (ticket) => { const status = canonicalStatus(ticket.status); return <StatusBadge tone="neutral">{statusText[status] ?? ticket.status}</StatusBadge> } },
-    { key: 'sla', header: 'SLA', cell: (ticket) => <TicketSlaBadge status={ticket.slaStatus} /> },
-    { key: 'equipamento', header: 'Equipamento', menuLabel: 'Equipamento e local', className: 'max-w-[220px]', cell: (ticket) => {
+    { key: 'sla', header: 'SLA', cell: (ticket) => ticket.slaStatus ? <TicketSlaBadge status={ticket.slaStatus} /> : <span className="text-text-muted" aria-label="Sem SLA">—</span> },
+    { key: 'equipamento', header: 'Equipamento', menuLabel: 'Equipamento e local', className: 'w-full min-w-[160px] max-w-0', cell: (ticket) => {
       const equip = equipmentById.get(ticket.equipamentoId)
       const hospital = hospitalById.get(ticket.hospitalId)
       const sector = sectorById.get(ticket.setorId)
@@ -193,6 +193,7 @@ export function TicketsPage() {
         <label className="min-w-0"><span className="sr-only">Filtrar por status</span><Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={(next) => pagination.setFilters({ status: next })} options={[{ value: '', label: 'Todos os status' }, { value: 'ABERTO', label: 'Aberto' }, { value: 'EM_ANDAMENTO', label: 'Em andamento' }, { value: 'AGUARDANDO_PECA', label: 'Aguardando peça' }, { value: 'RESOLVIDO', label: 'Resolvido' }, { value: 'CANCELADO', label: 'Cancelado' }]} /></label>
         <label className="min-w-0"><span className="sr-only">Ordenar chamados</span><Select size="sm" aria-label="Ordenar chamados" value={sortValue} onChange={(next) => { orderingFallback.dismiss(); const [ordenar, direcao] = next.split(':'); pagination.setFilters(next === DEFAULT_TICKET_SORT ? { ordenar: undefined, direcao: undefined } : { ordenar, direcao }) }} options={sortChoices.map(({ value, label }) => ({ value, label }))} /></label>
         <label className="min-w-0"><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={(next) => pagination.setFilters({ severidade: next })} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
+      <div id="chamados-colunas" className="flex min-w-0 justify-end" />
       </FilterBar>
 
       <div role="group" aria-label="Aberto entre" className="grid max-w-md grid-cols-2 gap-2">
@@ -218,6 +219,7 @@ export function TicketsPage() {
         rowHeightClass="h-16"
         minWidth="820px"
         storageKey="chamados"
+        columnsMenuContainerId="chamados-colunas"
         rowClassName={(ticket) => ticket.severidade === 'CRITICA' ? 'shadow-[inset_4px_0_0_var(--danger)]' : ticket.severidade === 'ALTA' ? 'shadow-[inset_4px_0_0_var(--warning)]' : ''}
         isLoading={tickets.isLoading}
         loadingLabel="Carregando chamados"

@@ -105,6 +105,7 @@ export function AssetsPage() {
           <Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input aria-label="Buscar equipamento" type="search" value={search.input} onChange={(event) => search.setInput(event.target.value)} placeholder="Código, nome, modelo, série…" title="Busca por código, nome, modelo, série ou categoria" className={`${inputClass} truncate pl-8`} />
         </label>
+        <div id="equipamentos-colunas" className="flex min-w-0 items-center justify-end" />
       </FilterBar>
 
     {hospitals.isError ? <ErrorState message="Não foi possível carregar os hospitais para os filtros." onRetry={() => void hospitals.refetch()} /> : null}

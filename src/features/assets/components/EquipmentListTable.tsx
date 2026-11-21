@@ -30,7 +30,7 @@ export function EquipmentListTable({ items, sectorNameById, isLoading, error, em
   const navigate = useNavigate()
   const columns: DataColumn<Equipment>[] = [
     { key: 'codigo', header: 'Código', sortable: true, essential: true, className: 'whitespace-nowrap', cell: (item) => <span className="font-medium text-text-secondary">{item.codigo}</span> },
-    { key: 'nome', header: 'Nome', sortable: true, essential: true, className: 'max-w-[260px]', cell: (item) => <span className="flex items-center gap-2.5 text-xs font-medium text-text-primary" title={item.nome}><EquipmentThumb equipmentId={item.id} nome={item.nome} fotoVersao={item.fotoVersao} /><span className="truncate">{item.nome}</span></span> },
+    { key: 'nome', header: 'Nome', sortable: true, essential: true, className: 'w-full min-w-[200px] max-w-0', cell: (item) => <span className="flex items-center gap-2.5 text-xs font-medium text-text-primary" title={item.nome}><EquipmentThumb equipmentId={item.id} nome={item.nome} fotoVersao={item.fotoVersao} /><span className="truncate">{item.nome}</span></span> },
     { key: 'categoria', header: 'Categoria', sortable: true, className: 'max-w-[170px]', cell: (item) => <span title={item.categoriaNome ?? undefined} className="block truncate text-text-secondary">{item.categoriaNome ?? <span className="text-text-muted">Sem categoria</span>}</span> },
     { key: 'modelo', header: 'Modelo', className: 'max-w-[150px]', cell: (item) => <span title={item.modelo || undefined} className="block truncate text-text-secondary">{item.modelo || '—'}</span> },
     { key: 'serie', header: 'Nº série', defaultHidden: true, className: 'whitespace-nowrap', cell: (item) => <span className="text-text-secondary">{item.numeroSerie || '—'}</span> },
@@ -58,5 +58,6 @@ export function EquipmentListTable({ items, sectorNameById, isLoading, error, em
     pagination={pagination}
     minWidth="860px"
     storageKey="equipamentos"
+    columnsMenuContainerId="equipamentos-colunas"
   />
 }

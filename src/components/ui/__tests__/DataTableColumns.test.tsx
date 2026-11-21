@@ -58,6 +58,22 @@ describe('DataTable: menu Colunas', () => {
     expect(within(screen.getAllByRole('table', { name: 'Itens' })[0]).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Nome', 'Modelo', 'Ações'])
   })
 
+  it('o botão avisa quantas colunas estão ocultas e Restaurar padrão fica inativo (aria-disabled) no padrão', async () => {
+    const user = userEvent.setup()
+    renderTable()
+    expect(screen.getByRole('button', { name: 'Colunas · 1 oculta' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Colunas/ }))
+    expect(screen.getByRole('button', { name: 'Restaurar padrão' })).toHaveAttribute('aria-disabled', 'true')
+    await user.click(screen.getByRole('checkbox', { name: 'Modelo' }))
+    expect(screen.getByRole('button', { name: 'Colunas · 2 ocultas' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Restaurar padrão' })).not.toHaveAttribute('aria-disabled')
+  })
+
+  it('leva o botão Colunas para o elemento da página indicado (ao lado da busca)', () => {
+    render(<><div data-testid="slot" id="slot-colunas" /><DataTable label="Itens" columns={columns} rows={rows} getRowId={(row) => row.id} storageKey="teste" columnsMenuContainerId="slot-colunas" /></>)
+    expect(within(screen.getByTestId('slot')).getByRole('button', { name: /Colunas/ })).toBeInTheDocument()
+  })
+
   it('Esc fecha o menu e devolve o foco ao botão', async () => {
     const user = userEvent.setup()
     renderTable()

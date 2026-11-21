@@ -1,4 +1,5 @@
-import type { HTMLAttributes, KeyboardEvent, ReactNode } from 'react'
+import { useEffect, useState, type HTMLAttributes, type KeyboardEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import { Pagination, type PaginationProps } from './Pagination'
 import { ColumnsMenu } from './DataTableColumns'
@@ -74,6 +75,8 @@ export type DataTableProps<T> = {
   minWidth?: string
   /** Liga o menu "Colunas" (escolha lembrada neste navegador sob esta chave, ex.: 'chamados'). */
   storageKey?: string
+  /** Id de um elemento da página (ex.: ao lado da busca) onde o botão "Colunas" aparece; sem ele, o botão fica acima da tabela. */
+  columnsMenuContainerId?: string
   /** Altura das linhas (padrão `h-12`). */
   rowHeightClass?: string
   className?: string
@@ -90,7 +93,7 @@ function cellClass<T>(column: DataColumn<T>) {
 /** Tabela padrão das listas (formato da lista de Categorias): colunas, selos e ações configuráveis. */
 export function DataTable<T>({
   rows, getRowId, label, caption, onRowClick, rowActions, rowLabel, rowActionsHeader = 'Ações', selection, rowClassName, rowProps,
-  sort, onSortChange, isLoading = false, loadingLabel, loadingRows = 6, empty, error, pagination, minWidth = '720px', rowHeightClass = 'h-12', className = '', storageKey, columns: allColumns,
+  sort, onSortChange, isLoading = false, loadingLabel, loadingRows = 6, empty, error, pagination, minWidth = '720px', rowHeightClass = 'h-12', className = '', storageKey, columnsMenuContainerId, columns: allColumns,
 }: DataTableProps<T>) {
   const toggleable = allColumns.map<ToggleableColumn>((column) => ({
     key: column.key,
@@ -99,6 +102,8 @@ export function DataTable<T>({
     defaultHidden: column.defaultHidden,
   }))
   const visibility = useColumnVisibility(storageKey, toggleable)
+  const [menuTarget, setMenuTarget] = useState<HTMLElement | null>(null)
+  useEffect(() => { setMenuTarget(columnsMenuContainerId ? document.getElementById(columnsMenuContainerId) : null) }, [columnsMenuContainerId])
   const columns = storageKey ? allColumns.filter((column) => !visibility.hidden.has(column.key)) : allColumns
   if (error) {
     return <section role="alert" className={`rounded-lg border border-danger/40 bg-surface p-5 text-sm text-text-primary ${className}`}>
@@ -142,7 +147,10 @@ export function DataTable<T>({
   }
 
   return <div className={className}>
-    {storageKey ? <div className="mb-1.5 flex justify-end"><ColumnsMenu columns={toggleable} hidden={visibility.hidden} onToggle={visibility.toggle} onReset={visibility.reset} isDefault={visibility.isDefault} /></div> : null}
+    {storageKey ? (() => {
+      const menu = <ColumnsMenu columns={toggleable} hidden={visibility.hidden} onToggle={visibility.toggle} onReset={visibility.reset} isDefault={visibility.isDefault} />
+      return menuTarget ? createPortal(menu, menuTarget) : <div className="mb-1.5 flex justify-end">{menu}</div>
+    })() : null}
     <div className={shell}>
       <table aria-label={label} className="w-full border-collapse text-left" style={{ minWidth }}>
         {caption ? <caption className="sr-only">{caption}</caption> : null}
