@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { endOfSystemDay, startOfSystemDay } from '@/lib/system-day'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { useHospitals, useSectors } from '@/features/assets/api/assets'
 import { useReportBacklog, useReportIndicators, useReportTopEquipment, useRiskCompliance } from '../api/reports'
@@ -26,13 +27,8 @@ function dateInputValue(value: string) {
   return value.slice(0, 10)
 }
 
-function startOfDay(value: string) {
-  return new Date(`${value}T00:00:00.000Z`).toISOString()
-}
-
-function endOfDay(value: string) {
-  return new Date(`${value}T23:59:59.999Z`).toISOString()
-}
+const startOfDay = startOfSystemDay
+const endOfDay = endOfSystemDay
 
 const riskLabels: Record<string, string> = {
   CRITICO: 'Crítico',
@@ -120,11 +116,11 @@ export function ReportsPage() {
 
         {backlog.isLoading ? <SectionSkeleton label="Carregando backlog" /> : backlog.isError ? (
           <SectionError message={getErrorMessage(backlog.error, 'Não foi possível carregar o backlog.')} onRetry={() => void backlog.refetch()} />
-        ) : backlog.data && <ReportBacklog backlog={backlog.data} />}
+        ) : backlog.data && <ReportBacklog backlog={backlog.data} hospitalId={hospitalId || undefined} setorId={setorId || undefined} />}
 
         {topEquipment.isLoading ? <SectionSkeleton label="Carregando equipamentos com mais chamados" /> : topEquipment.isError ? (
           <SectionError message={getErrorMessage(topEquipment.error, 'Não foi possível carregar os equipamentos com mais chamados.')} onRetry={() => void topEquipment.refetch()} />
-        ) : topEquipment.data && <ReportTopEquipment items={topEquipment.data} />}
+        ) : topEquipment.data && <ReportTopEquipment items={topEquipment.data} desde={invalidRange ? undefined : desde} ate={invalidRange ? undefined : ate} />}
       </div>
     </AdminPageShell>
   )

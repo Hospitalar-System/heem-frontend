@@ -19,6 +19,7 @@
     --primary-hover: #129a76;
     --primary-soft: rgba(23, 184, 142, 0.12);
     --danger: #ff4e4e;
+    --danger-text: #ff8080;
     --warning: #f5a623;
     --info: #5aa9ff;
   }
@@ -39,6 +40,7 @@
     --primary-hover: #095f49;
     --primary-soft: rgba(12, 122, 94, 0.12);
     --danger: #dc2626;
+    --danger-text: #b91c1c;
     --warning: #d97706;
     --info: #2563eb;
   }
@@ -58,6 +60,7 @@
       --primary: #3ed597;
       --primary-hover: #38b38c;
       --danger: #ff4e4e;
+      --danger-text: #ff8080;
       --warning: #f5a623;
       --info: #5aa9ff;
     }

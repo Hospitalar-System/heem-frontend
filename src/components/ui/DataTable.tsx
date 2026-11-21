@@ -71,7 +71,7 @@ export type DataTableProps<T> = {
 
 const hideClass = { sm: 'hidden sm:table-cell', md: 'hidden md:table-cell', lg: 'hidden lg:table-cell', xl: 'hidden xl:table-cell' } as const
 const alignClass = { left: 'text-left', center: 'text-center', right: 'text-right' } as const
-const shell = 'overflow-x-auto rounded-lg border border-border bg-surface'
+const shell = 'relative overflow-x-auto rounded-lg border border-border bg-surface'
 
 function cellClass<T>(column: DataColumn<T>) {
   return [column.hideBelow ? hideClass[column.hideBelow] : '', alignClass[column.align ?? 'left'], column.className ?? ''].filter(Boolean).join(' ')

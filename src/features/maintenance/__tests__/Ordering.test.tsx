@@ -16,7 +16,7 @@ vi.mock('@/components/layout/AdminPageShell', () => ({
 }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
-const ticket = (id: string, severidade: string) => ({ id, hospitalId: 'h1', setorId: 's1', equipamentoId: 'e1', abertoPor: 'u', descricao: `Desc ${id}`, severidade, status: 'ABERTO', abertoEm: '2026-10-14T10:00:00Z' })
+const ticket = (id: string, severidade: string) => ({ id, codigo: `CH-${id}`, hospitalId: 'h1', setorId: 's1', equipamentoId: 'e1', abertoPor: 'u', descricao: `Desc ${id}`, severidade, status: 'ABERTO', abertoEm: '2026-10-14T10:00:00Z' })
 const order = (id: string, codigo: string) => ({ id, codigo, tipo: 'PREVENTIVA', status: 'AGENDADA', equipamentoId: 'e1', checklistId: 'c1', tecnicoId: null, dataAgendada: '2026-11-10T10:00:00Z' })
 const httpError = (code: string) => Object.assign(new Error('http'), { response: { status: 400, data: { code } } })
 
@@ -115,7 +115,35 @@ describe('TicketsPage: ordenação no servidor', () => {
     renderPage(<TicketsPage />, '/tickets')
     await screen.findByText('Mostrando 1–25 de 120')
     const rows = within(screen.getByRole('table', { name: 'Lista de chamados' })).getAllByRole('row').slice(1)
-    expect(rows.map((row) => within(row).getAllByRole('link')[0].getAttribute('aria-label'))).toEqual(['Abrir chamado t-baixa', 'Abrir chamado t-critica', 'Abrir chamado t-media'])
+    expect(rows.map((row) => within(row).getAllByRole('link')[0].getAttribute('aria-label'))).toEqual(['Abrir chamado CH-t-baixa', 'Abrir chamado CH-t-critica', 'Abrir chamado CH-t-media'])
+  })
+
+  it('lê da URL os filtros vindos do backlog, envia ao servidor, mostra os aplicados e limpa tudo', async () => {
+    const user = userEvent.setup()
+    renderPage(<TicketsPage />, '/tickets?situacao=pendentes&severidade=CRITICA&idade=ate24h&hospitalId=h1&setorId=s1&abertoDe=2026-11-01&abertoAte=2026-11-30')
+    await waitFor(() => expect(lastParams('/chamados')).toMatchObject({
+      situacao: 'pendentes', severidade: 'CRITICA', idade: 'ate24h', hospitalId: 'h1', setorId: 's1', abertoDe: '2026-11-01', abertoAte: '2026-11-30',
+    }))
+    const applied = within(await screen.findByRole('region', { name: 'Filtros aplicados' }))
+    expect(applied.getByText('Somente pendentes')).toBeInTheDocument()
+    expect(applied.getByText('Severidade: Crítica')).toBeInTheDocument()
+    expect(applied.getByText('Idade: até 24 h')).toBeInTheDocument()
+    expect(applied.getByText('Aberto desde 01/11/2026 até 30/11/2026')).toBeInTheDocument()
+    await user.click(applied.getByRole('button', { name: 'Limpar filtros' }))
+    await waitFor(() => expect(lastParams('/chamados')).not.toHaveProperty('situacao'))
+    expect(lastParams('/chamados')).not.toHaveProperty('abertoDe')
+    expect(screen.queryByRole('region', { name: 'Filtros aplicados' })).not.toBeInTheDocument()
+  })
+
+  it('filtra por equipamento vindo da URL e mostra o equipamento aplicado como chip removível', async () => {
+    const user = userEvent.setup()
+    renderPage(<TicketsPage />, '/tickets?equipamentoId=e1&abertoDe=2026-11-01&abertoAte=2026-11-30')
+    await waitFor(() => expect(lastParams('/chamados')).toMatchObject({ equipamentoId: 'e1', abertoDe: '2026-11-01', abertoAte: '2026-11-30' }))
+    const applied = within(await screen.findByRole('region', { name: 'Filtros aplicados' }))
+    expect(applied.getByText(/^Equipamento:/)).toBeInTheDocument()
+    await user.click(applied.getByRole('button', { name: /Remover filtro Equipamento/ }))
+    await waitFor(() => expect(lastParams('/chamados')).not.toHaveProperty('equipamentoId'))
+    expect(lastParams('/chamados')).toMatchObject({ abertoDe: '2026-11-01' })
   })
 
   it('ORDENACAO_INDISPONIVEL: mostra a mensagem e volta à ordem padrão', async () => {
