@@ -34,12 +34,12 @@ export function PreventiveCampaignsPage() {
   const forbidden = campaigns.isError && campaignApiError(campaigns.error, '').status === 403
 
   const campaignColumns: DataColumn<Campaign>[] = [
-    { key: 'nome', header: 'Campanha', cell: (campaign) => <><Link to={`/work-orders/campanhas/${campaign.id}`} className={`font-medium text-primary hover:underline ${linkClass}`}>{campaign.nome}</Link><span className="block text-[10px] text-text-muted">Início {formatPlanDate(campaign.dataInicio)}</span></> },
+    { key: 'nome', header: 'Campanha', cell: (campaign) => <><Link to={`/work-orders/campanhas/${campaign.id}`} className={`font-medium text-primary hover:underline ${linkClass}`}>{campaign.nome}</Link><span className="block text-[11px] text-text-muted">Início {formatPlanDate(campaign.dataInicio)}</span></> },
     { key: 'hospital', header: 'Hospital', cell: (campaign) => <span className="text-text-secondary">{hospitalById.get(campaign.hospitalId) ?? '—'}</span> },
     { key: 'status', header: 'Status', cell: (campaign) => <CampaignStatusBadge status={campaign.status} /> },
-    { key: 'recorrencia', header: 'Recorrência', cell: (campaign) => <span className="text-text-secondary">{recurrenceLabel(campaign.recorrencia, campaign.intervalo)}{recurringNextLabel(campaign) ? <span className="block text-[10px] text-text-muted">{recurringNextLabel(campaign)}</span> : null}</span> },
+    { key: 'recorrencia', header: 'Recorrência', cell: (campaign) => <span className="text-text-secondary">{recurrenceLabel(campaign.recorrencia, campaign.intervalo)}{recurringNextLabel(campaign) ? <span className="block text-[11px] text-text-muted">{recurringNextLabel(campaign)}</span> : null}</span> },
     { key: 'proxima', header: 'Próxima data', cell: (campaign) => <span className="text-text-secondary">{campaign.ativa ? formatPlanDate(campaign.proximaData) : '—'}</span> },
-    { key: 'execucao', header: 'Última execução', cell: (campaign) => <span className="text-text-secondary">{campaign.execucao.geradas} geradas · {campaign.execucao.puladas} puladas · {campaign.execucao.pendencias} pendências<span className="block text-[10px] text-text-muted">{campaign.execucao.processadas} de {campaign.execucao.totalEquipamentos} equipamentos</span></span> },
+    { key: 'execucao', header: 'Última execução', cell: (campaign) => <span className="text-text-secondary">{campaign.execucao.geradas} geradas · {campaign.execucao.puladas} puladas · {campaign.execucao.pendencias} pendências<span className="block text-[11px] text-text-muted">{campaign.execucao.processadas} de {campaign.execucao.totalEquipamentos} equipamentos</span></span> },
   ]
   return <AdminPageShell tabs={<WorkOrdersTabs />} title="Campanha de preventiva" subtitle="Gere as OTs preventivas do parque de um hospital de uma só vez" action={<PageAction to="/work-orders/campanhas/new" collapseLabelOnMobile>Nova campanha</PageAction>}>
     <div className="space-y-4">

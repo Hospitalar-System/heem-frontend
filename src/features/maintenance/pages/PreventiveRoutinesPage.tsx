@@ -107,17 +107,17 @@ export function PreventiveRoutinesPage() {
 
   const columns: DataColumn<Routine>[] = [
     { key: 'rotina', header: 'Rotina', cell: (routine) => {
-      if (routine.kind === 'campanha') return <><Link to={`/work-orders/campanhas/${routine.campaign.id}`} className={`inline-flex min-h-6 items-center font-medium text-primary hover:underline ${focusRing}`}>{routine.campaign.nome}</Link><span className="block text-[10px] text-text-muted">Campanha · {recurrenceLabel(routine.campaign.recorrencia, routine.campaign.intervalo)}</span></>
+      if (routine.kind === 'campanha') return <><Link to={`/work-orders/campanhas/${routine.campaign.id}`} className={`inline-flex min-h-6 items-center font-medium text-primary hover:underline ${focusRing}`}>{routine.campaign.nome}</Link><span className="block text-[11px] text-text-muted">Campanha · {recurrenceLabel(routine.campaign.recorrencia, routine.campaign.intervalo)}</span></>
       const equipment = planEquipment(routine.plan)
       const { intervaloDias } = routine.plan
-      return <><span className="block font-medium text-text-primary">{equipment?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equipment?.codigo ?? ''} · Plano · A cada {intervaloDias} {intervaloDias === 1 ? 'dia' : 'dias'}</span>
+      return <><span className="block font-medium text-text-primary">{equipment?.nome ?? '—'}</span><span className="text-[11px] text-text-muted">{equipment?.codigo ?? ''} · Plano · A cada {intervaloDias} {intervaloDias === 1 ? 'dia' : 'dias'}</span>
         {routine.plan.ativo && routine.plan.pendencia && <span title="O técnico padrão está inativo ou desvinculado do hospital; nenhuma OT foi gerada." className="mt-1 block"><StatusBadge tone="warning">Pendência</StatusBadge></span>}</>
     } },
     { key: 'escopo', header: 'Escopo', cell: (routine) => {
       const details = routine.kind === 'campanha'
         ? [[hospitalById.get(routine.campaign.hospitalId), ...(routine.scope === 'setor' ? routine.campaign.setorIds.map((id) => sectorById.get(id)) : [])].filter(Boolean).join(' · ')]
         : [checklistById.get(routine.plan.checklistId)?.nome ?? '', `Técnico ${userById.get(routine.plan.tecnicoPadraoId)?.nome ?? '—'}`]
-      return <><Badge variant={routine.scope === 'equipamento' ? 'info' : 'neutral'}>{routineScopeLabels[routine.scope]}</Badge>{details.filter(Boolean).map((detail) => <span key={detail} className="mt-1 block text-[10px] text-text-muted">{detail}</span>)}</>
+      return <><Badge variant={routine.scope === 'equipamento' ? 'info' : 'neutral'}>{routineScopeLabels[routine.scope]}</Badge>{details.filter(Boolean).map((detail) => <span key={detail} className="mt-1 block text-[11px] text-text-muted">{detail}</span>)}</>
     } },
     { key: 'proxima', header: 'Próxima execução', cell: (routine) => <span className="text-text-secondary">{routine.next ? formatPlanDate(routine.next) : '—'}</span> },
     { key: 'situacao', header: 'Situação', cell: (routine) => <StatusBadge tone={routineSituationTones[routine.situation]}>{routineSituationLabels[routine.situation]}</StatusBadge> },

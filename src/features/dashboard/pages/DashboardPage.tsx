@@ -47,7 +47,7 @@ export function DashboardPage() {
             </button>
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold leading-5 text-text-primary">Dashboard</h1>
-              <p className="truncate text-[9px] leading-3 text-text-muted">
+              <p className="truncate text-[11px] leading-3 text-text-muted">
                 Resumo operacional
               </p>
             </div>
@@ -62,12 +62,12 @@ export function DashboardPage() {
                 placeholder="Buscar equipamento, OT, chamado…"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                className="h-full w-full rounded-md border border-border bg-surface pl-8 pr-3 text-[10px] text-text-primary outline-none placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="h-full w-full rounded-md border border-border bg-surface pl-8 pr-3 text-[11px] text-text-primary outline-none placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </label>
             <NotificationsPopover />
             <ThemeSwitcher />
-            <Link to="/work-orders/new" className="inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-3 text-[10px] font-semibold text-bg-brand outline-none transition hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary">
+            <Link to="/work-orders/new" className="inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-md bg-primary px-3 text-[11px] font-semibold text-bg-brand outline-none transition hover:bg-primary-hover focus-visible:ring-2 focus-visible:ring-primary">
               <Plus aria-hidden="true" size={13} /> Nova OT
             </Link>
           </div>
