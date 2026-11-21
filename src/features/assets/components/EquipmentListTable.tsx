@@ -29,18 +29,18 @@ type EquipmentListTableProps = Pick<DataTableProps<Equipment>, 'isLoading' | 'er
 export function EquipmentListTable({ items, sectorNameById, isLoading, error, empty, sort, onSortChange, pagination }: EquipmentListTableProps) {
   const navigate = useNavigate()
   const columns: DataColumn<Equipment>[] = [
-    { key: 'codigo', header: 'Código', sortable: true, className: 'whitespace-nowrap', cell: (item) => <span className="font-medium text-text-secondary">{item.codigo}</span> },
-    { key: 'nome', header: 'Nome', sortable: true, className: 'max-w-[320px]', cell: (item) => <span className="flex items-center gap-3 text-sm font-medium text-text-primary"><EquipmentThumb equipmentId={item.id} nome={item.nome} fotoVersao={item.fotoVersao} /><span className="truncate">{item.nome}</span></span> },
-    { key: 'categoria', header: 'Categoria', sortable: true, cell: (item) => <span className="text-text-secondary">{item.categoriaNome ?? <span className="text-text-muted">Sem categoria</span>}</span> },
-    { key: 'modelo', header: 'Modelo', cell: (item) => <span className="text-text-secondary">{item.modelo || '—'}</span> },
-    { key: 'serie', header: 'Nº série', cell: (item) => <span className="text-text-secondary">{item.numeroSerie || '—'}</span> },
-    { key: 'setor', header: 'Setor', cell: (item) => <span className="text-text-secondary">{sectorNameById.get(item.setorId) ?? '—'}</span> },
-    { key: 'manutencao', header: 'Últ. manut.', className: 'whitespace-nowrap', cell: (item) => {
+    { key: 'codigo', header: 'Código', sortable: true, essential: true, className: 'whitespace-nowrap', cell: (item) => <span className="font-medium text-text-secondary">{item.codigo}</span> },
+    { key: 'nome', header: 'Nome', sortable: true, essential: true, className: 'w-full min-w-[200px] max-w-0', cell: (item) => <span className="flex items-center gap-2.5 text-xs font-medium text-text-primary" title={item.nome}><EquipmentThumb equipmentId={item.id} nome={item.nome} fotoVersao={item.fotoVersao} /><span className="truncate">{item.nome}</span></span> },
+    { key: 'categoria', header: 'Categoria', sortable: true, className: 'max-w-[170px]', cell: (item) => <span title={item.categoriaNome ?? undefined} className="block truncate text-text-secondary">{item.categoriaNome ?? <span className="text-text-muted">Sem categoria</span>}</span> },
+    { key: 'modelo', header: 'Modelo', className: 'max-w-[150px]', cell: (item) => <span title={item.modelo || undefined} className="block truncate text-text-secondary">{item.modelo || '—'}</span> },
+    { key: 'serie', header: 'Nº série', defaultHidden: true, className: 'whitespace-nowrap', cell: (item) => <span className="text-text-secondary">{item.numeroSerie || '—'}</span> },
+    { key: 'setor', header: 'Setor', className: 'max-w-[140px]', cell: (item) => <span title={sectorNameById.get(item.setorId)} className="block truncate text-text-secondary">{sectorNameById.get(item.setorId) ?? '—'}</span> },
+    { key: 'manutencao', header: 'Últ. manut.', className: 'whitespace-nowrap tabular-nums', cell: (item) => {
       const date = formatLastMaintenance(item.ultimaManutencaoEm)
       return date ? <span className="text-text-secondary">{date}</span> : <span className="text-text-muted" title="Nenhuma manutenção concluída">—</span>
     } },
     { key: 'documentos', header: 'Documentos', className: 'whitespace-nowrap', cell: (item) => <DocumentsIndicator vencidos={item.documentosVencidos} vencendo={item.documentosVencendo} proximaValidade={item.proximaValidade} /> },
-    { key: 'status', header: 'Status', width: '9.5rem', className: 'whitespace-nowrap', cell: (item) => <EquipmentStateBadge state={item.statusCicloVida} /> },
+    { key: 'status', header: 'Status', width: '8rem', className: 'whitespace-nowrap', cell: (item) => <EquipmentStateBadge state={item.statusCicloVida} /> },
   ]
   return <DataTable
     label="Equipamentos"
@@ -56,6 +56,8 @@ export function EquipmentListTable({ items, sectorNameById, isLoading, error, em
     sort={sort}
     onSortChange={onSortChange}
     pagination={pagination}
-    minWidth="1280px"
+    minWidth="860px"
+    storageKey="equipamentos"
+    columnsMenuContainerId="equipamentos-colunas"
   />
 }

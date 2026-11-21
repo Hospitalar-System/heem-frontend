@@ -98,7 +98,9 @@ export function EquipmentThumb({ equipmentId, nome, fotoVersao }: { equipmentId:
     }
   }
   const query = useEquipmentPhotoUrl(equipmentId, 'miniatura', Boolean(fotoVersao) && visible, fotoVersao)
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+  const showImage = Boolean(fotoVersao && query.data && query.data !== failedUrl)
   return <span ref={ref} className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-bg text-text-muted">
-    {fotoVersao && query.data ? <img src={query.data} alt={`Miniatura de ${nome}`} loading="lazy" className="size-full object-cover" /> : <ImageOff aria-hidden="true" size={14} />}
+    {showImage ? <img src={query.data} alt={`Miniatura de ${nome}`} loading="lazy" onError={() => setFailedUrl(query.data ?? null)} className="size-full object-cover" /> : <ImageOff aria-hidden="true" size={14} />}
   </span>
 }
