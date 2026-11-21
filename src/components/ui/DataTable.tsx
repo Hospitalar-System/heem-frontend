@@ -117,7 +117,7 @@ export function DataTable<T>({
 
   if (isLoading) {
     return <div aria-label={loadingLabel ?? `Carregando ${label.toLocaleLowerCase('pt-BR')}`} aria-busy="true" className={`${shell} ${className}`}>
-      <table aria-hidden="true" className="w-full border-collapse text-left" style={{ minWidth }}>
+      <table aria-hidden="true" className="tabular-nums w-full border-collapse text-left" style={{ minWidth }}>
         <thead><tr className="table-head h-12 text-[11px]">{columns.map((column) => <th key={column.key} scope="col" style={{ width: column.width }} className={`px-3 font-medium ${column.headerClassName ?? ''} ${cellClass(column)}`}>{column.header}</th>)}{hasActions ? <th scope="col" className="w-12 px-3 font-medium" /> : null}</tr></thead>
         <tbody>{Array.from({ length: loadingRows }, (_, row) => <tr key={row} data-skeleton-row className={`row-idle row-divider ${rowHeightClass}`}>
           {Array.from({ length: columnCount }, (__, cell) => <td key={cell} className={`px-3 ${columns[cell] ? cellClass(columns[cell]) : ''}`}><div className="h-4 w-3/4 animate-pulse rounded bg-bg" /></td>)}
@@ -152,7 +152,7 @@ export function DataTable<T>({
       return menuTarget ? createPortal(menu, menuTarget) : <div className="mb-1.5 flex justify-end">{menu}</div>
     })() : null}
     <div className={shell}>
-      <table aria-label={label} className="w-full border-collapse text-left" style={{ minWidth }}>
+      <table aria-label={label} className="tabular-nums w-full border-collapse text-left" style={{ minWidth }}>
         {caption ? <caption className="sr-only">{caption}</caption> : null}
         <thead><tr className="table-head h-12 text-[11px]">
           {columns.map((column) => {
@@ -161,7 +161,7 @@ export function DataTable<T>({
             const Icon = active ? (active.direction === 'asc' ? ArrowUp : ArrowDown) : ChevronsUpDown
             return <th key={column.key} scope="col" aria-sort={ariaSort} style={{ width: column.width }} className={`px-3 font-medium ${column.headerClassName ?? ''} ${cellClass(column)}`}>
               {column.sortable
-                ? <button type="button" onClick={() => onSortChange?.(column.key)} className="inline-flex items-center gap-1 rounded font-medium outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-primary">{column.header}<Icon aria-hidden="true" size={12} /></button>
+                ? <button type="button" onClick={() => onSortChange?.(column.key)} className="inline-flex min-h-6 items-center gap-1 rounded font-medium outline-none hover:text-text-primary focus-visible:ring-2 focus-visible:ring-primary">{column.header}<Icon aria-hidden="true" size={12} /></button>
                 : column.header || (column.srHeader ? <span className="sr-only">{column.srHeader}</span> : null)}
             </th>
           })}
