@@ -43,7 +43,7 @@ describe('ThemeSwitcher (botão sol/lua)', () => {
     expect(localStorage.getItem('heem-theme-mode')).toBe('light')
   })
 
-  it('desliga as transições do resto da página só durante a troca (2 quadros), sem deixar o atributo preso', async () => {
+  it('desliga as transições do resto da página só durante a troca (200 ms), sem deixar o atributo preso', async () => {
     renderSwitcher()
     fireEvent.click(screen.getByRole('button', { name: 'Mudar para o tema claro' }))
     expect(document.documentElement.hasAttribute('data-theme-switching')).toBe(true)

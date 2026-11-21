@@ -18,13 +18,13 @@ function useResolvedTheme(): 'dark' | 'light' {
 }
 
 /**
- * A troca de tema é instantânea: por 2 quadros o <html> recebe data-theme-switching, que desliga as transições de cor
+ * A troca de tema é instantânea: por 200 ms o <html> recebe data-theme-switching, que desliga as transições de cor
  * do resto da página (sem cor intermediária nem piscar). Só o ícone (svg[data-icon]) segue animando.
  */
 function pauseTransitions() {
   const root = document.documentElement
   root.setAttribute('data-theme-switching', '')
-  requestAnimationFrame(() => requestAnimationFrame(() => root.removeAttribute('data-theme-switching')))
+  window.setTimeout(() => root.removeAttribute('data-theme-switching'), 200)
 }
 
 // Só transform e opacity, 250 ms: o sol sai girando para -90° e a lua entra de +90°. Com prefers-reduced-motion não há giro nem escala, só um fade curto.
