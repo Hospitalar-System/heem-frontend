@@ -32,6 +32,9 @@ const endOfDay = endOfSystemDay
 
 const riskLabels: Record<string, string> = {
   CRITICO: 'Crítico',
+  ALTO: 'Alto',
+  MEDIO: 'Médio',
+  BAIXO: 'Baixo',
   SEMI_CRITICO: 'Semicrítico',
   NAO_CRITICO: 'Não crítico',
 }

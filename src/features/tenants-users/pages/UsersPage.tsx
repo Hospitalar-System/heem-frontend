@@ -159,7 +159,7 @@ function UserForm({ user, hospitals, hospitalsLoading, onClose, onSaved }: { use
       const results = await Promise.allSettled(operations.map((operation) => linkMutation.mutateAsync({ userId, ...operation })))
       const failures = results.filter((result) => result.status === 'rejected').length
       if (failures) {
-        const message = `Usuário salvo, mas ${failures} vínculo(s) de hospital não foram atualizados. Revise a seleção e tente novamente.`
+        const message = `Usuário salvo, mas ${failures === 1 ? '1 vínculo de hospital não foi atualizado' : `${failures} vínculos de hospital não foram atualizados`}. Revise a seleção e tente novamente.`
         setServerError(message)
         toast.error(message)
         return

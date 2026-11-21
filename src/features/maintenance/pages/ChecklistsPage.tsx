@@ -1,3 +1,4 @@
+import { plural } from '@/lib/plural'
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -185,7 +186,7 @@ export function ChecklistsPage() {
             <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" onClick={() => setShowCreate(false)} disabled={createChecklist.isPending} className="h-8 rounded-md border border-border px-3 text-xs text-text-secondary">Cancelar</button><button type="submit" disabled={createChecklist.isPending} className="h-8 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand disabled:opacity-50">{createChecklist.isPending ? 'Criando…' : 'Criar checklist'}</button></div>
           </form>
         </div> : !currentChecklist ? <div className="grid min-h-64 place-items-center p-8 text-center"><div><ClipboardCheck aria-hidden="true" className="mx-auto text-text-muted" size={24} /><h2 className="mt-3 text-sm font-semibold text-text-primary">Selecione um checklist</h2><p className="mt-1 text-xs text-text-secondary">Os itens e suas configurações aparecerão aqui.</p></div></div> : <>
-          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4"><div className="min-w-0"><h2 className="truncate text-sm font-semibold text-text-primary">{currentChecklist.nome}</h2><p className="mt-1 text-xs text-text-muted">{items.length} item(ns) · ordem usada no formulário da OT</p></div><Badge variant={currentChecklist.ativo === false ? 'neutral' : 'success'}>{currentChecklist.ativo === false ? 'Inativo' : 'Ativo'}</Badge></header>
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4"><div className="min-w-0"><h2 className="truncate text-sm font-semibold text-text-primary">{currentChecklist.nome}</h2><p className="mt-1 text-xs text-text-muted">{plural(items.length, 'item', 'itens')} · ordem usada no formulário da OT</p></div><Badge variant={currentChecklist.ativo === false ? 'neutral' : 'success'}>{currentChecklist.ativo === false ? 'Inativo' : 'Ativo'}</Badge></header>
           <div className="grid gap-5 p-4 lg:grid-cols-[minmax(260px,1fr)_minmax(230px,0.8fr)] lg:p-5">
             <div className="min-w-0">
               <div className="mb-3 flex items-center justify-between gap-2"><h3 className="text-xs font-semibold text-text-primary">Itens do checklist</h3>{reorderItems.isPending && <span className="text-[10px] text-text-muted">Salvando ordem…</span>}</div>

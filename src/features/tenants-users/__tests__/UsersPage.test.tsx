@@ -150,7 +150,7 @@ describe('UsersPage F2.2', () => {
     await user.click(await screen.findByRole('button', { name: 'Hospital Central' }))
     await user.click(screen.getByRole('button', { name: 'Criar usuário' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('1 vínculo(s) de hospital não foram atualizados')
+    expect(await screen.findByRole('alert')).toHaveTextContent('1 vínculo de hospital não foi atualizado')
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     rejectedHospitalId = null
     await waitFor(() => expect(screen.getByRole('button', { name: 'Tentar vínculos novamente' })).toBeEnabled())
