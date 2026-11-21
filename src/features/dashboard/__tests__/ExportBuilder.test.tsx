@@ -45,7 +45,7 @@ describe('ExportBuilder', () => {
 
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(1))
     expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', {
-      conteudo: 'ordens_trabalho', formato: 'csv', desde: '2026-10-14T00:00:00.000Z', ate: '2026-11-12T23:59:59.999Z', hospitalId: 'hospital-1', setorId: 'sector-1',
+      conteudo: 'ordens_trabalho', formato: 'csv', desde: '2026-10-14T03:00:00.000Z', ate: '2026-11-13T02:59:59.999Z', hospitalId: 'hospital-1', setorId: 'sector-1',
     })
     const body = vi.mocked(apiClient.post).mock.calls[0][1] as Record<string, unknown>
     expect(body).not.toHaveProperty('nivel')
