@@ -120,7 +120,7 @@ export function ReportsPage() {
 
         {backlog.isLoading ? <SectionSkeleton label="Carregando backlog" /> : backlog.isError ? (
           <SectionError message={getErrorMessage(backlog.error, 'Não foi possível carregar o backlog.')} onRetry={() => void backlog.refetch()} />
-        ) : backlog.data && <ReportBacklog backlog={backlog.data} />}
+        ) : backlog.data && <ReportBacklog backlog={backlog.data} hospitalId={hospitalId || undefined} setorId={setorId || undefined} />}
 
         {topEquipment.isLoading ? <SectionSkeleton label="Carregando equipamentos com mais chamados" /> : topEquipment.isError ? (
           <SectionError message={getErrorMessage(topEquipment.error, 'Não foi possível carregar os equipamentos com mais chamados.')} onRetry={() => void topEquipment.refetch()} />

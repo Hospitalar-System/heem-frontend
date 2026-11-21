@@ -7,6 +7,14 @@ export const ticketsKey = ['tickets'] as const
 
 export interface TicketListFilters {
   status?: string
+  /** Filtros do backlog (servidor): severidade, local, datas de abertura, pendentes e faixa de idade. */
+  severidade?: string
+  hospitalId?: string
+  setorId?: string
+  abertoDe?: string
+  abertoAte?: string
+  situacao?: 'pendentes'
+  idade?: 'ate24h' | 'de1a3dias' | 'maisde3dias'
   /** Ordenação no servidor: `severidade`, `abertoEm` ou `slaResolucaoAte` (nulos por último). */
   ordenar?: string
   direcao?: 'asc' | 'desc'

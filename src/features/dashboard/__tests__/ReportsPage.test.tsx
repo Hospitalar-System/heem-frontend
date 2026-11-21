@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '@/lib/axios'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
@@ -16,7 +17,7 @@ vi.mock('@/components/layout/AdminPageShell', () => ({
 
 function TestProviders({ children }: PropsWithChildren) {
   const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  return <QueryClientProvider client={client}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>
 }
 
 const preventiva = { atrasadas: 2, concluidasNoPrazo: 19, concluidasForaDoPrazo: 3, percentualNoPrazo: 86.4, canceladas: 1 }
@@ -134,6 +135,25 @@ describe('ReportsPage', () => {
     await user.click(within(table).getByRole('button', { name: 'Mais de 3 dias' }))
     expect(rowNames(table)[0]).toBe('Alta')
     expect(within(table).getByRole('columnheader', { name: 'Mais de 3 dias' })).toHaveAttribute('aria-sort', 'descending')
+  })
+
+  it('cada linha e célula do backlog é um link para a lista de chamados já filtrada, mantendo hospital e setor', async () => {
+    const user = userEvent.setup()
+    render(<ReportsPage />, { wrapper: TestProviders })
+    const table = await screen.findByRole('table', { name: /Backlog de chamados/ })
+    const critical = within(table).getByRole('row', { name: /Crítica/ })
+    const links = within(critical).getAllByRole('link')
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/tickets?situacao=pendentes&severidade=CRITICA',
+      '/tickets?situacao=pendentes&severidade=CRITICA&idade=ate24h',
+      '/tickets?situacao=pendentes&severidade=CRITICA&idade=de1a3dias',
+      '/tickets?situacao=pendentes&severidade=CRITICA&idade=maisde3dias',
+      '/tickets?situacao=pendentes&severidade=CRITICA',
+    ])
+    await chooseOption(user, 'Hospital', 'Santa Casa')
+    await chooseOption(user, 'Setor', 'UTI Adulto')
+    await waitFor(() => expect(within(screen.getByRole('table', { name: /Backlog de chamados/ })).getAllByRole('link')[0].getAttribute('href'))
+      .toContain('hospitalId=hospital-1&setorId=sector-1'))
   })
 
   it('renderiza o top de equipamentos, ordena e trata equipamento excluído e MTBF nulo', async () => {
