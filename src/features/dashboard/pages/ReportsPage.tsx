@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { endOfSystemDay, startOfSystemDay } from '@/lib/system-day'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { useHospitals, useSectors } from '@/features/assets/api/assets'
@@ -57,21 +57,11 @@ export function ReportsPage() {
   const compliance = useRiskCompliance(filters)
   const invalidRange = !desde || !ate || desde > ate
   const metrics = indicators.data
-  const filtersRef = useRef<HTMLDivElement>(null)
-  const hospitalName = hospitalId ? (hospitals.data ?? []).find((hospital) => hospital.id === hospitalId)?.nome ?? 'Selecionado' : 'Todos'
-  const sectorName = setorId ? (sectors.data ?? []).find((sector) => sector.id === setorId)?.nome ?? 'Selecionado' : 'Todos'
-
-  function editFilters() {
-    const container = filtersRef.current
-    container?.scrollIntoView?.({ block: 'center' })
-    container?.querySelector<HTMLElement>('button, input, [role="combobox"]')?.focus()
-  }
 
   return (
     <AdminPageShell title="Relatórios & Indicadores" subtitle="Indicadores de manutenção e conformidade">
       <div className="space-y-5">
-        <div ref={filtersRef}>
-        <FilterBar label="Filtros do relatório" className="items-end">
+        <FilterBar label="Filtros do relatório" className="items-end" dense>
           <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
             <span>Desde</span>
             <DatePicker size="sm" required aria-label="Data inicial" value={desde} max={ate || undefined} onChange={setDesde} />
@@ -92,11 +82,10 @@ export function ReportsPage() {
             <span>Agrupar por</span>
             <Select size="sm" aria-label="Agrupar por" value={agrupar} onChange={(next) => setAgrupar(next as ReportGrouping)} options={[{ value: 'hospital', label: 'Hospital' }, { value: 'setor', label: 'Setor' }]} />
           </label>
+          <ExportBuilder filters={{ desde, ate, hospitalId, setorId, invalidRange }} />
         </FilterBar>
-        </div>
 
         {invalidRange && <p role="alert" className="text-xs text-danger">Informe um período válido: a data inicial deve ser anterior ou igual à data final.</p>}
-        <ExportBuilder filters={{ desde, ate, hospitalId, setorId, hospitalName, sectorName, invalidRange, onEditFilters: editFilters }} />
 
         {indicators.isLoading ? <ReportSkeleton /> : indicators.isError ? (
           <ReportError message={getErrorMessage(indicators.error, 'Não foi possível carregar os indicadores.')} onRetry={() => void indicators.refetch()} />

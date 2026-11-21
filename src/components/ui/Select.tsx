@@ -46,7 +46,7 @@ export function Select({
 
   const selectedIndex = useMemo(() => options.findIndex((option) => option.value === value), [options, value])
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined
-  const isEmptyValue = !selected || selected.value === ''
+  const isEmptyValue = !selected
 
   const enabledIndexes = useMemo(() => options.map((option, index) => (option.disabled ? -1 : index)).filter((index) => index >= 0), [options])
 

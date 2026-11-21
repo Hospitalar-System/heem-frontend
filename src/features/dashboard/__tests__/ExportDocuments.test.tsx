@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -18,7 +18,8 @@ function TestProviders({ children }: PropsWithChildren) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>
 }
 
-const filters: ExportFiltersSummary = { desde: '2026-10-14', ate: '2026-11-12', hospitalId: '', setorId: '', hospitalName: 'Todos', sectorName: 'Todos', invalidRange: false, onEditFilters: () => undefined }
+const filters: ExportFiltersSummary = { desde: '2026-10-14', ate: '2026-11-12', hospitalId: '', setorId: '', invalidRange: false }
+const chooseContent = (user: ReturnType<typeof userEvent.setup>, label: string) => chooseOption(user, 'Conteúdo da exportação', label)
 const original = { ...EXPORT_BACKEND_SUPPORT }
 const pending = { data: { id: 'doc-1', status: 'pendente', urlDownload: null } }
 const done = { data: { id: 'doc-1', status: 'concluido', urlDownload: 'https://storage.test/doc.pdf' } }
@@ -35,8 +36,10 @@ describe('flags do construtor de exportação', () => {
     Object.assign(EXPORT_BACKEND_SUPPORT, { emergencias: false, filtrosOt: false })
     const user = userEvent.setup()
     render(<ExportBuilder filters={filters} />, { wrapper: TestProviders })
-    expect(screen.queryByRole('radio', { name: 'Emergências' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('radio', { name: 'Ordens de trabalho' }))
+    await user.click(screen.getByRole('combobox', { name: 'Conteúdo da exportação' }))
+    expect(within(await screen.findByRole('listbox')).queryByRole('option', { name: 'Emergências' })).not.toBeInTheDocument()
+    await user.click(within(screen.getByRole('listbox')).getByRole('option', { name: 'Ordens de trabalho' }))
+    await user.click(screen.getByRole('button', { name: 'Opções de exportação' }))
     expect(screen.queryByRole('combobox', { name: 'Tipo da OT' })).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Status da OT' })).not.toBeInTheDocument()
     const values = { ...defaultExportValues(), conteudo: 'ordens_trabalho' as const, tipoOt: 'corretiva' as const, statusOt: 'concluida' as const }
@@ -48,9 +51,10 @@ describe('flags do construtor de exportação', () => {
     EXPORT_BACKEND_SUPPORT.emergencias = true
     const user = userEvent.setup()
     render(<ExportBuilder filters={filters} />, { wrapper: TestProviders })
-    await user.click(screen.getByRole('radio', { name: 'Emergências' }))
+    await chooseContent(user, 'Emergências')
+    await user.click(screen.getByRole('button', { name: 'Opções de exportação' }))
     expect(screen.getByRole('radio', { name: 'Retrato' })).toBeChecked()
-    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    await user.click(screen.getByRole('button', { name: 'Exportar PDF' }))
     expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', expect.objectContaining({ conteudo: 'emergencias', formato: 'pdf', orientacao: 'RETRATO', nivel: 'COMPLETO' }))
   })
 
@@ -59,17 +63,18 @@ describe('flags do construtor de exportação', () => {
     const user = userEvent.setup()
     render(<ExportBuilder filters={filters} />, { wrapper: TestProviders })
     expect(screen.queryByRole('combobox', { name: 'Tipo da OT' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('radio', { name: 'Ordens de trabalho' }))
-    await user.click(screen.getByRole('radio', { name: 'CSV' }))
-    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    await chooseContent(user, 'Ordens de trabalho')
+    await user.click(screen.getByRole('button', { name: 'Exportar CSV' }))
     expect(vi.mocked(apiClient.post).mock.calls[0][1]).not.toHaveProperty('tipo')
     expect(vi.mocked(apiClient.post).mock.calls[0][1]).not.toHaveProperty('status')
     await user.click(await screen.findByRole('button', { name: 'Cancelar' }))
+    await user.click(screen.getByRole('button', { name: 'Opções de exportação' }))
     await chooseOption(user, 'Tipo da OT', 'Corretiva')
     await chooseOption(user, 'Status da OT', 'Em execução')
-    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    await user.click(screen.getByRole('button', { name: 'Exportar CSV' }))
     expect(vi.mocked(apiClient.post).mock.calls[1][1]).toMatchObject({ conteudo: 'ordens_trabalho', formato: 'csv', tipo: 'corretiva', status: 'em_execucao' })
-    await user.click(screen.getByRole('radio', { name: 'Chamados' }))
+    await chooseContent(user, 'Chamados')
+    await user.click(screen.getByRole('button', { name: 'Opções de exportação' }))
     expect(screen.queryByRole('combobox', { name: 'Tipo da OT' })).not.toBeInTheDocument()
   })
 })
