@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,8 +16,12 @@ function TestProviders({ children }: PropsWithChildren) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>
 }
 
-const baseFilters: ExportFiltersSummary = { desde: '2026-10-14', ate: '2026-11-12', hospitalId: '', setorId: '', hospitalName: 'Todos', sectorName: 'Todos', invalidRange: false, onEditFilters: () => undefined }
+const baseFilters: ExportFiltersSummary = { desde: '2026-10-14', ate: '2026-11-12', hospitalId: '', setorId: '', invalidRange: false }
 const renderBuilder = (filters: Partial<ExportFiltersSummary> = {}) => render(<ExportBuilder filters={{ ...baseFilters, ...filters }} />, { wrapper: TestProviders })
+
+type User = ReturnType<typeof userEvent.setup>
+const openOptions = (user: User) => user.click(screen.getByRole('button', { name: 'Opções de exportação' }))
+const chooseContent = (user: User, label: string) => chooseOption(user, 'Conteúdo da exportação', label)
 
 const pending = { data: { id: 'export-1', status: 'pendente', urlDownload: null } }
 
@@ -38,10 +42,9 @@ describe('ExportBuilder', () => {
 
   it('monta o corpo com tipo, período, hospital, setor e formato dos filtros da página; CSV não leva nível nem orientação', async () => {
     const user = userEvent.setup()
-    renderBuilder({ hospitalId: 'hospital-1', setorId: 'sector-1', hospitalName: 'Santa Casa', sectorName: 'UTI Adulto' })
-    await user.click(screen.getByRole('radio', { name: 'Ordens de trabalho' }))
-    await user.click(screen.getByRole('radio', { name: 'CSV' }))
-    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    renderBuilder({ hospitalId: 'hospital-1', setorId: 'sector-1' })
+    await chooseContent(user, 'Ordens de trabalho')
+    await user.click(screen.getByRole('button', { name: 'Exportar CSV' }))
 
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(1))
     expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', {
@@ -53,39 +56,40 @@ describe('ExportBuilder', () => {
     expect(await screen.findByRole('button', { name: 'Cancelar' })).toBeInTheDocument()
   })
 
-  it('não repete os campos de período, hospital e setor; mostra só o resumo e o link Alterar filtros', async () => {
+  it('é compacto: só o seletor de conteúdo e os botões; nível e orientação ficam num popover fechado com Esc', async () => {
     const user = userEvent.setup()
-    const onEditFilters = vi.fn()
-    renderBuilder({ hospitalName: 'Santa Casa', sectorName: 'UTI Adulto', onEditFilters })
-    expect(screen.queryByRole('button', { name: 'Período de' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('combobox', { name: 'Hospital da exportação' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('combobox', { name: 'Setor da exportação' })).not.toBeInTheDocument()
-    expect(screen.getByTestId('export-filters-summary')).toHaveTextContent('Período 14/10/2026 a 12/11/2026 · Hospital: Santa Casa · Setor: UTI Adulto')
-    await user.click(screen.getByRole('button', { name: 'Alterar filtros' }))
-    expect(onEditFilters).toHaveBeenCalledTimes(1)
+    renderBuilder()
+    expect(screen.getByRole('combobox', { name: 'Conteúdo da exportação' })).toBeInTheDocument()
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument()
+    await openOptions(user)
+    const menu = within(screen.getByRole('dialog', { name: 'Opções de exportação' }))
+    expect(menu.getByRole('radio', { name: 'Resumo' })).toHaveFocus()
+    expect(menu.getByRole('radio', { name: 'Completo' })).toBeChecked()
+    expect(menu.getByRole('radio', { name: 'Paisagem' })).toBeChecked()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Opções de exportação' })).toHaveFocus()
   })
 
   it('PDF envia nível e orientação em maiúsculas, com o padrão do tipo (paisagem em chamados)', async () => {
     const user = userEvent.setup()
     renderBuilder()
+    await openOptions(user)
     expect(screen.getByRole('radio', { name: 'Completo' })).toBeChecked()
     expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeChecked()
-    expect(screen.getByRole('radio', { name: 'Retrato' })).toBeEnabled()
     await user.click(screen.getByRole('radio', { name: 'Resumo' }))
-    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    await user.click(screen.getByRole('button', { name: 'Exportar PDF' }))
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(1))
     expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', expect.objectContaining({ conteudo: 'chamados', formato: 'pdf', nivel: 'RESUMO', orientacao: 'PAISAGEM' }))
   })
 
-  it('XLSX e CSV omitem a orientação (e o nível) e a orientação fica desabilitada', async () => {
+  it('Excel omite a orientação e o nível', async () => {
     const user = userEvent.setup()
     renderBuilder()
-    await user.click(screen.getByRole('radio', { name: 'XLSX' }))
-    expect(screen.getByRole('radio', { name: 'Retrato' })).toBeDisabled()
-    expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    await user.click(screen.getByRole('button', { name: 'Exportar Excel' }))
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledTimes(1))
     const body = vi.mocked(apiClient.post).mock.calls[0][1] as Record<string, unknown>
+    expect(body).toMatchObject({ conteudo: 'chamados', formato: 'xlsx' })
     expect(body).not.toHaveProperty('orientacao')
     expect(body).not.toHaveProperty('nivel')
   })
@@ -93,39 +97,38 @@ describe('ExportBuilder', () => {
   it('trocar o tipo reaplica a orientação padrão enquanto a pessoa não escolheu; depois respeita a escolha', async () => {
     const user = userEvent.setup()
     renderBuilder()
-    await user.click(screen.getByRole('radio', { name: 'Indicadores' }))
-    expect(screen.getByRole('radio', { name: 'Retrato' })).toBeChecked()
-    await user.click(screen.getByRole('radio', { name: 'Medições' }))
+    await openOptions(user)
+    expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeChecked()
+    await chooseContent(user, 'Indicadores')
+    await openOptions(user)
     expect(screen.getByRole('radio', { name: 'Retrato' })).toBeChecked()
     await user.click(screen.getByRole('radio', { name: 'Paisagem' }))
-    await user.click(screen.getByRole('radio', { name: 'Ordens de trabalho' }))
+    await chooseContent(user, 'Medições')
+    await openOptions(user)
     expect(screen.getByRole('radio', { name: 'Paisagem' })).toBeChecked()
-    expect(screen.getByRole('radio', { name: 'Retrato' })).toBeEnabled()
   })
 
   it('período inválido nos filtros bloqueia o envio', async () => {
     const user = userEvent.setup()
     renderBuilder({ desde: '2026-11-20', ate: '2026-11-01', invalidRange: true })
-    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    expect(screen.getByRole('button', { name: 'Exportar PDF' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Exportar PDF' }))
     expect(apiClient.post).not.toHaveBeenCalled()
-    expect(screen.getByText(/Corrija o período/)).toBeInTheDocument()
   })
 
-  it('o seletor de campanha só aparece no tipo Campanha preventiva e o período não se aplica', async () => {
+  it('o seletor de campanha só aparece no tipo Campanha preventiva e o período não vai no corpo', async () => {
     const user = userEvent.setup()
-    renderBuilder({ hospitalName: 'Santa Casa' })
+    renderBuilder({ hospitalId: 'hospital-1' })
     expect(screen.queryByRole('combobox', { name: 'Campanha' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('radio', { name: 'Campanha preventiva' }))
-    expect(screen.getByTestId('export-filters-summary')).toHaveTextContent('O período não se aplica à campanha · Hospital: Santa Casa')
-    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    await chooseContent(user, 'Campanha preventiva')
+    await user.click(screen.getByRole('button', { name: 'Exportar Excel' }))
     expect(await screen.findByText('Escolha a campanha.')).toBeInTheDocument()
     expect(apiClient.post).not.toHaveBeenCalled()
 
     await chooseOption(user, 'Campanha', 'Campanha Outubro')
-    await user.click(screen.getByRole('radio', { name: 'XLSX' }))
-    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    await user.click(screen.getByRole('button', { name: 'Exportar Excel' }))
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/relatorios/exportacoes', { conteudo: 'campanha', formato: 'xlsx', campanhaId: 'camp-1' }))
-    await user.click(screen.getByRole('radio', { name: 'Chamados' }))
+    await chooseContent(user, 'Chamados')
     expect(screen.queryByRole('combobox', { name: 'Campanha' })).not.toBeInTheDocument()
   })
 
@@ -134,8 +137,9 @@ describe('ExportBuilder', () => {
     let resolvePost!: (value: unknown) => void
     vi.mocked(apiClient.post).mockReturnValueOnce(new Promise((resolve) => { resolvePost = resolve }) as never)
     renderBuilder()
-    await user.click(screen.getByRole('button', { name: 'Gerar relatório' }))
-    expect(await screen.findByRole('button', { name: 'Gerando…' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Exportar PDF' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Exportar PDF' })).toBeDisabled())
+    expect(screen.getByRole('button', { name: 'Exportar PDF' })).toHaveTextContent('Gerando…')
     resolvePost(pending)
     expect(await screen.findByRole('button', { name: 'Cancelar' })).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent(/Gerando… Chamados em PDF/)
@@ -150,7 +154,7 @@ describe('ExportBuilder: acompanhamento e download automático', () => {
   const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms) })
   async function generate() {
     renderBuilder()
-    fireEvent.click(screen.getByRole('button', { name: 'Gerar relatório' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Exportar PDF' }))
     await tick(0)
   }
 
@@ -210,7 +214,7 @@ describe('ExportBuilder: acompanhamento e download automático', () => {
     expect(getExport).toHaveBeenCalledTimes(1)
     expect(clicks).toHaveLength(0)
     expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Gerar relatório' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Exportar PDF' })).toBeEnabled()
   })
 
   it('exportação que falhou mostra a mensagem e Tentar de novo recomeça com o mesmo corpo', async () => {
