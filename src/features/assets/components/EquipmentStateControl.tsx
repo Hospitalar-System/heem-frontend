@@ -1,3 +1,4 @@
+import { ArrowLeftRight } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Modal } from '@/components/ui/Modal'
@@ -13,18 +14,30 @@ function formatDate(value: string | null | undefined) {
   return Number.isNaN(date.getTime()) ? null : dateFormat.format(date)
 }
 
-/** Cabeçalho da ficha: selo do estado atual, descrição, data e (admin/técnico) o botão "Alterar estado". */
+/** Selo do estado atual, para ficar junto ao título da ficha. */
+export function EquipmentStateSummary({ equipment }: { equipment: Equipment }) {
+  return <EquipmentStateBadge state={equipment.statusCicloVida} />
+}
+
+/** Descrição e data do estado atual, abaixo do título. */
+export function EquipmentStateNote({ equipment }: { equipment: Equipment }) {
+  const updatedAt = formatDate(equipment.estadoAtualizadoEm)
+  if (!equipment.descricaoEstado && !updatedAt) return null
+  return <div className="mt-1 min-w-0 max-w-xl">
+    {equipment.descricaoEstado ? <p data-testid="descricao-estado" className="break-words text-xs text-text-secondary">{equipment.descricaoEstado}</p> : null}
+    {updatedAt ? <p className="text-[11px] text-text-muted">atualizado em {updatedAt}</p> : null}
+  </div>
+}
+
+/** Botão "Alterar estado" (admin/técnico), do mesmo tamanho dos demais botões do cabeçalho. */
 export function EquipmentStateControl({ equipment, role }: { equipment: Equipment; role: StateRole }) {
   const [open, setOpen] = useState(false)
-  const updatedAt = formatDate(equipment.estadoAtualizadoEm)
   const canChange = role !== 'leitura' && canChangeFrom(equipment.statusCicloVida, role)
-  return <div className="flex min-w-0 max-w-sm flex-col items-start gap-1.5 sm:items-end">
-    <EquipmentStateBadge state={equipment.statusCicloVida} />
-    {equipment.descricaoEstado ? <p data-testid="descricao-estado" className="break-words text-xs text-text-secondary sm:text-right">{equipment.descricaoEstado}</p> : null}
-    {updatedAt ? <p className="text-[11px] text-text-muted">atualizado em {updatedAt}</p> : null}
-    {canChange ? <button type="button" onClick={() => setOpen(true)} className="inline-flex h-8 items-center rounded-md border border-border px-3 text-xs font-medium hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">Alterar estado</button> : null}
+  if (!canChange) return null
+  return <>
+    <button type="button" onClick={() => setOpen(true)} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-border px-3 text-xs font-semibold max-sm:h-11 text-text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ArrowLeftRight aria-hidden="true" size={14} />Alterar estado</button>
     {open ? <ChangeStateModal equipment={equipment} role={role} onClose={() => setOpen(false)} /> : null}
-  </div>
+  </>
 }
 
 function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; role: StateRole; onClose: () => void }) {
