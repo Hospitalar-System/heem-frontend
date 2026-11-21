@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { severityTone, slaTones, ticketStatusTone, workOrderStatusTone } from '../status-tones'
+import { equipmentStateTone, severityTone, slaTones, ticketStatusTone, workOrderStatusTone } from '../status-tones'
 
 describe('tons dos selos', () => {
   it('estado do chamado: aberto neutro, em andamento azul, resolvido verde, cancelado cinza', () => {
@@ -24,9 +24,18 @@ describe('tons dos selos', () => {
     expect(severityTone('BAIXA')).toBe('neutral')
   })
 
-  it('SLA: no prazo verde, em risco âmbar em contorno, vencido vermelho', () => {
-    expect(slaTones.no_prazo).toEqual({ tone: 'success', outline: false })
+  it('SLA: verde, âmbar e vermelho, os três em contorno (forma própria da família)', () => {
+    expect(slaTones.no_prazo).toEqual({ tone: 'success', outline: true })
     expect(slaTones.em_risco).toEqual({ tone: 'warning', outline: true })
-    expect(slaTones.vencido).toEqual({ tone: 'danger', outline: false })
+    expect(slaTones.vencido).toEqual({ tone: 'danger', outline: true })
+  })
+
+  it('estado do equipamento: tons distintos por estado', () => {
+    expect(equipmentStateTone('ATIVO')).toBe('success')
+    expect(equipmentStateTone('NAO_APTO')).toBe('danger')
+    expect(equipmentStateTone('EM_MANUTENCAO')).toBe('warning')
+    expect(equipmentStateTone('DESATIVADO')).toBe('neutral')
+    expect(equipmentStateTone('INATIVO')).toBe('muted')
+    expect(equipmentStateTone('DESCARTADO')).toBe('muted')
   })
 })

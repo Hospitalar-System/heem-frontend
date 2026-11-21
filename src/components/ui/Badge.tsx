@@ -23,7 +23,7 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 /** Selo de condição: fundo suave na cor semântica, sem borda; tamanho e raio únicos (F6.7). */
 export function Badge({ variant = 'neutral', icon, outline = false, className = '', children, ...props }: BadgeProps) {
   return (
-    <span {...props} className={`inline-flex min-h-6 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[11px] font-medium leading-4 ${variantClass[variant]} ${outline ? 'border border-current' : ''} ${className}`.trim()}>
+    <span {...props} className={`inline-flex min-h-6 items-center gap-1 whitespace-nowrap rounded-md px-2 text-[11px] font-medium leading-4 ${variantClass[variant]} ${outline ? 'border border-current !bg-transparent' : ''} ${className}`.trim()}>
       {icon ? <span aria-hidden="true" className="inline-flex shrink-0">{icon}</span> : null}
       {children}
     </span>

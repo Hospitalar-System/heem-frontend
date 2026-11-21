@@ -59,14 +59,22 @@ const historyCalls = () => vi.mocked(apiClient.get).mock.calls.filter(([url]) =>
 
 describe('EquipmentStateBadge', () => {
   it.each([
-    ['ATIVO', 'Apto', 'solid'], ['NAO_APTO', 'Não apto', 'double'], ['EM_MANUTENCAO', 'Em manutenção', 'dashed'], ['DESATIVADO', 'Desativado', 'dotted'],
-    ['INATIVO', 'Inativo', 'solid'], ['DESCARTADO', 'Descartado', 'solid'],
-  ])('%s mostra o texto "%s" com borda %s', (state, label, border) => {
+    ['ATIVO', 'Apto', 'success'], ['NAO_APTO', 'Não apto', 'danger'], ['EM_MANUTENCAO', 'Em manutenção', 'warning'], ['DESATIVADO', 'Desativado', 'neutral'],
+    ['INATIVO', 'Inativo', 'muted'], ['DESCARTADO', 'Descartado', 'muted'],
+  ])('%s mostra o texto "%s" no tom %s, com ícone e sem borda especial', (state, label, tone) => {
     render(<EquipmentStateBadge state={state} />)
     const badge = screen.getByText(label)
-    expect(badge).toHaveAttribute('data-border', border)
-    expect(badge.className).toContain(border === 'solid' ? 'border-solid' : `border-${border}`)
-    expect(badge.className).not.toMatch(/border-white|\/\d/)
+    expect(badge).toHaveAttribute('data-tone', tone)
+    expect(badge.className).toContain(`badge-${tone}`)
+    expect(badge.className).not.toMatch(/border-(double|dashed|dotted|\[3px\])/)
+    expect(badge.querySelector('svg')).not.toBeNull() // eslint-disable-line testing-library/no-node-access
+  })
+
+  it('estado desconhecido mostra o texto cru em tom neutro, sem ícone', () => {
+    render(<EquipmentStateBadge state="NOVO_ESTADO" />)
+    const badge = screen.getByText('NOVO_ESTADO')
+    expect(badge).toHaveAttribute('data-tone', 'neutral')
+    expect(badge.querySelector('svg')).toBeNull() // eslint-disable-line testing-library/no-node-access
   })
 
   it('usa a cor semântica de cada estado e tolera enum desconhecido mostrando o valor cru', () => {
@@ -87,8 +95,8 @@ describe('lista de equipamentos', () => {
   it('troca o selo pelo estado novo (Não apto e Apto)', () => {
     const items = [{ ...base, id: 'a', codigo: 'EQ-1', statusCicloVida: 'NAO_APTO' }, { ...base, id: 'b', codigo: 'EQ-2', statusCicloVida: 'ATIVO' }] as unknown as Equipment[]
     render(<MemoryRouter><EquipmentListTable items={items} sectorNameById={new Map()} /></MemoryRouter>)
-    expect(screen.getByText('Não apto')).toHaveAttribute('data-border', 'double')
-    expect(screen.getByText('Apto')).toHaveAttribute('data-border', 'solid')
+    expect(screen.getByText('Não apto')).toHaveAttribute('data-tone', 'danger')
+    expect(screen.getByText('Apto')).toHaveAttribute('data-tone', 'success')
     expect(screen.queryByText('Ativo')).not.toBeInTheDocument()
   })
 })
@@ -98,7 +106,7 @@ describe('ficha: estado atual', () => {
 
   it('mostra selo, descrição e data de atualização', async () => {
     setup({ equipment: { statusCicloVida: 'EM_MANUTENCAO', descricaoEstado: 'Aguardando peça', estadoAtualizadoEm: '2026-11-08T14:20:00Z' } })
-    expect(await screen.findByText('Em manutenção')).toHaveAttribute('data-border', 'dashed')
+    expect(await screen.findByText('Em manutenção')).toHaveAttribute('data-tone', 'warning')
     expect(screen.getByTestId('descricao-estado')).toHaveTextContent('Aguardando peça')
     expect(screen.getByText(/atualizado em \d{2}\/\d{2}\/\d{4}/)).toBeInTheDocument()
   })
