@@ -29,7 +29,7 @@ export function RecentTicketsTable({ tickets, query }: { tickets: DashboardTicke
       </div>
       <div className="overflow-x-auto">
         <table className="tabular-nums w-full min-w-[640px] border-collapse text-left text-xs">
-          <thead className="table-head text-[10px]">
+          <thead className="table-head text-[11px]">
             <tr className="h-9 2xl:h-12">
               <th scope="col" className="px-5 font-medium">Chamado</th>
               <th scope="col" className="px-4 font-medium">Status</th>

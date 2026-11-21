@@ -174,14 +174,14 @@ export function WorkOrdersPage() {
   const dependencyLoading = equipment.isLoading || checklists.isLoading || users.isLoading || sectors.isLoading || hospitalLinks.some((query) => query.isLoading)
 
   const orderColumns: DataColumn<(typeof visibleOrders)[number]>[] = [
-    { key: 'codigo', header: 'OT', cell: (order) => <><Link to={`/work-orders/${order.id}`} className="inline-flex min-h-6 items-center font-semibold text-text-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{order.codigo || order.id}</Link>{order.planoPreventivoId && <span className="mt-1 block text-[10px] text-text-muted">Plano preventivo</span>}{order.campanhaPreventivaId && <span className="mt-1 block text-[10px] text-text-muted">Campanha</span>}</> },
+    { key: 'codigo', header: 'OT', cell: (order) => <><Link to={`/work-orders/${order.id}`} className="inline-flex min-h-6 items-center font-semibold text-text-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{order.codigo || order.id}</Link>{order.planoPreventivoId && <span className="mt-1 block text-[11px] text-text-muted">Plano preventivo</span>}{order.campanhaPreventivaId && <span className="mt-1 block text-[11px] text-text-muted">Campanha</span>}</> },
     { key: 'tipo', header: 'Tipo', cell: (order) => <span className="text-text-secondary">{normalized(order.tipo) === 'PREVENTIVA' ? 'Preventiva' : normalized(order.tipo) === 'CORRETIVA' ? 'Corretiva' : order.tipo || '—'}</span> },
-    { key: 'equipamento', header: 'Equipamento', cell: (order) => { const equip = equipmentById.get(order.equipamentoId); return <><span className="block font-medium text-text-primary">{equip?.nome ?? '—'}</span><span className="text-[10px] text-text-muted">{equip?.codigo ?? ''}</span></> } },
+    { key: 'equipamento', header: 'Equipamento', cell: (order) => { const equip = equipmentById.get(order.equipamentoId); return <><span className="block font-medium text-text-primary">{equip?.nome ?? '—'}</span><span className="text-[11px] text-text-muted">{equip?.codigo ?? ''}</span></> } },
     { key: 'tecnico', header: 'Técnico', cell: (order) => <span className="text-text-secondary">{order.tecnicoId ? (users.data?.find((user) => user.id === order.tecnicoId)?.nome ?? '—') : 'Sem responsável'}</span> },
     { key: 'setor', header: 'Hospital / Setor', cell: (order) => {
       const equip = equipmentById.get(order.equipamentoId)
       const sectorName = order.setorNome ?? (equip ? sectorById.get(equip.setorId) : undefined)?.nome ?? '—'
-      return <><span className="block text-text-secondary">{sectorName}</span>{order.hospitalNome && <span className="text-[10px] text-text-muted">{order.hospitalNome}</span>}</>
+      return <><span className="block text-text-secondary">{sectorName}</span>{order.hospitalNome && <span className="text-[11px] text-text-muted">{order.hospitalNome}</span>}</>
     } },
     { key: 'vencimento', header: 'Vencimento', cell: (order) => <span className="text-text-secondary">{formatDate(order.dataAgendada)}</span> },
     { key: 'status', header: 'Status', cell: (order) => <div className="flex flex-wrap items-center gap-1.5"><StatusBadge tone={statusTone(order.status)}>{statusLabel[normalized(order.status)] ?? order.status.replaceAll('_', ' ')}</StatusBadge>{isOverdue(order) && <StatusBadge tone="danger">Atrasada</StatusBadge>}</div> },

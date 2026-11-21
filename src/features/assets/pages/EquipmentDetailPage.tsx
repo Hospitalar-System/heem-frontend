@@ -98,7 +98,7 @@ function EquipmentData({ equipment, canWritePhoto, order, ordersLoading, isAdmin
       <EquipmentPhotoSection equipmentId={equipment.id} nome={equipment.nome} fotoVersao={equipment.fotoVersao} hasLegacyPhoto={Boolean(equipment.fotoUrl)} canWrite={canWritePhoto} canDelete={isAdmin} />
       <section className="rounded-lg border border-border bg-surface p-5">
         <div className="flex items-center gap-2"><span className="grid size-8 place-items-center rounded-md bg-bg text-text-secondary"><Gauge size={16} /></span><h3 className="text-sm font-semibold">Indicadores</h3></div>
-        <div className="mt-4 grid grid-cols-3 gap-2">{['MTBF', 'Disponibilidade', 'OTs no ano'].map((label) => <div key={label} className="min-w-0 rounded-md border border-border bg-surface p-3"><p className="truncate text-[10px] text-text-muted">{label}</p><p className="mt-1 text-sm font-semibold text-text-secondary">—</p></div>)}</div>
+        <div className="mt-4 grid grid-cols-3 gap-2">{['MTBF', 'Disponibilidade', 'OTs no ano'].map((label) => <div key={label} className="min-w-0 rounded-md border border-border bg-surface p-3"><p className="truncate text-[11px] text-text-muted">{label}</p><p className="mt-1 text-sm font-semibold text-text-secondary">—</p></div>)}</div>
         <p className="mt-3 text-[11px] text-text-muted">Os indicadores deste equipamento ainda não estão disponíveis. Acompanhe MTBF e disponibilidade em Relatórios.</p>
       </section>
       <section className="rounded-lg border border-border bg-surface p-5">
