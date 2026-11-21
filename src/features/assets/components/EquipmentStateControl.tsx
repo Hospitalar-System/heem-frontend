@@ -35,7 +35,7 @@ export function EquipmentStateControl({ equipment, role }: { equipment: Equipmen
   const canChange = role !== 'leitura' && canChangeFrom(equipment.statusCicloVida, role)
   if (!canChange) return null
   return <>
-    <button type="button" onClick={() => setOpen(true)} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-border px-3 text-xs font-semibold text-text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ArrowLeftRight aria-hidden="true" size={14} />Alterar estado</button>
+    <button type="button" onClick={() => setOpen(true)} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-border px-3 text-xs font-semibold max-sm:h-11 text-text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ArrowLeftRight aria-hidden="true" size={14} />Alterar estado</button>
     {open ? <ChangeStateModal equipment={equipment} role={role} onClose={() => setOpen(false)} /> : null}
   </>
 }
