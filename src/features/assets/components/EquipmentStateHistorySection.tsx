@@ -4,6 +4,7 @@ import { PAGINATION_SIZES } from '@/components/ui/Pagination'
 import { useEquipmentStateHistory } from '../api/equipment-state'
 import type { EquipmentStateHistoryEntry } from '../types'
 import { EquipmentStateBadge } from './EquipmentStateBadge'
+import { baixaSummary } from '../utils/baixa'
 
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 function formatDateTime(value: string) {
@@ -28,7 +29,10 @@ export function EquipmentStateHistorySection({ equipmentId, isAdmin }: { equipme
     { key: 'data', header: 'Data', className: 'whitespace-nowrap', cell: (row) => <span className="text-text-secondary">{formatDateTime(row.alteradoEm)}</span> },
     { key: 'de', header: 'De', className: 'whitespace-nowrap', cell: (row) => row.estadoAnterior ? <EquipmentStateBadge state={row.estadoAnterior} /> : <span className="text-text-muted">—</span> },
     { key: 'para', header: 'Para', className: 'whitespace-nowrap', cell: (row) => <EquipmentStateBadge state={row.estadoNovo} /> },
-    { key: 'descricao', header: 'Descrição', className: 'max-w-[320px]', cell: (row) => <span className="break-words text-text-secondary">{row.descricao || '—'}</span> },
+    { key: 'descricao', header: 'Descrição', className: 'max-w-[320px]', cell: (row) => {
+      const baixa = baixaSummary(row)
+      return <><span className="block break-words text-text-secondary">{row.descricao || '—'}</span>{baixa ? <span className="mt-0.5 block break-words text-[11px] text-text-muted">{baixa}</span> : null}</>
+    } },
     { key: 'por', header: 'Alterado por', cell: (row) => <span className="text-text-secondary">{row.alteradoPorNome || '—'}</span> },
     { key: 'origem', header: 'Origem', className: 'whitespace-nowrap', cell: (row) => row.origem === 'ORDEM_TRABALHO'
       ? <span className="text-text-secondary">Ordem de trabalho{isAdmin && row.ordemTrabalhoId ? <> · <Link to={`/work-orders/${row.ordemTrabalhoId}`} className="font-medium text-primary underline">Abrir OT</Link></> : null}</span>

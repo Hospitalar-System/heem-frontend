@@ -46,7 +46,7 @@ export function changeStateErrorMessage(error: unknown): string {
     case 'DESCRICAO_OBRIGATORIA': return 'Informe a descrição: ela é obrigatória para Em manutenção.'
     case 'ACESSO_NEGADO': return 'Seu perfil não pode colocar o equipamento neste estado.'
     case 'TRANSICAO_INVALIDA': return 'Este equipamento foi descartado e não pode mais mudar de estado.'
-    case 'VALIDACAO_FALHOU': return 'Dados inválidos: confira o estado e a descrição (até 200 caracteres).'
+    case 'VALIDACAO_FALHOU': return 'Dados inválidos: confira o estado, a descrição (até 200 caracteres) e a data da baixa (não pode ser futura).'
   }
   if (response?.status === 404) return 'Equipamento não encontrado.'
   if (!response) return 'Sem conexão com o servidor. Verifique a internet e tente novamente.'

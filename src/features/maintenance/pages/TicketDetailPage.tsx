@@ -16,6 +16,7 @@ import { formatSlaDeadline } from '../utils/sla'
 import { ticketCauseCategories, ticketCauseLabels, type TicketCauseCategory, type TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
 import { ticketCode } from '../utils/ticket-code'
+import { finalidadeOptions, type Finalidade } from '../utils/finalidade'
 import { severityTone, ticketStatusTone } from '@/lib/status-tones'
 import { Badge } from '@/components/ui/Badge'
 
@@ -61,6 +62,7 @@ export function TicketDetailPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [codigo, setCodigo] = useState('')
   const [tecnicoId, setTecnicoId] = useState('')
+  const [finalidade, setFinalidade] = useState('')
   const assumeTicket = useAssumeTicket()
   const assignResponsible = useAssignTicketResponsible()
   const changeStatus = useChangeTicketStatus()
@@ -172,13 +174,14 @@ export function TicketDetailPage() {
     event.preventDefault()
     if (!ticket.data || !codigo.trim() || !tecnicoId) return
     try {
-      const created = await createWorkOrder.mutateAsync({ codigo: codigo.trim(), chamadoId: ticket.data.id, tecnicoId })
+      const created = await createWorkOrder.mutateAsync({ codigo: codigo.trim(), chamadoId: ticket.data.id, tecnicoId, ...(finalidade ? { finalidade: finalidade as Finalidade } : {}) })
       toast.success(`OT corretiva ${created.codigo} criada.`, created.id ? {
         action: { label: 'Abrir OT', onClick: () => navigate(`/work-orders/${created.id}`) },
       } : undefined)
       setIsCreateOpen(false)
       setCodigo('')
       setTecnicoId('')
+      setFinalidade('')
     } catch {
       // Keep the form open to allow correction or retry.
     }
@@ -269,6 +272,7 @@ export function TicketDetailPage() {
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<Select required value={tecnicoId} onChange={setTecnicoId} placeholder="Selecione um técnico" options={activeTechnicians.map((user) => ({ value: user.id, label: user.nome }))} /></label>
         {isAdmin && !users.isLoading && !hospitalLinks.some((query) => query.isLoading) && activeTechnicians.length === 0 && <p role="status" className="text-xs text-warning">Não há técnicos ativos vinculados ao hospital deste chamado.</p>}
         {isTechnician && <p className="text-xs text-text-muted">A OT será atribuída a você; o backend validará seu vínculo com o hospital.</p>}
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Finalidade (opcional)<Select aria-label="Finalidade" value={finalidade} onChange={setFinalidade} options={finalidadeOptions} /></label>
         {createWorkOrder.isError && <p role="alert" className="text-xs text-danger">{getErrorMessage(createWorkOrder.error)}</p>}
         <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" disabled={createWorkOrder.isPending} onClick={() => setIsCreateOpen(false)} className="h-9 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg">Cancelar</button><button type="submit" disabled={!codigo.trim() || !tecnicoId || createWorkOrder.isPending} className="h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{createWorkOrder.isPending ? 'Criando…' : 'Criar OT'}</button></div>
       </form>

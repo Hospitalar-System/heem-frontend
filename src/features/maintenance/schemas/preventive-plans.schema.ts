@@ -6,6 +6,8 @@ const base = {
     .regex(/^\d{1,5}$/, 'Use apenas números inteiros, com até 5 dígitos.')
     .refine((value) => Number(value) >= 1, 'O intervalo mínimo é de 1 dia.'),
   dataAncora: z.string().min(1, 'Informe a data âncora.'),
+  origemIntervalo: z.string(),
+  justificativaIntervalo: z.string().trim().max(300, 'A justificativa pode ter no máximo 300 caracteres.'),
 }
 
 export const createPreventivePlanSchema = z.object({

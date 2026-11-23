@@ -78,7 +78,7 @@ export function toEquipmentInput(values: EquipmentFormValues, fotoUrl: string | 
   }
 }
 
-export const documentTypes = ['MANUAL', 'CERTIFICADO_CALIBRACAO', 'LAUDO_SEGURANCA', 'NOTA_FISCAL', 'OUTRO'] as const
+export const documentTypes = ['MANUAL', 'CERTIFICADO_CALIBRACAO', 'LAUDO_SEGURANCA', 'NOTA_FISCAL', 'DOCUMENTO_BAIXA', 'OUTRO'] as const
 // O backend não limita tamanho/tipo do documento; este teto é só uma proteção do cliente.
 export const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024
 

@@ -1,3 +1,5 @@
+import type { Finalidade } from '../utils/finalidade'
+import type { OrigemIntervalo } from '../utils/intervalo-origem'
 export type TicketStatus = 'ABERTO' | 'EM_ANDAMENTO' | 'AGUARDANDO_PECA' | 'RESOLVIDO' | 'CANCELADO' | string
 export type TicketSeverity = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA' | string
 export type TicketSlaStatus = 'no_prazo' | 'em_risco' | 'vencido' | null
@@ -70,6 +72,7 @@ export interface CorrectiveWorkOrderInput {
   tecnicoId: string
   local?: string
   dataAgendada?: string
+  finalidade?: Finalidade
 }
 
 export interface CorrectiveWorkOrder {
@@ -151,6 +154,7 @@ export interface PreventiveWorkOrderInput {
   checklistId: string
   tecnicoId: string
   dataAgendada: string
+  finalidade?: Finalidade
 }
 
 export interface WorkOrderListItem {
@@ -174,6 +178,8 @@ export interface WorkOrderListItem {
   /** Rotina que gerou a OT (nulos = OT avulsa ou corretiva). */
   planoPreventivoId?: string | null
   campanhaPreventivaId?: string | null
+  /** Opcional; nula nas OTs antigas. */
+  finalidade?: Finalidade | null
 }
 
 export interface WorkOrderDetail {
@@ -190,6 +196,7 @@ export interface WorkOrderDetail {
   iniciadaEm: string | null
   concluidaEm: string | null
   fotosCount?: number
+  finalidade?: Finalidade | null
 }
 
 export interface WorkOrderChecklistItem {
@@ -208,6 +215,8 @@ export interface PreventivePlan {
   tecnicoPadraoId: string
   intervaloDias: number
   dataAncora: string
+  origemIntervalo?: OrigemIntervalo | null
+  justificativaIntervalo?: string | null
   proximaData: string
   ativo: boolean
   /** Story 9.2: técnico padrão inativo ou desvinculado; nenhuma OT foi gerada. */
@@ -227,6 +236,9 @@ export interface CreatePreventivePlanInput {
   tecnicoPadraoId: string
   intervaloDias: number
   dataAncora: string
+  /** Opcionais. No PUT o campo ausente grava nulo: a edição reenvia os valores atuais. */
+  origemIntervalo?: OrigemIntervalo
+  justificativaIntervalo?: string
 }
 
 export type UpdatePreventivePlanInput = Omit<CreatePreventivePlanInput, 'equipamentoId' | 'checklistId'>

@@ -1,4 +1,6 @@
 import { plural } from '@/lib/plural'
+import { Badge } from '@/components/ui/Badge'
+import { finalidadeLabel, finalidadeOptions, type Finalidade } from '../utils/finalidade'
 import { workOrderStatusTone } from '@/lib/status-tones'
 import { ClipboardPlus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -94,6 +96,7 @@ export function WorkOrdersPage() {
   const [checklistId, setChecklistId] = useState('')
   const [tecnicoId, setTecnicoId] = useState('')
   const [dataAgendada, setDataAgendada] = useState('')
+  const [finalidade, setFinalidade] = useState('')
   const [search, setSearch] = useState('')
   const [technicianFilter, setTechnicianFilter] = useState('')
   const [dateFrom, setDateFrom] = useState('')
@@ -138,7 +141,7 @@ export function WorkOrdersPage() {
   usePageClamp(pagination, orders.data?.total, !orders.isPlaceholderData)
 
   function resetForm() {
-    setCodigo(''); setEquipamentoId(''); setChecklistId(''); setTecnicoId(''); setDataAgendada('')
+    setCodigo(''); setEquipamentoId(''); setChecklistId(''); setTecnicoId(''); setDataAgendada(''); setFinalidade('')
   }
 
   function closeCreateDialog() {
@@ -153,7 +156,7 @@ export function WorkOrdersPage() {
     if (!parsed.success) return
     if (!eligibleTechnicians.some((technician) => technician.id === tecnicoId)) return
     try {
-      const created = await createOrder.mutateAsync({ ...parsed.data, dataAgendada: new Date(parsed.data.dataAgendada).toISOString() })
+      const created = await createOrder.mutateAsync({ ...parsed.data, dataAgendada: new Date(parsed.data.dataAgendada).toISOString(), ...(finalidade ? { finalidade: finalidade as Finalidade } : {}) })
       toast.success(`OT preventiva ${created.codigo} agendada.`)
       closeCreateDialog()
     } catch {
@@ -178,6 +181,7 @@ export function WorkOrdersPage() {
       const sectorName = order.setorNome ?? (equip ? sectorById.get(equip.setorId) : undefined)?.nome ?? '—'
       return <><span className="block text-text-secondary">{sectorName}</span>{order.hospitalNome && <span className="text-[11px] text-text-muted">{order.hospitalNome}</span>}</>
     } },
+    { key: 'finalidade', header: 'Finalidade', defaultHidden: true, className: 'whitespace-nowrap', cell: (order) => { const label = finalidadeLabel(order.finalidade); return label ? <Badge variant="neutral">{label}</Badge> : <span className="text-text-muted">—</span> } },
     { key: 'vencimento', header: 'Vencimento', cell: (order) => <span className="text-text-secondary">{formatDate(order.dataAgendada)}</span> },
     { key: 'status', header: 'Status', cell: (order) => <div className="flex flex-wrap items-center gap-1.5"><StatusBadge tone={statusTone(order.status)}>{statusLabel[normalized(order.status)] ?? order.status.replaceAll('_', ' ')}</StatusBadge>{isOverdue(order) && <StatusBadge tone="danger">Atrasada</StatusBadge>}</div> },
   ]
@@ -217,6 +221,7 @@ export function WorkOrdersPage() {
         onRowClick={(order) => navigate(`/work-orders/${order.id}`)}
         rowProps={(order) => ({ role: 'link', 'aria-label': `Abrir ${order.codigo || order.id}` })}
         minWidth="860px"
+        storageKey="ordens-de-trabalho"
         isLoading={orders.isLoading}
         loadingLabel="Carregando ordens de trabalho"
         error={orders.isError ? { message: orderingErrorMessage(orders.error) ?? 'Não foi possível carregar as ordens de trabalho.', onRetry: () => void orders.refetch() } : null}
@@ -242,6 +247,7 @@ export function WorkOrdersPage() {
         {selectedEquipment && selectedSector && eligibleTechnicians.length === 0 && <p className="text-xs text-warning">Não há técnicos ativos vinculados ao hospital do equipamento.</p>}
         {equipment.isError || checklists.isError || users.isError || sectors.isError ? <p role="alert" className="text-xs text-danger">Não foi possível carregar os dados necessários para o agendamento. Feche e tente novamente.</p> : null}
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Data agendada<DateTimePicker required label="Data agendada" value={dataAgendada} onChange={setDataAgendada} /></label>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Finalidade (opcional)<Select aria-label="Finalidade" value={finalidade} onChange={setFinalidade} options={finalidadeOptions} /></label>
         {createOrder.isError && <p role="alert" className="text-xs text-danger">{errorMessage(createOrder.error)}</p>}
         <div className="flex justify-end gap-2 border-t border-border pt-3"><button type="button" disabled={createOrder.isPending} onClick={closeCreateDialog} className="h-9 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg">Cancelar</button><button type="submit" disabled={!codigo.trim() || !equipamentoId || !checklistId || !tecnicoId || !dataAgendada || !selectedSector || !eligibleTechnicians.some((technician) => technician.id === tecnicoId) || createOrder.isPending} className="h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{createOrder.isPending ? 'Agendando…' : 'Agendar OT'}</button></div>
       </form>}

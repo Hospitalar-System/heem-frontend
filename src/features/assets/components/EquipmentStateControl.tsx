@@ -1,11 +1,16 @@
 import { ArrowLeftRight } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Checkbox } from '@/components/ui/Checkbox'
+import { DatePicker } from '@/components/ui/DatePicker'
+import { isoOf, todayCivil } from '@/components/ui/civil-date'
 import { Modal } from '@/components/ui/Modal'
+import { Select } from '@/components/ui/Select'
 import { useChangeEquipmentState } from '../api/equipment-state'
 import type { Equipment, EquipmentState } from '../types'
 import { ADMIN_ONLY_STATES, DESCRIPTION_MAX, QUICK_STATES, canChangeFrom, changeStateErrorMessage, equipmentStateLabel, isKnownState, type StateRole } from '../utils/equipment-state'
 import { EquipmentStateBadge } from './EquipmentStateBadge'
+import { BAIXA_STATES, destinoBaixaOptions, motivoBaixaOptions, type DestinoBaixa, type MotivoBaixa } from '../utils/baixa'
 
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' })
 function formatDate(value: string | null | undefined) {
@@ -46,10 +51,14 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
   const [state, setState] = useState<EquipmentState>(isKnownState(current) ? current : 'ATIVO')
   const [description, setDescription] = useState(equipment.descricaoEstado ?? '')
   const [confirmed, setConfirmed] = useState(false)
+  const [motivoBaixa, setMotivoBaixa] = useState('')
+  const [destinoBaixa, setDestinoBaixa] = useState('')
+  const [dataBaixa, setDataBaixa] = useState('')
   const [error, setError] = useState<string | null>(null)
   const needsDescription = state === 'EM_MANUTENCAO'
   const showDescription = state !== 'ATIVO'
   const discarding = state === 'DESCARTADO'
+  const showBaixa = BAIXA_STATES.includes(state)
   const others = role === 'admin' ? ADMIN_ONLY_STATES : []
 
   const submit = () => {
@@ -58,7 +67,13 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
     if (text.length > DESCRIPTION_MAX) { setError(`A descrição pode ter no máximo ${DESCRIPTION_MAX} caracteres.`); return }
     if (discarding && !confirmed) { setError('Confirme o descarte para continuar.'); return }
     setError(null)
-    mutation.mutate({ estado: state, ...(showDescription && text ? { descricao: text } : {}) }, {
+    mutation.mutate({
+      estado: state,
+      ...(showDescription && text ? { descricao: text } : {}),
+      ...(showBaixa && motivoBaixa ? { motivoBaixa: motivoBaixa as MotivoBaixa } : {}),
+      ...(showBaixa && destinoBaixa ? { destinoBaixa: destinoBaixa as DestinoBaixa } : {}),
+      ...(showBaixa && dataBaixa ? { dataBaixa } : {}),
+    }, {
       onSuccess: () => { toast.success(`Estado alterado para ${equipmentStateLabel(state)}.`); onClose() },
       onError: (failure) => setError(changeStateErrorMessage(failure)),
     })
@@ -84,7 +99,15 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
         <textarea id="equipment-state-description" value={description} maxLength={DESCRIPTION_MAX} rows={3} aria-required={needsDescription} aria-invalid={Boolean(error) && needsDescription && !description.trim()} disabled={mutation.isPending} onChange={(event) => { setDescription(event.target.value); setError(null) }} className={`w-full rounded-md border bg-bg px-3 py-2 text-xs text-text-primary outline-none focus:ring-2 focus:ring-primary/20 ${needsDescription ? 'border-warning focus:border-warning' : 'border-border focus:border-primary'}`} />
         <p className="text-right text-[11px] text-text-muted" aria-live="polite">{description.length}/{DESCRIPTION_MAX}</p>
       </div> : null}
-      {discarding ? <label className="flex items-start gap-2 rounded-md border border-danger/40 p-3 text-xs"><input type="checkbox" checked={confirmed} disabled={mutation.isPending} onChange={(event) => setConfirmed(event.target.checked)} className="mt-0.5" /><span>Entendo que Descartado é definitivo: o equipamento não poderá mais mudar de estado.</span></label> : null}
+      {showBaixa ? <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Motivo da baixa (opcional)<Select aria-label="Motivo da baixa" value={motivoBaixa} onChange={setMotivoBaixa} disabled={mutation.isPending} options={motivoBaixaOptions} /></label>
+          <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Destino do equipamento (opcional)<Select aria-label="Destino do equipamento" value={destinoBaixa} onChange={setDestinoBaixa} disabled={mutation.isPending} options={destinoBaixaOptions} /></label>
+        </div>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Data da baixa (opcional)<DatePicker aria-label="Data da baixa" value={dataBaixa} max={isoOf(todayCivil())} onChange={setDataBaixa} disabled={mutation.isPending} /></label>
+        <p className="text-[11px] text-text-muted">O documento de baixa é anexado na aba Documentos da ficha (tipo "Documento de baixa").</p>
+      </div> : null}
+      {discarding ? <div className="rounded-md border border-danger/40 p-3 text-xs"><Checkbox checked={confirmed} disabled={mutation.isPending} onCheckedChange={setConfirmed} label="Entendo que Descartado é definitivo: o equipamento não poderá mais mudar de estado." /></div> : null}
       {error ? <p role="alert" className="text-xs text-danger">{error}</p> : null}
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onClose} disabled={mutation.isPending} className="h-9 rounded-md border border-border px-3 text-xs font-medium hover:bg-bg disabled:opacity-50">Cancelar</button>

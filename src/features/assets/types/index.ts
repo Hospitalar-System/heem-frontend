@@ -1,3 +1,4 @@
+import type { DestinoBaixa, MotivoBaixa } from '../utils/baixa'
 export type RiscoSetor = 'CRITICO' | 'SEMI_CRITICO' | 'NAO_CRITICO'
 export type GrupoInstalacao = 'GRUPO_0' | 'GRUPO_1' | 'GRUPO_2'
 
@@ -62,7 +63,15 @@ export interface Equipment {
   estadoAtualizadoEm?: string | null
 }
 
-export interface ChangeEquipmentStateInput { estado: EquipmentState; descricao?: string | null }
+export interface ChangeEquipmentStateInput {
+  estado: EquipmentState
+  descricao?: string | null
+  /** Só com INATIVO, DESATIVADO ou DESCARTADO (opcionais; DESCARTADO é terminal, então vão na mesma chamada). */
+  motivoBaixa?: MotivoBaixa
+  destinoBaixa?: DestinoBaixa
+  /** AAAA-MM-DD, não futura. */
+  dataBaixa?: string
+}
 export type EquipmentStateOrigin = 'MANUAL' | 'ORDEM_TRABALHO'
 export interface EquipmentStateHistoryEntry {
   id: string
@@ -75,6 +84,9 @@ export interface EquipmentStateHistoryEntry {
   alteradoEm: string
   origem: EquipmentStateOrigin | string
   ordemTrabalhoId: string | null
+  motivoBaixa?: string | null
+  destinoBaixa?: string | null
+  dataBaixa?: string | null
 }
 
 export interface EquipmentEditableFields {
@@ -175,7 +187,7 @@ export interface EquipmentPageFilters extends EquipmentFilters {
   direcao?: 'asc' | 'desc'
 }
 
-export type DocumentType = 'MANUAL' | 'CERTIFICADO_CALIBRACAO' | 'LAUDO_SEGURANCA' | 'NOTA_FISCAL' | 'OUTRO'
+export type DocumentType = 'MANUAL' | 'CERTIFICADO_CALIBRACAO' | 'LAUDO_SEGURANCA' | 'NOTA_FISCAL' | 'DOCUMENTO_BAIXA' | 'OUTRO'
 
 export interface EquipmentDocument {
   id: string

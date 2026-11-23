@@ -6,6 +6,8 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
 import { apiClient } from '@/lib/axios'
+import { chooseDate } from '@/test/date-helpers'
+import { chooseOption } from '@/test/select-helpers'
 import { EquipmentStateBadge } from '../components/EquipmentStateBadge'
 import { EquipmentListTable } from '../components/EquipmentListTable'
 import { EquipmentDetailPage } from '../pages/EquipmentDetailPage'
@@ -219,6 +221,46 @@ describe('ficha: Alterar estado', () => {
     await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/equipamentos/equipment-1/estado', { estado: 'DESCARTADO' }))
   })
 
+  it('baixa: Descartado, Desativado e Inativo mostram Motivo, Destino e Data da baixa; Apto e Em manutenção não', async () => {
+    const user = setup({ role: 'admin_cliente' })
+    const dialog = await openModal(user)
+    for (const name of ['Apto', 'Em manutenção']) {
+      await user.click(within(dialog).getByRole('radio', { name }))
+      expect(within(dialog).queryByRole('combobox', { name: 'Motivo da baixa' })).not.toBeInTheDocument()
+    }
+    for (const name of ['Desativado', 'Inativo', 'Descartado']) {
+      await user.click(within(dialog).getByRole('radio', { name }))
+      expect(within(dialog).getByRole('combobox', { name: 'Motivo da baixa' })).toBeInTheDocument()
+      expect(within(dialog).getByRole('combobox', { name: 'Destino do equipamento' })).toBeInTheDocument()
+      expect(within(dialog).getByRole('button', { name: 'Data da baixa' })).toBeInTheDocument()
+    }
+    expect(within(dialog).getByText(/Documento de baixa/)).toBeInTheDocument()
+  })
+
+  it('baixa: envia motivo, destino e data junto com o descarte (mesma chamada); sem preencher, não envia os campos', async () => {
+    const user = setup({ role: 'admin_cliente' })
+    const dialog = await openModal(user)
+    await user.click(within(dialog).getByRole('radio', { name: 'Descartado' }))
+    await chooseOption(user, 'Motivo da baixa', 'Defeito irreparável')
+    await chooseOption(user, 'Destino do equipamento', 'Sucata')
+    const now = new Date()
+    const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+    await chooseDate(user, 'Data da baixa', day)
+    await user.click(within(dialog).getByRole('checkbox', { name: /Entendo que Descartado é definitivo/ }))
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/equipamentos/equipment-1/estado', { estado: 'DESCARTADO', motivoBaixa: 'DEFEITO_IRREPARAVEL', destinoBaixa: 'SUCATA', dataBaixa: day }))
+  })
+
+  it('baixa: trocar para um estado sem baixa não envia os campos preenchidos antes', async () => {
+    const user = setup({ role: 'admin_cliente' })
+    const dialog = await openModal(user)
+    await user.click(within(dialog).getByRole('radio', { name: 'Inativo' }))
+    await chooseOption(user, 'Motivo da baixa', 'Obsolescência')
+    await user.click(within(dialog).getByRole('radio', { name: 'Apto' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/equipamentos/equipment-1/estado', { estado: 'ATIVO' }))
+  })
+
   it('mostra "Salvando…" enquanto envia e fecha o modal ao concluir', async () => {
     let finish: (value: unknown) => void = () => undefined
     const user = setup({ role: 'tecnico' })
@@ -263,6 +305,14 @@ describe('ficha: Histórico de estado', () => {
     expect(rows[1]).toHaveTextContent('Ordem de trabalho')
     expect(within(rows[1]).getByRole('link', { name: 'Abrir OT' })).toHaveAttribute('href', '/work-orders/ot-77')
     expect(historyCalls().at(-1)?.[1]).toEqual({ params: { pagina: 0, tamanho: 10 } })
+  })
+
+  it('mostra motivo, destino e data da baixa como linha secundária abaixo da descrição', async () => {
+    const entry = { id: 'h9', estadoAnterior: 'ATIVO', estadoNovo: 'DESCARTADO', descricao: 'Sem conserto', alteradoPorId: 'u2', alteradoPorNome: 'Bruno', alteradoEm: '2026-11-10T14:20:00Z', origem: 'MANUAL', ordemTrabalhoId: null, motivoBaixa: 'DEFEITO_IRREPARAVEL', destinoBaixa: 'SUCATA', dataBaixa: '2026-11-09' }
+    const user = setup({ role: 'admin_cliente', history: [entry, history[0]] })
+    await user.click(await screen.findByRole('tab', { name: 'Histórico de estado' }))
+    expect(await screen.findByText('Motivo: Defeito irreparável · Destino: Sucata · Data da baixa: 09/11/2026')).toBeInTheDocument()
+    expect(screen.getAllByText(/^Motivo:/)).toHaveLength(1) // entrada antiga sem baixa não mostra a linha
   })
 
   it('técnico vê a origem sem link para a OT', async () => {
