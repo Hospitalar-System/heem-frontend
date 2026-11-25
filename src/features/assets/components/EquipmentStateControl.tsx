@@ -101,11 +101,11 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
       </div> : null}
       {showBaixa ? <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Motivo da baixa (opcional)<Select aria-label="Motivo da baixa" value={motivoBaixa} onChange={setMotivoBaixa} disabled={mutation.isPending} options={motivoBaixaOptions} /></label>
-          <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Destino do equipamento (opcional)<Select aria-label="Destino do equipamento" value={destinoBaixa} onChange={setDestinoBaixa} disabled={mutation.isPending} options={destinoBaixaOptions} /></label>
+          <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Motivo da baixa (opcional)<Select aria-label="Motivo da baixa" value={motivoBaixa} onChange={setMotivoBaixa} size="sm" disabled={mutation.isPending} options={motivoBaixaOptions} /></label>
+          <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Destino do equipamento (opcional)<Select aria-label="Destino do equipamento" value={destinoBaixa} onChange={setDestinoBaixa} size="sm" disabled={mutation.isPending} options={destinoBaixaOptions} /></label>
         </div>
-        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Data da baixa (opcional)<DatePicker aria-label="Data da baixa" value={dataBaixa} max={isoOf(todayCivil())} onChange={setDataBaixa} disabled={mutation.isPending} /></label>
-        <p className="text-[11px] text-text-muted">O documento de baixa é anexado na aba Documentos da ficha (tipo "Documento de baixa").</p>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Data da baixa (opcional)<DatePicker aria-label="Data da baixa" value={dataBaixa} max={isoOf(todayCivil())} onChange={setDataBaixa} size="sm" disabled={mutation.isPending} /></label>
+        <p className="text-[11px] text-text-muted">O documento de baixa é anexado na aba Documentos da ficha (tipo “Documento de baixa”).</p>
       </div> : null}
       {discarding ? <div className="rounded-md border border-danger/40 p-3 text-xs"><Checkbox checked={confirmed} disabled={mutation.isPending} onCheckedChange={setConfirmed} label="Entendo que Descartado é definitivo: o equipamento não poderá mais mudar de estado." /></div> : null}
       {error ? <p role="alert" className="text-xs text-danger">{error}</p> : null}

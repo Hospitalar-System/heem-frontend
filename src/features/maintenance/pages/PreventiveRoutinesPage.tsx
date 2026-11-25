@@ -121,8 +121,8 @@ export function PreventiveRoutinesPage() {
       const justificativa = routine.kind === 'plano' ? routine.plan.justificativaIntervalo : null
       return <><Badge variant={routine.scope === 'equipamento' ? 'info' : 'neutral'}>{routineScopeLabels[routine.scope]}</Badge>{details.filter(Boolean).map((detail) => <span key={detail} className="mt-1 block text-[11px] text-text-muted">{detail}</span>)}
         {routine.kind === 'plano' ? <>
-          <span className="mt-1 block text-[11px] text-text-muted">Origem do intervalo: {origemIntervaloLabel(routine.plan.origemIntervalo) ?? '—'}</span>
-          <span title={justificativa ?? undefined} className="block max-w-[260px] truncate text-[11px] text-text-muted">Justificativa: {justificativa || '—'}</span>
+          {routine.plan.origemIntervalo ? <span className="mt-1 block text-[11px] text-text-muted">Origem do intervalo: {origemIntervaloLabel(routine.plan.origemIntervalo)}</span> : null}
+          {justificativa ? <span title={justificativa} className="line-clamp-1 max-w-[260px] break-all text-[11px] text-text-muted">Justificativa: {justificativa}</span> : null}
         </> : null}</>
     } },
     { key: 'proxima', header: 'Próxima execução', cell: (routine) => <span className="text-text-secondary">{routine.next ? formatPlanDate(routine.next) : '—'}</span> },

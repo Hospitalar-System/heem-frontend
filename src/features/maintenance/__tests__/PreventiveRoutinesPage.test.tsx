@@ -212,7 +212,7 @@ describe('PreventiveRoutinesPage', () => {
     }))
   })
 
-  it('a lista mostra origem e justificativa do intervalo, com traço nos planos antigos; a edição reenvia os valores atuais', async () => {
+  it('a lista mostra origem e justificativa do intervalo só quando preenchidas; a edição reenvia os valores atuais', async () => {
     const original = plans[0]
     plans[0] = { ...original, origemIntervalo: 'RISCO', justificativaIntervalo: 'Equipamento de risco alto.' } as typeof original
     try {
@@ -221,7 +221,8 @@ describe('PreventiveRoutinesPage', () => {
       await screen.findByText('Bomba de infusão')
       expect(screen.getByText('Origem do intervalo: Risco do equipamento')).toBeInTheDocument()
       expect(screen.getByText('Justificativa: Equipamento de risco alto.')).toBeInTheDocument()
-      expect(screen.getAllByText('Origem do intervalo: —').length).toBeGreaterThanOrEqual(1)
+      expect(screen.getAllByText(/^Origem do intervalo:/)).toHaveLength(1)
+      expect(screen.getByText('Justificativa: Equipamento de risco alto.')).toHaveAttribute('title', 'Equipamento de risco alto.')
       await chooseRowAction(user, 'Ações de plano de EQ-01 · Bomba de infusão', 'Editar plano')
       const dialog = await screen.findByRole('dialog', { name: 'Editar plano preventivo' })
       expect(within(dialog).getByRole('textbox', { name: /Justificativa do intervalo/ })).toHaveValue('Equipamento de risco alto.')
