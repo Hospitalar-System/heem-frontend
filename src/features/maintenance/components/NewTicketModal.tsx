@@ -9,10 +9,10 @@ import { useEquipments, useHospitals, useSectors } from '@/features/assets/api/a
 import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/api/users'
 import { createTicketErrorMessage, useCreateTicket } from '../api/tickets'
 import { newTicketSchema, newTicketSeverityOptions, type NewTicketFormValues } from '../schemas/tickets.schema'
-import type { CreateTicketInput } from '../types'
+import { ticketTypeLabels, ticketTypes, type CreateTicketInput } from '../types'
 
 const inputClass = 'w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 aria-[invalid=true]:border-danger'
-const fieldOrder = ['hospitalId', 'setorId', 'equipamentoId', 'severidade', 'descricao', 'tecnicoResponsavelId'] as const
+const fieldOrder = ['hospitalId', 'setorId', 'equipamentoId', 'severidade', 'tipo', 'descricao', 'tecnicoResponsavelId'] as const
 type FieldName = (typeof fieldOrder)[number]
 
 function Row({ id, label, error, hint, children }: { id: string; label: string; error?: string; hint?: ReactNode; children: ReactNode }) {
@@ -44,7 +44,7 @@ export function NewTicketModal({ onClose }: { onClose: () => void }) {
   const form = useForm<NewTicketFormValues>({
     resolver: zodResolver(newTicketSchema),
     shouldFocusError: false, // o foco é movido por focusFirstInvalid (os Selects não expõem ref ao RHF)
-    defaultValues: { hospitalId: '', setorId: '', equipamentoId: '', severidade: 'MEDIA', descricao: '', tecnicoResponsavelId: '' },
+    defaultValues: { hospitalId: '', setorId: '', equipamentoId: '', severidade: 'MEDIA', descricao: '', tecnicoResponsavelId: '', tipo: '' },
   })
   const { errors } = form.formState
   const hospitalId = form.watch('hospitalId')
@@ -79,6 +79,7 @@ export function NewTicketModal({ onClose }: { onClose: () => void }) {
       descricao: values.descricao.trim(),
       severidade: values.severidade,
       ...(values.tecnicoResponsavelId ? { tecnicoResponsavelId: values.tecnicoResponsavelId } : {}),
+      ...(values.tipo ? { tipo: values.tipo } : {}),
     }
     try {
       const created = await create.mutateAsync(body)
@@ -135,6 +136,11 @@ export function NewTicketModal({ onClose }: { onClose: () => void }) {
         <p id={`${ids.severidade}-help`} className="text-[11px] text-text-muted">{selectedSeverity ? `${selectedSeverity.label}: ${selectedSeverity.help}.` : 'Escolha a severidade.'}</p>
         {errors.severidade && <p id={`${ids.severidade}-error`} role="alert" className="text-xs text-danger">{errors.severidade.message}</p>}
       </fieldset>
+
+      <Row id={ids.tipo} label="Tipo (opcional)">
+        <FormSelect control={form.control} name="tipo" id={ids.tipo} aria-labelledby={`${ids.tipo}-label`} placeholder="Não informado"
+          options={[{ value: '', label: 'Não informado' }, ...ticketTypes.map((value) => ({ value, label: ticketTypeLabels[value] }))]} />
+      </Row>
 
       <Row id={ids.descricao} label="Descrição" error={errors.descricao?.message}
         hint={<div className="flex justify-between gap-2 text-[11px] text-text-muted"><span>Não inclua nome ou dados de paciente.</span><span>{descricao.length} caracteres</span></div>}>

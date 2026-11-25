@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { ArrowLeft, CalendarClock, ClipboardList, Edit3, FileText, Gauge, History, ListChecks, Tag, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, CalendarClock, ClipboardList, Edit3, FileText, Gauge, History, ListChecks, Tag, ChevronLeft, ChevronRight, Wrench } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { getAuthState } from '@/features/auth/session'
@@ -11,6 +11,7 @@ import { EquipmentPhotoSection } from '../components/EquipmentPhotoSection'
 import { EquipmentChecklistSection } from '../components/EquipmentChecklistSection'
 import { EquipmentMeasurementsSection } from '../components/EquipmentMeasurementsSection'
 import { EquipmentLabelsSection } from '../components/EquipmentLabelsSection'
+import { EquipmentPartsSection } from '../components/EquipmentPartsSection'
 import { useEquipment, useEquipmentWorkOrders, useHospital, useSector } from '../api/assets'
 import type { Equipment } from '../types'
 import { Badge } from '@/components/ui/Badge'
@@ -18,13 +19,14 @@ import { dossieEquipamentoBody } from '@/features/dashboard/api/documents'
 import { EXPORT_BACKEND_SUPPORT } from '@/features/dashboard/components/export-builder-model'
 import { GenerateDocumentButton } from '@/features/dashboard/components/GenerateDocumentButton'
 
-type EquipmentTab = 'dados' | 'medicoes' | 'checklists' | 'ots' | 'documentos' | 'etiquetas' | 'estados'
+type EquipmentTab = 'dados' | 'medicoes' | 'checklists' | 'ots' | 'pecas' | 'documentos' | 'etiquetas' | 'estados'
 const tabs: Array<{ id: EquipmentTab; label: string; Icon: typeof Gauge }> = [
   { id: 'dados', label: 'Dados', Icon: Gauge },
   { id: 'medicoes', label: 'Histórico de medições', Icon: History },
   { id: 'estados', label: 'Histórico de estado', Icon: History },
   { id: 'checklists', label: 'Checklists', Icon: ListChecks },
   { id: 'ots', label: 'OTs', Icon: ClipboardList },
+  { id: 'pecas', label: 'Peças trocadas', Icon: Wrench },
 ]
 
 export function EquipmentDetailPage() {
@@ -77,6 +79,7 @@ export function EquipmentDetailPage() {
         {activeTab === 'estados' ? <EquipmentStateHistorySection equipmentId={id} isAdmin={isAdmin} /> : null}
         {activeTab === 'checklists' ? <EquipmentChecklistSection equipment={equipment.data} isAdmin={isAdmin} /> : null}
         {activeTab === 'ots' ? <WorkOrdersPanel orders={orders.data ?? []} loading={orders.isLoading} error={orders.isError} retry={() => void orders.refetch()} /> : null}
+        {activeTab === 'pecas' ? <EquipmentPartsSection equipmentId={id} /> : null}
         {activeTab === 'documentos' && canReadDocuments ? <EquipmentDocumentsSection equipmentId={id} canWrite={canReadDocuments} canManage={isAdmin} /> : null}
         {activeTab === 'etiquetas' && isAdmin ? <EquipmentLabelsSection equipmentId={id} /> : null}
       </section>

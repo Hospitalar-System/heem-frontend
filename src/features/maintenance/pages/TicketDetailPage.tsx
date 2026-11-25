@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowLeft, CalendarClock, ClipboardPlus, MapPin, UserRound } from 'lucide-react'
-import { useMemo, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode, type RefObject } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
@@ -10,10 +10,10 @@ import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { useUserHospitalLinks } from '@/features/tenants-users/api/users'
 import type { TenantUser } from '@/features/tenants-users/types'
 import { apiClient } from '@/lib/axios'
-import { ticketActionErrorMessage, useAssignTicketResponsible, useAssumeTicket, useChangeTicketStatus, useCreateCorrectiveWorkOrder, useReopenTicket, useTicket, useTicketHistory } from '../api/tickets'
+import { ticketActionErrorMessage, useAddTicketParts, useAssignTicketResponsible, useAssumeTicket, useChangeTicketStatus, useCreateCorrectiveWorkOrder, useReopenTicket, useSetTicketType, useTicket, useTicketHistory, useTicketParts } from '../api/tickets'
 import { TicketSlaBadge } from '../components/TicketSlaBadge'
 import { formatSlaDeadline } from '../utils/sla'
-import { ticketCauseCategories, ticketCauseLabels, type TicketCauseCategory, type TicketStatus } from '../types'
+import { ticketCauseCategories, ticketCauseLabels, ticketTypeLabel, ticketTypeLabels, ticketTypes, type TicketCauseCategory, type TicketPartInput, type TicketStatus, type TicketType } from '../types'
 import { Select } from '@/components/ui/Select'
 import { ticketCode } from '../utils/ticket-code'
 import { severityTone, ticketStatusTone } from '@/lib/status-tones'
@@ -26,7 +26,9 @@ const textareaClass = 'min-h-24 w-full rounded-md border border-border bg-bg px-
 const secondaryButton = 'h-9 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50'
 const primaryButton = 'h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50'
 const dangerButton = 'h-9 rounded-md border border-danger/40 px-3 text-xs font-semibold text-danger hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:cursor-not-allowed disabled:opacity-50'
-const actionLabel: Record<string, string> = { ABRIR_CHAMADO: 'Chamado aberto', TRANSICIONAR_CHAMADO: 'Status atualizado', GERAR_OT_CORRETIVA: 'OT corretiva gerada' }
+const actionLabel: Record<string, string> = { ABRIR_CHAMADO: 'Chamado aberto', TRANSICIONAR_CHAMADO: 'Status atualizado', GERAR_OT_CORRETIVA: 'OT corretiva gerada', DEFINIR_TIPO_CHAMADO: 'Tipo do chamado alterado', REGISTRAR_PECA: 'Peça trocada registrada' }
+const PART_DESCRIPTION_MAX = 200
+const PART_CODE_MAX = 60
 
 function normalizeStatus(status: TicketStatus) {
   return status.toLocaleUpperCase('pt-BR').replace('Ç', 'C')
@@ -40,7 +42,9 @@ export function TicketDetailPage() {
   const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
   const isAdmin = auth.user?.roles.includes('admin_cliente') ?? false
   const isTechnician = auth.user?.roles.includes('tecnico') ?? false
+  const isInternal = auth.user?.roles.includes('interno_hospital') ?? false
   const ticket = useTicket(id)
+  const parts = useTicketParts(id, !ticket.isLoading && !ticket.isError)
   const history = useTicketHistory(id, !ticket.isLoading && !ticket.isError)
   const hospitals = useHospitals()
   const hospitalIds = useMemo(() => hospitals.data?.map(({ id: hospitalId }) => hospitalId) ?? [], [hospitals.data])
@@ -65,13 +69,19 @@ export function TicketDetailPage() {
   const assignResponsible = useAssignTicketResponsible()
   const changeStatus = useChangeTicketStatus()
   const reopenTicket = useReopenTicket()
+  const setTicketType = useSetTicketType()
+  const addParts = useAddTicketParts()
   const [dialog, setDialog] = useState<TicketDialog>(null)
+  const [typeValue, setTypeValue] = useState('')
+  const [part, setPart] = useState<PartForm>(emptyPart)
+  const [partMissing, setPartMissing] = useState(false)
+  const partDescriptionRef = useRef<HTMLInputElement>(null)
   const [responsibleId, setResponsibleId] = useState('')
   const [motivo, setMotivo] = useState('')
   const [solucao, setSolucao] = useState('')
   const [causa, setCausa] = useState('')
   const [actionError, setActionError] = useState<string | null>(null)
-  const actionPending = assumeTicket.isPending || assignResponsible.isPending || changeStatus.isPending || reopenTicket.isPending
+  const actionPending = assumeTicket.isPending || assignResponsible.isPending || changeStatus.isPending || reopenTicket.isPending || setTicketType.isPending || addParts.isPending
 
   const hospital = hospitals.data?.find((item) => item.id === ticket.data?.hospitalId)
   const sector = sectors.data?.find((item) => item.id === ticket.data?.setorId)
@@ -95,7 +105,18 @@ export function TicketDetailPage() {
   const canCancel = isStaff && (normalizedStatus === 'ABERTO' || normalizedStatus === 'EM_ANDAMENTO')
   const canAssign = isAdmin && ['ABERTO', 'EM_ANDAMENTO', 'AGUARDANDO_PECA'].includes(normalizedStatus)
   const canReopen = isAdmin && normalizedStatus === 'RESOLVIDO'
-  const hasActions = canAssume || canHold || canResume || canResolve || canCancel || canAssign || canReopen
+  const isClosed = normalizedStatus === 'RESOLVIDO' || normalizedStatus === 'CANCELADO'
+  // Story 25.1: os três papéis definem o tipo enquanto o chamado não estiver encerrado; 25.2: peça só Admin e Técnico.
+  const canEditType = Boolean(ticket.data) && !isClosed && (isStaff || isInternal)
+  const canAddParts = Boolean(ticket.data) && !isClosed && isStaff
+  const isPartReplacement = ticket.data?.tipo === 'peca_reposicao'
+  const partList = parts.data ?? []
+  const resolveNeedsPart = isPartReplacement && !parts.isLoading && partList.length === 0
+  // Depois do PECA_OBRIGATORIA o campo da peça aparece (chamado recarregado): o foco vai para ele.
+  useEffect(() => {
+    if (partMissing && resolveNeedsPart) partDescriptionRef.current?.focus()
+  }, [partMissing, resolveNeedsPart])
+  const hasActions = canAssume || canHold || canResume || canResolve || canCancel || canAssign || canReopen || canEditType
   const notReadyToResolve = ticket.data?.prontoParaResolver === false
   const responsibleId0 = ticket.data?.tecnicoResponsavelId
   const responsibleName = responsibleId0
@@ -111,8 +132,25 @@ export function TicketDetailPage() {
     setMotivo('')
     setSolucao('')
     setCausa('')
+    setPart(emptyPart)
+    setPartMissing(false)
+    setTypeValue(ticket.data?.tipo ?? '')
     setResponsibleId(ticket.data?.tecnicoResponsavelId ?? '')
     setDialog(next)
+  }
+
+  async function submitType(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!ticket.data) return
+    const tipo = typeValue ? typeValue as TicketType : null
+    await runAction(() => setTicketType.mutateAsync({ id: ticket.data.id, tipo }), 'Tipo do chamado atualizado.')
+  }
+
+  async function submitPart(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const input = partInput(part)
+    if (!ticket.data || !input) return
+    await runAction(() => addParts.mutateAsync({ id: ticket.data.id, pecas: [input] }), 'Peça registrada.')
   }
 
   function closeDialog() {
@@ -141,9 +179,26 @@ export function TicketDetailPage() {
   async function submitResolve(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!ticket.data || !solucao.trim()) return
-    await runAction(() => changeStatus.mutateAsync({
-      id: ticket.data.id, novoStatus: 'RESOLVIDO', solucao: solucao.trim(), ...(causa ? { causaCategoria: causa as TicketCauseCategory } : {}),
-    }), 'Chamado resolvido.')
+    // Story 25.2: chamado de reposição sem peça registrada leva a peça na própria resolução.
+    const input = resolveNeedsPart ? partInput(part) : null
+    if (resolveNeedsPart && !input) return
+    setActionError(null)
+    try {
+      await changeStatus.mutateAsync({
+        id: ticket.data.id, novoStatus: 'RESOLVIDO', solucao: solucao.trim(), ...(causa ? { causaCategoria: causa as TicketCauseCategory } : {}),
+        ...(input ? { pecas: [input] } : {}),
+      })
+      toast.success('Chamado resolvido.')
+      setDialog(null)
+    } catch (error) {
+      setActionError(ticketActionErrorMessage(error))
+      // O tipo pode ter virado peça de reposição depois que a tela carregou: atualiza o chamado para mostrar o campo
+      // da peça, marca-o como inválido e leva o foco até ele.
+      if (problemCode(error) === 'PECA_OBRIGATORIA') {
+        await ticket.refetch()
+        setPartMissing(true)
+      }
+    }
   }
 
   async function submitCancel(event: FormEvent<HTMLFormElement>) {
@@ -240,6 +295,7 @@ export function TicketDetailPage() {
       <section aria-labelledby="care-title" className="rounded-lg border border-border bg-surface p-5">
         <h3 id="care-title" className="text-sm font-semibold text-text-primary">Atendimento</h3>
         <dl className="mt-4 grid gap-x-6 gap-y-3 text-xs sm:grid-cols-2 xl:grid-cols-4">
+          <div><dt className="text-text-muted">Tipo</dt><dd className={`mt-0.5 font-medium ${ticket.data.tipo ? 'text-text-primary' : 'text-text-muted'}`}>{ticketTypeLabel(ticket.data.tipo)}</dd></div>
           <div><dt className="text-text-muted">Responsável</dt><dd className="mt-0.5 font-medium text-text-primary">{responsibleName ?? 'Sem responsável'}</dd></div>
           <div><dt className="text-text-muted">Primeira resposta</dt><dd className="mt-0.5 font-medium text-text-primary">{ticket.data.primeiraRespostaEm ? formatDate(ticket.data.primeiraRespostaEm) : 'Ainda sem resposta'}</dd></div>
           {ticket.data.canceladoEm && <div><dt className="text-text-muted">Cancelado em</dt><dd className="mt-0.5 font-medium text-text-primary">{formatDate(ticket.data.canceladoEm)}</dd></div>}
@@ -254,12 +310,28 @@ export function TicketDetailPage() {
           {canAssign && <button type="button" disabled={actionPending} onClick={() => openDialog('assign')} className={secondaryButton}>Atribuir responsável</button>}
           {canHold && <button type="button" disabled={actionPending} onClick={() => void submitHold('AGUARDANDO_PECA')} className={secondaryButton}>Aguardando peça</button>}
           {canResume && <button type="button" disabled={actionPending} onClick={() => void submitHold('EM_ANDAMENTO')} className={secondaryButton}>Retomar atendimento</button>}
+          {canEditType && <button type="button" disabled={actionPending} onClick={() => openDialog('type')} className={secondaryButton}>{ticket.data.tipo ? 'Alterar tipo' : 'Informar tipo'}</button>}
           {canResolve && <button type="button" disabled={actionPending || notReadyToResolve} aria-describedby={notReadyToResolve ? 'resolve-hint' : undefined} onClick={() => openDialog('resolve')} className={primaryButton}>Resolver</button>}
           {canReopen && <button type="button" disabled={actionPending} onClick={() => openDialog('reopen')} className={secondaryButton}>Reabrir</button>}
           {canCancel && <button type="button" disabled={actionPending} onClick={() => openDialog('cancel')} className={dangerButton}>Cancelar chamado</button>}
         </div>}
         {canResolve && notReadyToResolve && <p id="resolve-hint" className="mt-2 text-xs text-text-muted">Ainda não é possível resolver: conclua ou cancele a OT corretiva em aberto deste chamado.</p>}
         {!dialog && actionError && <p role="alert" className="mt-3 text-xs text-danger">{actionError}</p>}
+      </section>
+
+      <section aria-labelledby="parts-title" className="rounded-lg border border-border bg-surface p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div><h3 id="parts-title" className="text-sm font-semibold text-text-primary">Peças trocadas</h3><p className="mt-1 text-xs text-text-muted">Registro permanente: para corrigir, registre de novo.</p></div>
+          {canAddParts && <button type="button" disabled={actionPending} onClick={() => openDialog('part')} className={secondaryButton}>Registrar peça</button>}
+        </div>
+        {parts.isLoading ? <div aria-label="Carregando peças" aria-busy="true" className="mt-4 space-y-2"><span className="sr-only">Carregando peças.</span>{[0, 1].map((item) => <div key={item} className="h-10 animate-pulse rounded bg-bg" />)}</div>
+          : parts.isError ? <p role="alert" className="mt-4 text-xs text-danger">Não foi possível carregar as peças. <button type="button" onClick={() => void parts.refetch()} className="font-medium text-primary hover:underline">Tentar novamente</button></p>
+            : partList.length ? <ul className="mt-4 divide-y divide-border rounded-md border border-border">{partList.map((item) => <li key={item.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-4 py-3">
+              <div className="min-w-0"><p className="text-sm font-medium text-text-primary">{item.descricao}</p><p className="mt-0.5 text-[11px] text-text-muted">{item.codigo ? `Código ${item.codigo} · ` : ''}{item.registradoPorNome ?? 'Registrado'} · {formatDate(item.registradoEm)}</p></div>
+              <p className="shrink-0 text-xs font-medium text-text-secondary">Qtd. {item.quantidade}</p>
+            </li>)}</ul>
+              : <p className="mt-4 rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-text-muted">Nenhuma peça trocada registrada neste chamado.</p>}
+        {isPartReplacement && !isClosed && !parts.isLoading && partList.length === 0 && <p role="status" className="mt-3 text-xs text-warning">Chamado de peça de reposição: registre a peça trocada antes de resolver.</p>}
       </section>
     </div>
 
@@ -284,7 +356,25 @@ export function TicketDetailPage() {
       <form className="space-y-4" onSubmit={(event) => void submitResolve(event)}>
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Solução aplicada<textarea autoFocus required maxLength={4000} value={solucao} onChange={(event) => setSolucao(event.target.value)} placeholder="Descreva o que foi feito para resolver" className={textareaClass} /></label>
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Causa (opcional)<Select value={causa} onChange={setCausa} placeholder="Não informada" options={[{ value: '', label: 'Não informada' }, ...ticketCauseCategories.map((value) => ({ value, label: ticketCauseLabels[value] }))]} /></label>
-        <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Resolver chamado" pendingLabel="Resolvendo…" disabled={!solucao.trim()} />
+        {resolveNeedsPart && <fieldset className="grid gap-3 border-t border-border pt-4">
+          <legend className="text-xs font-medium text-text-secondary">Peça trocada (obrigatória em chamado de peça de reposição)</legend>
+          <PartFields value={part} onChange={(next) => { setPart(next); if (next.descricao.trim()) setPartMissing(false) }} invalid={partMissing} descriptionRef={partDescriptionRef} />
+        </fieldset>}
+        <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Resolver chamado" pendingLabel="Resolvendo…" disabled={!solucao.trim() || (resolveNeedsPart && !partInput(part))} />
+      </form>
+    </Modal>}
+    {dialog === 'type' && <Modal title={ticket.data.tipo ? 'Alterar tipo do chamado' : 'Informar tipo do chamado'} description={`Chamado ${ticketCode(ticket.data)}`} busy={setTicketType.isPending} onClose={closeDialog}>
+      <form className="space-y-4" onSubmit={(event) => void submitType(event)}>
+        <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Tipo<Select value={typeValue} onChange={setTypeValue} placeholder="Não informado" options={[{ value: '', label: 'Não informado' }, ...ticketTypes.map((value) => ({ value, label: ticketTypeLabels[value] }))]} /></label>
+        <p className="text-[11px] text-text-muted">O tipo separa falha, peça de reposição e instalação nos indicadores. O status do chamado não muda.</p>
+        <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Salvar tipo" pendingLabel="Salvando…" disabled={typeValue === (ticket.data.tipo ?? '')} />
+      </form>
+    </Modal>}
+    {dialog === 'part' && <Modal title="Registrar peça trocada" description={`Chamado ${ticketCode(ticket.data)}`} busy={addParts.isPending} onClose={closeDialog}>
+      <form className="space-y-4" onSubmit={(event) => void submitPart(event)}>
+        <PartFields value={part} onChange={setPart} autoFocus />
+        <p className="text-[11px] text-text-muted">O registro não pode ser editado depois; para corrigir, registre a peça de novo.</p>
+        <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Registrar peça" pendingLabel="Registrando…" disabled={!partInput(part)} />
       </form>
     </Modal>}
     {dialog === 'cancel' && <Modal title="Cancelar chamado" description="O cancelamento é definitivo e não pode ser desfeito." busy={changeStatus.isPending} onClose={closeDialog}>
@@ -302,7 +392,29 @@ export function TicketDetailPage() {
   </AdminPageShell>
 }
 
-type TicketDialog = 'assign' | 'resolve' | 'cancel' | 'reopen' | null
+type TicketDialog = 'assign' | 'resolve' | 'cancel' | 'reopen' | 'type' | 'part' | null
+
+interface PartForm { descricao: string; quantidade: string; codigo: string }
+const emptyPart: PartForm = { descricao: '', quantidade: '1', codigo: '' }
+
+/** Peça válida para a API (descrição até 200, quantidade inteira > 0, código até 60) ou null. */
+function partInput(form: PartForm): TicketPartInput | null {
+  const descricao = form.descricao.trim()
+  const quantidade = Number(form.quantidade)
+  const codigo = form.codigo.trim()
+  if (!descricao || descricao.length > PART_DESCRIPTION_MAX) return null
+  if (!Number.isInteger(quantidade) || quantidade < 1) return null
+  if (codigo.length > PART_CODE_MAX) return null
+  return { descricao, quantidade, ...(codigo ? { codigo } : {}) }
+}
+
+function PartFields({ value, onChange, autoFocus = false, invalid = false, descriptionRef }: { value: PartForm; onChange: (next: PartForm) => void; autoFocus?: boolean; /** Servidor recusou por falta de peça: campo marcado como inválido. */ invalid?: boolean; descriptionRef?: RefObject<HTMLInputElement | null> }) {
+  return <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_96px]">
+    <label className="grid gap-1.5 text-xs font-medium text-text-secondary sm:col-span-2">Peça<input ref={descriptionRef} autoFocus={autoFocus} required maxLength={PART_DESCRIPTION_MAX} value={value.descricao} onChange={(event) => onChange({ ...value, descricao: event.target.value })} placeholder="Ex.: Bateria 12V 7Ah" aria-invalid={invalid || undefined} className={`${fieldClass} aria-[invalid=true]:border-danger`} /></label>
+    <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Código (opcional)<input maxLength={PART_CODE_MAX} value={value.codigo} onChange={(event) => onChange({ ...value, codigo: event.target.value })} className={fieldClass} /></label>
+    <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Quantidade<input required type="number" inputMode="numeric" min={1} step={1} value={value.quantidade} onChange={(event) => onChange({ ...value, quantidade: event.target.value })} className={fieldClass} /></label>
+  </div>
+}
 
 function DialogFooter({ error, pending, onCancel, cancelLabel, submitLabel, pendingLabel, disabled, danger = false }: { error: string | null; pending: boolean; onCancel: () => void; cancelLabel: string; submitLabel: string; pendingLabel: string; disabled: boolean; danger?: boolean }) {
   return <>
@@ -322,6 +434,13 @@ function DetailSkeleton() {
 function formatDate(value: string) {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('pt-BR')
+}
+
+/** `code` do ProblemDetail da resposta de erro, se houver. */
+function problemCode(error: unknown) {
+  return typeof error === 'object' && error !== null && 'response' in error
+    ? (error as { response?: { data?: { code?: string } } }).response?.data?.code
+    : undefined
 }
 
 function getErrorMessage(error: unknown) {
