@@ -17,6 +17,8 @@ export const newTicketSchema = z.object({
   severidade: z.enum(newTicketSeverities, { message: 'Selecione a severidade.' }),
   descricao: z.string().trim().min(1, 'Descreva o problema.'),
   tecnicoResponsavelId: z.string(),
+  /** Story 25.1: opcional; vazio = não informado. */
+  tipo: z.union([z.literal(''), z.enum(['falha', 'peca_reposicao', 'instalacao', 'outro'])]),
 })
 
 export type NewTicketFormValues = z.infer<typeof newTicketSchema>

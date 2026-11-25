@@ -282,6 +282,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path === '/relatorios/indicadores') return demoIndicators(params?.agrupar)
   if (path === '/relatorios/backlog') return demoBacklog
   if (path === '/relatorios/top-equipamentos') return demoTopEquipment
+  if (path === '/relatorios/trocas-pecas') return demoPartReplacements()
   if (path === '/relatorios/conformidade') return ['CRITICO', 'ALTO', 'MEDIO', 'BAIXO'].map((nivelRisco, index) => ({ nivelRisco, percentualConforme: [96, 92, 98, 100][index], totalMedicoes: [25, 38, 54, 12][index] }))
   if (path === '/relatorios/exportacoes' && method === 'post') {
     const id = makeId('export')
@@ -466,6 +467,13 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     }
     return sectorView(sector)
   }
+  // Story 25: tipo do chamado e peças trocadas (append-only), mesmas regras do backend.
+  const ticketTypeMatch = path.match(/^\/chamados\/([^/]+)\/tipo$/)
+  if (ticketTypeMatch && method === 'put') return demoSetTicketType(ticketTypeMatch[1], body.tipo)
+  const ticketPartsMatch = path.match(/^\/chamados\/([^/]+)\/pecas$/)
+  if (ticketPartsMatch) return method === 'post' ? demoAddParts(ticketPartsMatch[1], body.pecas) : demoParts.filter((part) => part.chamadoId === ticketPartsMatch[1])
+  const equipmentPartsMatch = path.match(/^\/equipamentos\/([^/]+)\/pecas-trocadas$/)
+  if (equipmentPartsMatch) return demoEquipmentParts(equipmentPartsMatch[1])
   const detailRoutes = [
     ['/hospitais/', hospitals], ['/setores/', sectors], ['/equipamentos/', equipment], ['/ordens-de-trabalho/', workOrders], ['/chamados/', tickets], ['/users/', users], ['/platform-users/', platformUsers], ['/tenants/', tenants],
   ] as const
@@ -820,6 +828,52 @@ function handleCampaigns(method: string, path: string, body: RecordValue, params
 }
 
 function lastPart(path: string) { return path.split('/').filter(Boolean).at(-1) ?? '' }
+const DEMO_TICKET_TYPES = ['falha', 'peca_reposicao', 'instalacao', 'outro']
+const demoParts: RecordValue[] = []
+
+function demoOpenTicket(id: string) {
+  const record = tickets.find((item) => item.id === id)
+  if (!record) throw demoProblem(404, { code: 'NAO_ENCONTRADO' })
+  if (record.status === 'RESOLVIDO' || record.status === 'CANCELADO') throw demoProblem(409, { code: 'CHAMADO_ENCERRADO' })
+  return record
+}
+
+function demoSetTicketType(id: string, tipo: unknown) {
+  if (tipo !== null && tipo !== undefined && !DEMO_TICKET_TYPES.includes(String(tipo))) throw demoProblem(400, { code: 'TIPO_INVALIDO' })
+  const record = demoOpenTicket(id)
+  record.tipo = tipo ?? null
+  return record
+}
+
+function demoAddParts(id: string, pecas: unknown) {
+  const record = demoOpenTicket(id)
+  const list = Array.isArray(pecas) ? pecas as RecordValue[] : []
+  if (!list.length || list.some((part) => !String(part.descricao ?? '').trim())) throw demoProblem(400, { code: 'PECA_INVALIDA' })
+  const { user } = getAuthState()
+  list.forEach((part) => demoParts.push({ id: makeId('peca'), chamadoId: id, equipamentoId: record.equipamentoId, chamadoCodigo: record.codigo, descricao: String(part.descricao).trim(), quantidade: Number(part.quantidade ?? 1), codigo: part.codigo ?? null, registradoPor: user?.id ?? null, registradoPorNome: user?.name ?? 'Usuário demo', registradoEm: new Date().toISOString() }))
+  return demoParts.filter((part) => part.chamadoId === id)
+}
+
+function demoEquipmentParts(equipamentoId: string) {
+  return demoParts.filter((part) => part.equipamentoId === equipamentoId).slice().reverse()
+}
+
+function demoPartReplacements() {
+  const byEquipment = new Map<string, { trocas: number; pecas: number; chamados: Set<string> }>()
+  demoParts.forEach((part) => {
+    const key = String(part.equipamentoId)
+    const row = byEquipment.get(key) ?? { trocas: 0, pecas: 0, chamados: new Set<string>() }
+    row.trocas += 1
+    row.pecas += Number(part.quantidade)
+    row.chamados.add(String(part.chamadoId))
+    byEquipment.set(key, row)
+  })
+  return [...byEquipment.entries()].map(([equipamentoId, row]) => {
+    const item = equipment.find((candidate) => candidate.id === equipamentoId)
+    return { equipamentoId, codigo: item?.codigo ?? null, nome: item?.nome ?? null, trocas: row.trocas, pecas: row.pecas, chamados: row.chamados.size }
+  }).sort((left, right) => right.trocas - left.trocas)
+}
+
 function makeId(prefix: string) { return `${prefix}-${Math.random().toString(36).slice(2, 9)}` }
 
 const dashboard = {

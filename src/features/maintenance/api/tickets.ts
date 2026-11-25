@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
 import { fetchPaged, usePagedQuery } from '@/lib/pagination'
-import type { ChangeTicketStatusInput, CreateTicketInput, CorrectiveWorkOrder, CorrectiveWorkOrderInput, Ticket, TicketHistoryEvent } from '../types'
+import type { ChangeTicketStatusInput, CreateTicketInput, CorrectiveWorkOrder, CorrectiveWorkOrderInput, EquipmentPart, Ticket, TicketHistoryEvent, TicketPart, TicketPartInput, TicketType } from '../types'
 
 export const ticketsKey = ['tickets'] as const
 
@@ -16,6 +16,8 @@ export interface TicketListFilters {
   abertoAte?: string
   situacao?: 'pendentes'
   idade?: 'ate24h' | 'de1a3dias' | 'maisde3dias'
+  /** Story 25.1: `falha | peca_reposicao | instalacao | outro | nao_informado`. */
+  tipo?: string
   /** Ordenação no servidor: `severidade`, `abertoEm` ou `slaResolucaoAte` (nulos por último). */
   ordenar?: string
   direcao?: 'asc' | 'desc'
@@ -119,6 +121,48 @@ export function useChangeTicketStatus() {
   })
 }
 
+/** Story 25.1: define ou limpa (null) o tipo de um chamado ainda não encerrado; o status não muda. */
+export function useSetTicketType() {
+  const invalidate = useInvalidateTicket()
+  return useMutation({
+    mutationFn: async ({ id, tipo }: { id: string; tipo: TicketType | null }) =>
+      (await apiClient.put<Ticket>(`/chamados/${id}/tipo`, { tipo })).data,
+    onSuccess: (_data, input) => invalidate(input.id),
+  })
+}
+
+/** Story 25.2: peças trocadas no chamado, na ordem do registro. */
+export function useTicketParts(id: string, enabled = true) {
+  return useQuery({
+    queryKey: [...ticketsKey, id, 'parts'],
+    queryFn: async () => (await apiClient.get<TicketPart[]>(`/chamados/${id}/pecas`)).data,
+    enabled: Boolean(id) && enabled,
+  })
+}
+
+/** Story 25.2: registra peças (append-only); a resposta traz todas as peças do chamado. */
+export function useAddTicketParts() {
+  const client = useQueryClient()
+  const invalidate = useInvalidateTicket()
+  return useMutation({
+    mutationFn: async ({ id, pecas }: { id: string; pecas: TicketPartInput[] }) =>
+      (await apiClient.post<TicketPart[]>(`/chamados/${id}/pecas`, { pecas })).data,
+    onSuccess: async (data, input) => {
+      client.setQueryData([...ticketsKey, input.id, 'parts'], data)
+      await Promise.all([invalidate(input.id), client.invalidateQueries({ queryKey: ['equipment-parts'] })])
+    },
+  })
+}
+
+/** Story 25.2: peças trocadas no equipamento (ficha), mais recentes primeiro. */
+export function useEquipmentParts(equipamentoId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['equipment-parts', equipamentoId],
+    queryFn: async () => (await apiClient.get<EquipmentPart[]>(`/equipamentos/${equipamentoId}/pecas-trocadas`)).data,
+    enabled: Boolean(equipamentoId) && enabled,
+  })
+}
+
 export function useReopenTicket() {
   const invalidate = useInvalidateTicket()
   return useMutation({
@@ -130,7 +174,10 @@ export function useReopenTicket() {
 const ticketErrorMessages: Record<string, string> = {
   CHAMADO_NAO_ABERTO: 'Este chamado não está mais aberto.',
   CHAMADO_JA_ATRIBUIDO: 'Este chamado já possui um técnico responsável.',
-  CHAMADO_ENCERRADO: 'Chamados resolvidos ou cancelados não podem mudar de responsável.',
+  CHAMADO_ENCERRADO: 'Chamados resolvidos ou cancelados não podem ser alterados.',
+  TIPO_INVALIDO: 'Tipo de chamado inválido.',
+  PECA_OBRIGATORIA: 'Registre a peça trocada antes de resolver um chamado de peça de reposição.',
+  PECA_INVALIDA: 'Revise a peça: descrição de até 200 caracteres, quantidade maior que zero e código de até 60.',
   PAPEL_INVALIDO: 'O usuário escolhido não é técnico.',
   TECNICO_FORA_DO_HOSPITAL: 'O técnico escolhido não está vinculado ao hospital deste chamado.',
   TRANSICAO_INVALIDA: 'Esta mudança de status não é permitida para o estado atual do chamado.',

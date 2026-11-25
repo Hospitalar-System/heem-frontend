@@ -244,6 +244,92 @@ describe('TicketDetailPage', () => {
       expect(screen.getByRole('button', { name: 'Cancelar chamado' })).toBeInTheDocument()
     })
 
+    it('shows the ticket type as "Não informado" and lets the admin set it without changing the status (Story 25.1)', async () => {
+      const user = userEvent.setup()
+      render(<TicketDetailPage />, { wrapper: TestProviders })
+      const care = await screen.findByRole('region', { name: 'Atendimento' })
+      expect(within(care).getByText('Não informado')).toBeInTheDocument()
+      await user.click(within(care).getByRole('button', { name: 'Informar tipo' }))
+      const dialog = await screen.findByRole('dialog', { name: 'Informar tipo do chamado' })
+      expect(within(dialog).getByRole('button', { name: 'Salvar tipo' })).toBeDisabled()
+      await chooseOption(user, within(dialog).getByRole('combobox', { name: 'Tipo' }), 'Peça de reposição')
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar tipo' }))
+      await waitFor(() => expect(apiClient.put).toHaveBeenCalledWith('/chamados/ticket-12345678/tipo', { tipo: 'peca_reposicao' }))
+    })
+
+    it('lets an internal user set the type but not register parts', async () => {
+      loginAs('interno_hospital')
+      mockTicket({ status: 'EM_ANDAMENTO', tipo: 'falha', slaStatus: null })
+      render(<TicketDetailPage />, { wrapper: TestProviders })
+      const care = await screen.findByRole('region', { name: 'Atendimento' })
+      expect(within(care).getByText('Falha')).toBeInTheDocument()
+      expect(within(care).getByRole('button', { name: 'Alterar tipo' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Registrar peça' })).not.toBeInTheDocument()
+    })
+
+    it('does not offer type or part changes on a closed ticket', async () => {
+      mockTicket({ status: 'CANCELADO', tipo: 'falha' })
+      render(<TicketDetailPage />, { wrapper: TestProviders })
+      await screen.findByRole('region', { name: 'Peças trocadas' })
+      expect(screen.queryByRole('button', { name: 'Alterar tipo' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Registrar peça' })).not.toBeInTheDocument()
+    })
+
+    it('lists the replaced parts and registers a new one (Story 25.2)', async () => {
+      mockTicket({ status: 'AGUARDANDO_PECA', tipo: 'peca_reposicao' })
+      const base = vi.mocked(apiClient.get).getMockImplementation()!
+      vi.mocked(apiClient.get).mockImplementation(async (url, config) => (url === '/chamados/ticket-12345678/pecas'
+        ? ({ data: [{ id: 'p1', chamadoId: 'ticket-12345678', descricao: 'Bateria 12V 7Ah', quantidade: 2, codigo: 'BAT-12', registradoPorNome: 'Rafael', registradoEm: '2026-10-14T11:00:00Z' }] } as never)
+        : base(url, config)))
+      vi.mocked(apiClient.post).mockResolvedValueOnce({ data: [] } as never)
+      const user = userEvent.setup()
+      render(<TicketDetailPage />, { wrapper: TestProviders })
+      const parts = await screen.findByRole('region', { name: 'Peças trocadas' })
+      expect(await within(parts).findByText('Bateria 12V 7Ah')).toBeInTheDocument()
+      expect(within(parts).getByText('Qtd. 2')).toBeInTheDocument()
+      expect(within(parts).getByText(/Código BAT-12 · Rafael/)).toBeInTheDocument()
+      await user.click(within(parts).getByRole('button', { name: 'Registrar peça' }))
+      const dialog = await screen.findByRole('dialog', { name: 'Registrar peça trocada' })
+      const submit = within(dialog).getByRole('button', { name: 'Registrar peça' })
+      expect(submit).toBeDisabled()
+      await user.type(within(dialog).getByRole('textbox', { name: 'Peça' }), 'Cabo de alimentação')
+      await user.click(submit)
+      await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/chamados/ticket-12345678/pecas', { pecas: [{ descricao: 'Cabo de alimentação', quantidade: 1 }] }))
+    })
+
+    it('requires the replaced part when resolving a part-replacement ticket without parts', async () => {
+      mockTicket({ status: 'EM_ANDAMENTO', tipo: 'peca_reposicao', prontoParaResolver: true })
+      const user = userEvent.setup()
+      render(<TicketDetailPage />, { wrapper: TestProviders })
+      expect(await screen.findByText('Chamado de peça de reposição: registre a peça trocada antes de resolver.')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Resolver' }))
+      const dialog = await screen.findByRole('dialog', { name: 'Resolver chamado' })
+      const submit = within(dialog).getByRole('button', { name: 'Resolver chamado' })
+      await user.type(within(dialog).getByRole('textbox', { name: 'Solução aplicada' }), 'Troca da bateria')
+      expect(submit).toBeDisabled()
+      await user.type(within(dialog).getByRole('textbox', { name: 'Peça' }), 'Bateria 12V 7Ah')
+      await user.type(within(dialog).getByRole('textbox', { name: 'Código (opcional)' }), 'BAT-12')
+      const quantity = within(dialog).getByRole('spinbutton', { name: 'Quantidade' })
+      await user.clear(quantity)
+      await user.type(quantity, '2')
+      await user.click(submit)
+      await waitFor(() => expect(apiClient.put).toHaveBeenLastCalledWith('/chamados/ticket-12345678/status', {
+        novoStatus: 'RESOLVIDO', solucao: 'Troca da bateria', pecas: [{ descricao: 'Bateria 12V 7Ah', quantidade: 2, codigo: 'BAT-12' }],
+      }))
+    })
+
+    it('shows the pt-BR message for PECA_OBRIGATORIA', async () => {
+      mockTicket({ status: 'EM_ANDAMENTO', prontoParaResolver: true })
+      vi.mocked(apiClient.put).mockRejectedValueOnce({ response: { data: { code: 'PECA_OBRIGATORIA', detail: 'x' } } })
+      const user = userEvent.setup()
+      render(<TicketDetailPage />, { wrapper: TestProviders })
+      await user.click(await screen.findByRole('button', { name: 'Resolver' }))
+      const dialog = await screen.findByRole('dialog', { name: 'Resolver chamado' })
+      await user.type(within(dialog).getByRole('textbox', { name: 'Solução aplicada' }), 'Troca')
+      await user.click(within(dialog).getByRole('button', { name: 'Resolver chamado' }))
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent('Registre a peça trocada antes de resolver')
+    })
+
     it('hides every action and the SLA from an internal user', async () => {
       loginAs('interno_hospital')
       mockTicket({ slaStatus: null, slaAtendimentoAte: null, slaResolucaoAte: null })
