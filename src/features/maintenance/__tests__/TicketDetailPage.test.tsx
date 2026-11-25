@@ -330,6 +330,29 @@ describe('TicketDetailPage', () => {
       expect(await within(dialog).findByRole('alert')).toHaveTextContent('Registre a peça trocada antes de resolver')
     })
 
+    it('after PECA_OBRIGATORIA, reloads the ticket and marks and focuses the part field', async () => {
+      // Outra pessoa mudou o tipo para peça de reposição depois que a tela carregou.
+      let current: Record<string, unknown> = { ...ticket, status: 'EM_ANDAMENTO', prontoParaResolver: true, tipo: null }
+      const base = vi.mocked(apiClient.get).getMockImplementation()!
+      vi.mocked(apiClient.get).mockImplementation(async (url, config) => (url === '/chamados/ticket-12345678' ? ({ data: current } as never) : base(url, config)))
+      vi.mocked(apiClient.put).mockImplementationOnce(async () => {
+        current = { ...current, tipo: 'peca_reposicao' }
+        throw { response: { data: { code: 'PECA_OBRIGATORIA', detail: 'x' } } }
+      })
+      const user = userEvent.setup()
+      render(<TicketDetailPage />, { wrapper: TestProviders })
+      await user.click(await screen.findByRole('button', { name: 'Resolver' }))
+      const dialog = await screen.findByRole('dialog', { name: 'Resolver chamado' })
+      expect(within(dialog).queryByRole('textbox', { name: 'Peça' })).not.toBeInTheDocument()
+      await user.type(within(dialog).getByRole('textbox', { name: 'Solução aplicada' }), 'Troca')
+      await user.click(within(dialog).getByRole('button', { name: 'Resolver chamado' }))
+      const field = await within(dialog).findByRole('textbox', { name: 'Peça' })
+      await waitFor(() => expect(field).toHaveFocus())
+      expect(field).toHaveAttribute('aria-invalid', 'true')
+      await user.type(field, 'Bateria')
+      expect(field).not.toHaveAttribute('aria-invalid')
+    })
+
     it('hides every action and the SLA from an internal user', async () => {
       loginAs('interno_hospital')
       mockTicket({ slaStatus: null, slaAtendimentoAte: null, slaResolucaoAte: null })

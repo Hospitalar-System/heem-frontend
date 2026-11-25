@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowLeft, CalendarClock, ClipboardPlus, MapPin, UserRound } from 'lucide-react'
-import { useMemo, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode, type RefObject } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
@@ -74,6 +74,8 @@ export function TicketDetailPage() {
   const [dialog, setDialog] = useState<TicketDialog>(null)
   const [typeValue, setTypeValue] = useState('')
   const [part, setPart] = useState<PartForm>(emptyPart)
+  const [partMissing, setPartMissing] = useState(false)
+  const partDescriptionRef = useRef<HTMLInputElement>(null)
   const [responsibleId, setResponsibleId] = useState('')
   const [motivo, setMotivo] = useState('')
   const [solucao, setSolucao] = useState('')
@@ -110,6 +112,10 @@ export function TicketDetailPage() {
   const isPartReplacement = ticket.data?.tipo === 'peca_reposicao'
   const partList = parts.data ?? []
   const resolveNeedsPart = isPartReplacement && !parts.isLoading && partList.length === 0
+  // Depois do PECA_OBRIGATORIA o campo da peça aparece (chamado recarregado): o foco vai para ele.
+  useEffect(() => {
+    if (partMissing && resolveNeedsPart) partDescriptionRef.current?.focus()
+  }, [partMissing, resolveNeedsPart])
   const hasActions = canAssume || canHold || canResume || canResolve || canCancel || canAssign || canReopen || canEditType
   const notReadyToResolve = ticket.data?.prontoParaResolver === false
   const responsibleId0 = ticket.data?.tecnicoResponsavelId
@@ -127,6 +133,7 @@ export function TicketDetailPage() {
     setSolucao('')
     setCausa('')
     setPart(emptyPart)
+    setPartMissing(false)
     setTypeValue(ticket.data?.tipo ?? '')
     setResponsibleId(ticket.data?.tecnicoResponsavelId ?? '')
     setDialog(next)
@@ -175,10 +182,23 @@ export function TicketDetailPage() {
     // Story 25.2: chamado de reposição sem peça registrada leva a peça na própria resolução.
     const input = resolveNeedsPart ? partInput(part) : null
     if (resolveNeedsPart && !input) return
-    await runAction(() => changeStatus.mutateAsync({
-      id: ticket.data.id, novoStatus: 'RESOLVIDO', solucao: solucao.trim(), ...(causa ? { causaCategoria: causa as TicketCauseCategory } : {}),
-      ...(input ? { pecas: [input] } : {}),
-    }), 'Chamado resolvido.')
+    setActionError(null)
+    try {
+      await changeStatus.mutateAsync({
+        id: ticket.data.id, novoStatus: 'RESOLVIDO', solucao: solucao.trim(), ...(causa ? { causaCategoria: causa as TicketCauseCategory } : {}),
+        ...(input ? { pecas: [input] } : {}),
+      })
+      toast.success('Chamado resolvido.')
+      setDialog(null)
+    } catch (error) {
+      setActionError(ticketActionErrorMessage(error))
+      // O tipo pode ter virado peça de reposição depois que a tela carregou: atualiza o chamado para mostrar o campo
+      // da peça, marca-o como inválido e leva o foco até ele.
+      if (problemCode(error) === 'PECA_OBRIGATORIA') {
+        await ticket.refetch()
+        setPartMissing(true)
+      }
+    }
   }
 
   async function submitCancel(event: FormEvent<HTMLFormElement>) {
@@ -290,9 +310,9 @@ export function TicketDetailPage() {
           {canAssign && <button type="button" disabled={actionPending} onClick={() => openDialog('assign')} className={secondaryButton}>Atribuir responsável</button>}
           {canHold && <button type="button" disabled={actionPending} onClick={() => void submitHold('AGUARDANDO_PECA')} className={secondaryButton}>Aguardando peça</button>}
           {canResume && <button type="button" disabled={actionPending} onClick={() => void submitHold('EM_ANDAMENTO')} className={secondaryButton}>Retomar atendimento</button>}
+          {canEditType && <button type="button" disabled={actionPending} onClick={() => openDialog('type')} className={secondaryButton}>{ticket.data.tipo ? 'Alterar tipo' : 'Informar tipo'}</button>}
           {canResolve && <button type="button" disabled={actionPending || notReadyToResolve} aria-describedby={notReadyToResolve ? 'resolve-hint' : undefined} onClick={() => openDialog('resolve')} className={primaryButton}>Resolver</button>}
           {canReopen && <button type="button" disabled={actionPending} onClick={() => openDialog('reopen')} className={secondaryButton}>Reabrir</button>}
-          {canEditType && <button type="button" disabled={actionPending} onClick={() => openDialog('type')} className={secondaryButton}>{ticket.data.tipo ? 'Alterar tipo' : 'Informar tipo'}</button>}
           {canCancel && <button type="button" disabled={actionPending} onClick={() => openDialog('cancel')} className={dangerButton}>Cancelar chamado</button>}
         </div>}
         {canResolve && notReadyToResolve && <p id="resolve-hint" className="mt-2 text-xs text-text-muted">Ainda não é possível resolver: conclua ou cancele a OT corretiva em aberto deste chamado.</p>}
@@ -338,7 +358,7 @@ export function TicketDetailPage() {
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Causa (opcional)<Select value={causa} onChange={setCausa} placeholder="Não informada" options={[{ value: '', label: 'Não informada' }, ...ticketCauseCategories.map((value) => ({ value, label: ticketCauseLabels[value] }))]} /></label>
         {resolveNeedsPart && <fieldset className="grid gap-3 border-t border-border pt-4">
           <legend className="text-xs font-medium text-text-secondary">Peça trocada (obrigatória em chamado de peça de reposição)</legend>
-          <PartFields value={part} onChange={setPart} />
+          <PartFields value={part} onChange={(next) => { setPart(next); if (next.descricao.trim()) setPartMissing(false) }} invalid={partMissing} descriptionRef={partDescriptionRef} />
         </fieldset>}
         <DialogFooter error={actionError} pending={actionPending} onCancel={closeDialog} cancelLabel="Voltar" submitLabel="Resolver chamado" pendingLabel="Resolvendo…" disabled={!solucao.trim() || (resolveNeedsPart && !partInput(part))} />
       </form>
@@ -388,9 +408,9 @@ function partInput(form: PartForm): TicketPartInput | null {
   return { descricao, quantidade, ...(codigo ? { codigo } : {}) }
 }
 
-function PartFields({ value, onChange, autoFocus = false }: { value: PartForm; onChange: (next: PartForm) => void; autoFocus?: boolean }) {
+function PartFields({ value, onChange, autoFocus = false, invalid = false, descriptionRef }: { value: PartForm; onChange: (next: PartForm) => void; autoFocus?: boolean; /** Servidor recusou por falta de peça: campo marcado como inválido. */ invalid?: boolean; descriptionRef?: RefObject<HTMLInputElement | null> }) {
   return <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_96px]">
-    <label className="grid gap-1.5 text-xs font-medium text-text-secondary sm:col-span-2">Peça<input autoFocus={autoFocus} required maxLength={PART_DESCRIPTION_MAX} value={value.descricao} onChange={(event) => onChange({ ...value, descricao: event.target.value })} placeholder="Ex.: Bateria 12V 7Ah" className={fieldClass} /></label>
+    <label className="grid gap-1.5 text-xs font-medium text-text-secondary sm:col-span-2">Peça<input ref={descriptionRef} autoFocus={autoFocus} required maxLength={PART_DESCRIPTION_MAX} value={value.descricao} onChange={(event) => onChange({ ...value, descricao: event.target.value })} placeholder="Ex.: Bateria 12V 7Ah" aria-invalid={invalid || undefined} className={`${fieldClass} aria-[invalid=true]:border-danger`} /></label>
     <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Código (opcional)<input maxLength={PART_CODE_MAX} value={value.codigo} onChange={(event) => onChange({ ...value, codigo: event.target.value })} className={fieldClass} /></label>
     <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Quantidade<input required type="number" inputMode="numeric" min={1} step={1} value={value.quantidade} onChange={(event) => onChange({ ...value, quantidade: event.target.value })} className={fieldClass} /></label>
   </div>
@@ -414,6 +434,13 @@ function DetailSkeleton() {
 function formatDate(value: string) {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('pt-BR')
+}
+
+/** `code` do ProblemDetail da resposta de erro, se houver. */
+function problemCode(error: unknown) {
+  return typeof error === 'object' && error !== null && 'response' in error
+    ? (error as { response?: { data?: { code?: string } } }).response?.data?.code
+    : undefined
 }
 
 function getErrorMessage(error: unknown) {

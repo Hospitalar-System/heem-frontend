@@ -197,7 +197,7 @@ export function TicketsPage() {
         <label className="min-w-0"><span className="sr-only">Ordenar chamados</span><Select size="sm" aria-label="Ordenar chamados" value={sortValue} onChange={(next) => { orderingFallback.dismiss(); const [ordenar, direcao] = next.split(':'); pagination.setFilters(next === DEFAULT_TICKET_SORT ? { ordenar: undefined, direcao: undefined } : { ordenar, direcao }) }} options={sortChoices.map(({ value, label }) => ({ value, label }))} /></label>
         <label className="min-w-0"><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={(next) => pagination.setFilters({ severidade: next })} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
         <label className="min-w-0"><span className="sr-only">Filtrar por tipo</span><Select size="sm" aria-label="Filtrar por tipo" value={typeFilter} onChange={(next) => pagination.setFilters({ tipo: next })} options={typeFilterOptions} /></label>
-      <div id="chamados-colunas" className="flex min-w-0 justify-end" />
+      <div id="chamados-colunas" className="flex min-w-0 justify-end sm:col-end-[-1]" />
       </FilterBar>
 
       <div role="group" aria-label="Aberto entre" className="grid max-w-md grid-cols-2 gap-2">
