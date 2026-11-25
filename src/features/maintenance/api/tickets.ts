@@ -83,6 +83,9 @@ function useInvalidateTicket() {
       client.invalidateQueries({ queryKey: [...ticketsKey, id] }),
       client.invalidateQueries({ queryKey: [...ticketsKey, id, 'history'] }),
       client.invalidateQueries({ queryKey: ['work-orders'] }),
+      // Story 25.2: peças registradas (inclusive na resolução) mudam a ficha do equipamento e o indicador de trocas.
+      client.invalidateQueries({ queryKey: ['equipment-parts'] }),
+      client.invalidateQueries({ queryKey: ['report-part-replacements'] }),
     ])
   }
 }
@@ -149,7 +152,7 @@ export function useAddTicketParts() {
       (await apiClient.post<TicketPart[]>(`/chamados/${id}/pecas`, { pecas })).data,
     onSuccess: async (data, input) => {
       client.setQueryData([...ticketsKey, input.id, 'parts'], data)
-      await Promise.all([invalidate(input.id), client.invalidateQueries({ queryKey: ['equipment-parts'] })])
+      await invalidate(input.id)
     },
   })
 }

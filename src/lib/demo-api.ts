@@ -448,6 +448,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     if (ticketAction[2] === 'responsavel') Object.assign(record, { tecnicoResponsavelId: body.tecnicoId })
     if (ticketAction[2] === 'status') {
       const novoStatus = body.novoStatus as string
+      demoCheckStatusParts(record, novoStatus, body.pecas)
       Object.assign(record, { status: novoStatus })
       if (novoStatus === 'CANCELADO') record.canceladoEm = now
       if (novoStatus === 'RESOLVIDO') Object.assign(record, { solucao: body.solucao ?? null, causaCategoria: body.causaCategoria ?? null })
@@ -852,6 +853,16 @@ function demoAddParts(id: string, pecas: unknown) {
   const { user } = getAuthState()
   list.forEach((part) => demoParts.push({ id: makeId('peca'), chamadoId: id, equipamentoId: record.equipamentoId, chamadoCodigo: record.codigo, descricao: String(part.descricao).trim(), quantidade: Number(part.quantidade ?? 1), codigo: part.codigo ?? null, registradoPor: user?.id ?? null, registradoPorNome: user?.name ?? 'Usuário demo', registradoEm: new Date().toISOString() }))
   return demoParts.filter((part) => part.chamadoId === id)
+}
+
+/** Peças na transição de status do chamado no demo: mesmas regras do backend (Story 25.2). */
+function demoCheckStatusParts(record: RecordValue, novoStatus: string, pecas: unknown) {
+  const novas = Array.isArray(pecas) ? pecas : []
+  if (novas.length && novoStatus !== 'AGUARDANDO_PECA' && novoStatus !== 'RESOLVIDO') throw demoProblem(400, { code: 'PECA_INVALIDA' })
+  const id = String(record.id)
+  const hasParts = demoParts.some((part) => part.chamadoId === id)
+  if (novoStatus === 'RESOLVIDO' && record.tipo === 'peca_reposicao' && !hasParts && !novas.length) throw demoProblem(400, { code: 'PECA_OBRIGATORIA' })
+  if (novas.length) demoAddParts(id, novas)
 }
 
 function demoEquipmentParts(equipamentoId: string) {
