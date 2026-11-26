@@ -22,7 +22,10 @@ export function FilterRange({ label = 'Período', from, to }: { label?: string; 
   return <div role="group" aria-label={label} className="col-span-full flex flex-wrap items-center gap-2">
     <span className="text-xs text-text-secondary">{label}</span>
     <div className="min-w-[9.5rem] flex-1 sm:max-w-[13rem]">{from}</div>
-    <span className="text-xs text-text-secondary">até</span>
-    <div className="min-w-[9.5rem] flex-1 sm:max-w-[13rem]">{to}</div>
+    {/* "até" fica junto da segunda data: ao quebrar a linha, os dois descem juntos. */}
+    <div className="flex min-w-[11.5rem] flex-1 items-center gap-2 sm:max-w-[14.75rem]">
+      <span className="text-xs text-text-secondary">até</span>
+      <div className="min-w-0 flex-1">{to}</div>
+    </div>
   </div>
 }

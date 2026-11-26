@@ -18,6 +18,8 @@ export const EXPORT_BACKEND_SUPPORT = {
   laudoOt: true,
   /** Botão "Gerar dossiê do equipamento" na ficha do equipamento. */
   dossieEquipamento: true,
+  /** Botão "Gerar comprovante" no detalhe do chamado resolvido (Story 22.4). */
+  comprovanteChamado: true,
 }
 
 /** Tipos exibidos na tela, respeitando as flags de suporte do backend. */

@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/Badge'
 import { laudoOtBody } from '@/features/dashboard/api/documents'
 import { EXPORT_BACKEND_SUPPORT } from '@/features/dashboard/components/export-builder-model'
 import { GenerateDocumentButton } from '@/features/dashboard/components/GenerateDocumentButton'
+import { SignaturesSection } from '../components/SignaturesSection'
 
 const statusLabels: Record<string, string> = { AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída', CANCELADA: 'Cancelada', CANCELADO: 'Cancelada' }
 
@@ -60,6 +61,7 @@ export function WorkOrderDetailPage() {
   const completedItems = hasExecutionState ? items.filter((item) => item.concluido).length : 0
   const roles = getAuthState().user?.roles ?? []
   const canGenerateLaudo = EXPORT_BACKEND_SUPPORT.laudoOt && canonical(order.data?.status ?? '') === 'CONCLUIDA' && (roles.includes('admin_cliente') || roles.includes('tecnico'))
+  const isConcluded = canonical(order.data?.status ?? '') === 'CONCLUIDA'
   const progress = hasExecutionState ? Math.round((completedItems / items.length) * 100) : 0
 
   async function submitReassignment(event: React.FormEvent<HTMLFormElement>) {
@@ -117,6 +119,8 @@ export function WorkOrderDetailPage() {
         </section>
 
         {canonical(order.data.tipo) === 'PREVENTIVA' ? <WorkOrderPhotosSection order={order.data} user={getAuthState().user} /> : null}
+
+        {isConcluded ? <SignaturesSection className="xl:col-span-2" signatures={order.data.assinaturas} emptyText="OT concluída sem assinatura. A assinatura é feita pelo técnico no app; sem ela, o laudo sai com as linhas para assinatura manual." /> : null}
 
         <section aria-labelledby="timeline-title" className="rounded-lg border border-border bg-surface p-5 xl:col-span-2">
           <h3 id="timeline-title" className="text-sm font-semibold text-text-primary">Linha do tempo</h3>

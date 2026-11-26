@@ -11,7 +11,7 @@ import { useTenantUsers, useUserHospitalLinks } from '@/features/tenants-users/a
 import { useCreateCorrectiveWorkOrder, useTicketsPage, useUrgentTicketCount } from '../api/tickets'
 import { NewTicketModal } from '../components/NewTicketModal'
 import { TicketSlaBadge } from '../components/TicketSlaBadge'
-import type { Ticket, TicketStatus } from '../types'
+import { TICKET_TYPE_NOT_INFORMED, ticketTypeLabel, ticketTypeLabels, ticketTypes, type Ticket, type TicketStatus } from '../types'
 import { Select } from '@/components/ui/Select'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { DatePicker } from '@/components/ui/DatePicker'
@@ -29,6 +29,13 @@ import { ageLabels, parseAge, parseSituation } from '../utils/ticket-filters'
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const severityText: Record<string, string> = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }
 const statusText: Record<string, string> = { ABERTO: 'Aberto', EM_ANDAMENTO: 'Em andamento', AGUARDANDO_PECA: 'Aguardando peça', AGUARDANDO_PEÇA: 'Aguardando peça', RESOLVIDO: 'Resolvido', CANCELADO: 'Cancelado' }
+
+/** Story 25.1: filtro por tipo (inclui "Não informado", chamados sem tipo). */
+const typeFilterOptions = [{ value: '', label: 'Todos os tipos' }, ...ticketTypes.map((value) => ({ value, label: ticketTypeLabels[value] })), { value: TICKET_TYPE_NOT_INFORMED, label: 'Não informado' }]
+
+function parseTicketType(value: string | null) {
+  return value && (value === TICKET_TYPE_NOT_INFORMED || (ticketTypes as readonly string[]).includes(value)) ? value : ''
+}
 
 function canonicalStatus(status: TicketStatus) {
   return status.toLocaleUpperCase('pt-BR').replace('Ç', 'C')
@@ -60,6 +67,7 @@ export function TicketsPage() {
   const untilFilter = searchParams.get('abertoAte') ?? ''
   const situationFilter = parseSituation(searchParams.get('situacao'))
   const ageFilter = parseAge(searchParams.get('idade'))
+  const typeFilter = parseTicketType(searchParams.get('tipo'))
   const invalidDates = Boolean(sinceFilter && untilFilter && sinceFilter > untilFilter)
   const sortChoices = useMemo(() => ticketSortChoicesFor(auth.user?.roles ?? []), [auth.user?.roles])
   const sortValue = ticketSortFromUrl(searchParams.get('ordenar'), searchParams.get('direcao'), sortChoices)
@@ -69,7 +77,7 @@ export function TicketsPage() {
     ...pagination.apiParams, status: statusFilter || undefined, severidade: severityFilter || undefined,
     hospitalId: hospitalFilter || undefined, setorId: sectorFilter || undefined, equipamentoId: equipmentFilter || undefined,
     abertoDe: sinceFilter || undefined, abertoAte: invalidDates ? undefined : untilFilter || undefined,
-    situacao: situationFilter, idade: ageFilter, ordenar: sortChoice.field, direcao: sortChoice.direction,
+    situacao: situationFilter, idade: ageFilter, tipo: typeFilter || undefined, ordenar: sortChoice.field, direcao: sortChoice.direction,
   })
   const orderingFallback = useOrderingFallback(
     tickets.error, sortValue !== DEFAULT_TICKET_SORT, () => pagination.setFilters({ ordenar: undefined, direcao: undefined }), sortValue,
@@ -121,9 +129,10 @@ export function TicketsPage() {
     equipmentFilter && { key: 'equipamentoId', label: `Equipamento: ${equipmentById.get(equipmentFilter) ? `${equipmentById.get(equipmentFilter)?.codigo} · ${equipmentById.get(equipmentFilter)?.nome}` : 'selecionado'}` },
     situationFilter && { key: 'situacao', label: 'Somente pendentes' },
     ageFilter && { key: 'idade', label: `Idade: ${ageLabels[ageFilter]}` },
+    typeFilter && { key: 'tipo', label: `Tipo: ${typeFilter === TICKET_TYPE_NOT_INFORMED ? 'Não informado' : ticketTypeLabel(typeFilter)}` },
   ].filter((item): item is { key: string; label: string } => Boolean(item))
   const filtersActive = Boolean(search || serverFilters.length || sinceFilter || untilFilter)
-  const clearAll = () => { setSearch(''); pagination.setFilters({ status: undefined, severidade: undefined, hospitalId: undefined, setorId: undefined, equipamentoId: undefined, abertoDe: undefined, abertoAte: undefined, situacao: undefined, idade: undefined }) }
+  const clearAll = () => { setSearch(''); pagination.setFilters({ status: undefined, severidade: undefined, hospitalId: undefined, setorId: undefined, equipamentoId: undefined, abertoDe: undefined, abertoAte: undefined, situacao: undefined, idade: undefined, tipo: undefined }) }
   const eligibleTechnicians = selectedTicket
     ? technicians.filter((technician) => technician.hospitalId === selectedTicket.hospitalId)
     : []
@@ -190,7 +199,8 @@ export function TicketsPage() {
         <label className="min-w-0"><span className="sr-only">Filtrar por status</span><Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={(next) => pagination.setFilters({ status: next })} options={[{ value: '', label: 'Todos os status' }, { value: 'ABERTO', label: 'Aberto' }, { value: 'EM_ANDAMENTO', label: 'Em andamento' }, { value: 'AGUARDANDO_PECA', label: 'Aguardando peça' }, { value: 'RESOLVIDO', label: 'Resolvido' }, { value: 'CANCELADO', label: 'Cancelado' }]} /></label>
         <label className="min-w-0"><span className="sr-only">Ordenar chamados</span><Select size="sm" aria-label="Ordenar chamados" value={sortValue} onChange={(next) => { orderingFallback.dismiss(); const [ordenar, direcao] = next.split(':'); pagination.setFilters(next === DEFAULT_TICKET_SORT ? { ordenar: undefined, direcao: undefined } : { ordenar, direcao }) }} options={sortChoices.map(({ value, label }) => ({ value, label }))} /></label>
         <label className="min-w-0"><span className="sr-only">Filtrar por severidade</span><Select size="sm" aria-label="Filtrar por severidade" value={severityFilter} onChange={(next) => pagination.setFilters({ severidade: next })} options={[{ value: '', label: 'Todas as severidades' }, { value: 'CRITICA', label: 'Crítica' }, { value: 'ALTA', label: 'Alta' }, { value: 'MEDIA', label: 'Média' }, { value: 'BAIXA', label: 'Baixa' }]} /></label>
-      <div id="chamados-colunas" className="flex min-w-0 justify-end" />
+        <label className="min-w-0"><span className="sr-only">Filtrar por tipo</span><Select size="sm" aria-label="Filtrar por tipo" value={typeFilter} onChange={(next) => pagination.setFilters({ tipo: next })} options={typeFilterOptions} /></label>
+      <div id="chamados-colunas" className="flex min-w-0 justify-end sm:col-end-[-1]" />
       </FilterBar>
 
       <div role="group" aria-label="Aberto entre" className="grid max-w-md grid-cols-2 gap-2">

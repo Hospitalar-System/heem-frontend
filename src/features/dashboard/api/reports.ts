@@ -72,6 +72,17 @@ export interface TopEquipment {
 
 export const TOP_EQUIPMENT_LIMIT = 10
 
+/** Story 25.2: trocas de peça de um equipamento no período (registros, soma das quantidades, chamados distintos). */
+export interface PartReplacementEquipment {
+  equipamentoId: string
+  /** null se o equipamento foi excluído. */
+  codigo: string | null
+  nome: string | null
+  trocas: number
+  pecas: number
+  chamados: number
+}
+
 export interface RiskCompliance {
   nivelRisco: string
   percentualConforme: number | null
@@ -145,6 +156,15 @@ export function useReportTopEquipment(filters: ReportFilters) {
   return useQuery({
     queryKey: ['report-top-equipment', filters],
     queryFn: async () => (await apiClient.get<TopEquipment[]>('/relatorios/top-equipamentos', { params: { ...filters, n: TOP_EQUIPMENT_LIMIT } })).data,
+    enabled: validPeriod(filters),
+  })
+}
+
+/** Story 25.2: os 10 equipamentos com mais trocas de peça no período (mesmos filtros de hospital e setor). */
+export function useReportPartReplacements(filters: ReportFilters) {
+  return useQuery({
+    queryKey: ['report-part-replacements', filters],
+    queryFn: async () => (await apiClient.get<PartReplacementEquipment[]>('/relatorios/trocas-pecas', { params: { ...filters, n: TOP_EQUIPMENT_LIMIT } })).data,
     enabled: validPeriod(filters),
   })
 }

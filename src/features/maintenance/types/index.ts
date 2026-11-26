@@ -1,6 +1,8 @@
+import type { Signature } from './signatures'
 import type { Finalidade } from '../utils/finalidade'
 import type { OrigemIntervalo } from '../utils/intervalo-origem'
-export type TicketStatus = 'ABERTO' | 'EM_ANDAMENTO' | 'AGUARDANDO_PECA' | 'RESOLVIDO' | 'CANCELADO' | string
+
+export type TicketStatus ='ABERTO' | 'EM_ANDAMENTO' | 'AGUARDANDO_PECA' | 'RESOLVIDO' | 'CANCELADO' | string
 export type TicketSeverity = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA' | string
 export type TicketSlaStatus = 'no_prazo' | 'em_risco' | 'vencido' | null
 
@@ -25,6 +27,62 @@ export interface Ticket {
   causaCategoria?: string | null
   reaberturas?: number | null
   prontoParaResolver?: boolean | null
+  /** Story 25.1: tipo do chamado; nulo em chamado antigo ou aberto por app antigo ("Não informado"). */
+  tipo?: string | null
+  /** Story 22.2: o chamado tem a assinatura do técnico. */
+  assinada?: boolean
+  /** Story 22.2: assinaturas na ordem do registro; só no detalhe (nulo na lista). */
+  assinaturas?: Signature[] | null
+}
+
+/** Story 25.1 (FR-I1): tipos de chamado aceitos pela API. */
+export const ticketTypes = ['falha', 'peca_reposicao', 'instalacao', 'outro'] as const
+export type TicketType = (typeof ticketTypes)[number]
+
+export const ticketTypeLabels: Record<TicketType, string> = {
+  falha: 'Falha',
+  peca_reposicao: 'Peça de reposição',
+  instalacao: 'Instalação',
+  outro: 'Outro',
+}
+
+/** Valor do filtro de lista para chamados sem tipo. */
+export const TICKET_TYPE_NOT_INFORMED = 'nao_informado'
+
+/** Rótulo do tipo; nulo ou vazio = "Não informado"; valor desconhecido é mostrado como veio. */
+export function ticketTypeLabel(tipo?: string | null): string {
+  if (!tipo) return 'Não informado'
+  return ticketTypeLabels[tipo as TicketType] ?? tipo
+}
+
+/** Story 25.2: peça trocada no chamado (append-only). */
+export interface TicketPart {
+  id: string
+  chamadoId: string
+  descricao: string
+  quantidade: number
+  codigo?: string | null
+  registradoPor?: string | null
+  registradoPorNome?: string | null
+  registradoEm: string
+}
+
+/** Story 25.2: peça trocada no equipamento, com o código do chamado (ficha do equipamento). */
+export interface EquipmentPart {
+  id: string
+  chamadoId: string
+  chamadoCodigo?: string | null
+  descricao: string
+  quantidade: number
+  codigo?: string | null
+  registradoEm: string
+}
+
+/** Story 25.2: peça a registrar; quantidade ausente vale 1 no backend. */
+export interface TicketPartInput {
+  descricao: string
+  quantidade?: number
+  codigo?: string
 }
 
 export const ticketCauseCategories = ['desgaste', 'falha_eletrica', 'falha_mecanica', 'uso_inadequado', 'falta_insumo', 'software', 'outra'] as const
@@ -49,6 +107,8 @@ export interface ChangeTicketStatusInput {
   motivo?: string
   solucao?: string
   causaCategoria?: TicketCauseCategory
+  /** Story 25.2: peças trocadas junto com AGUARDANDO_PECA ou RESOLVIDO. */
+  pecas?: TicketPartInput[]
 }
 
 export interface TicketHistoryEvent {
@@ -64,6 +124,8 @@ export interface CreateTicketInput {
   descricao: string
   severidade: 'CRITICA' | 'ALTA' | 'MEDIA' | 'BAIXA'
   tecnicoResponsavelId?: string
+  /** Story 25.1: opcional. */
+  tipo?: TicketType
 }
 
 export interface CorrectiveWorkOrderInput {
@@ -197,6 +259,10 @@ export interface WorkOrderDetail {
   concluidaEm: string | null
   fotosCount?: number
   finalidade?: Finalidade | null
+  /** Story 22.2: a OT tem a assinatura do técnico. */
+  assinada?: boolean
+  /** Story 22.2: assinaturas na ordem do registro. */
+  assinaturas?: Signature[] | null
 }
 
 export interface WorkOrderChecklistItem {

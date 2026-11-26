@@ -89,4 +89,15 @@ describe('TicketsPage', () => {
     expect(within(card).queryByRole('button', { name: 'Gerar OT corretiva' })).not.toBeInTheDocument()
     expect(screen.queryByText('Falha crítica de pressão')).not.toBeInTheDocument()
   })
+
+  it('sends the ticket type filter to the server, including "Não informado" (Story 25.1)', async () => {
+    const user = userEvent.setup()
+    render(<TicketsPage />, { wrapper: TestProviders })
+    await screen.findByText('Falha crítica de pressão')
+    await chooseOption(user, 'Filtrar por tipo', 'Peça de reposição')
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/chamados', expect.objectContaining({ params: expect.objectContaining({ tipo: 'peca_reposicao' }) })))
+    expect(screen.getByRole('button', { name: 'Remover filtro Tipo: Peça de reposição' })).toBeInTheDocument()
+    await chooseOption(user, 'Filtrar por tipo', 'Não informado')
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/chamados', expect.objectContaining({ params: expect.objectContaining({ tipo: 'nao_informado' }) })))
+  })
 })
