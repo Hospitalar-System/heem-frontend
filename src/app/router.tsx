@@ -30,6 +30,7 @@ const TicketDetailPage = lazy(() => import('@/features/maintenance/pages/TicketD
 const WorkOrdersPage = lazy(() => import('@/features/maintenance/pages/WorkOrdersPage').then((module) => ({ default: module.WorkOrdersPage })))
 const WorkOrderDetailPage = lazy(() => import('@/features/maintenance/pages/WorkOrderDetailPage').then((module) => ({ default: module.WorkOrderDetailPage })))
 const ChecklistsPage = lazy(() => import('@/features/maintenance/pages/ChecklistsPage').then((module) => ({ default: module.ChecklistsPage })))
+const QualityWindowPage = lazy(() => import('@/features/settings/pages/QualityWindowPage').then((module) => ({ default: module.QualityWindowPage })))
 const SlaPolicyPage = lazy(() => import('@/features/sla-policy/pages/SlaPolicyPage').then((module) => ({ default: module.SlaPolicyPage })))
 const BatchImportPage = lazy(() => import('@/features/imports/pages/BatchImportPage').then((module) => ({ default: module.BatchImportPage })))
 const CompanyProfilePage = lazy(() => import('@/features/settings/pages/CompanyProfilePage').then((module) => ({ default: module.CompanyProfilePage })))
@@ -63,6 +64,7 @@ export const routes = [
   { path: '/settings', element: <SettingsIndexRedirect /> },
   { path: '/settings/categories', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><CategoriesPage /></Suspense></RequireRole> },
   { path: '/settings/sla-policy', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><SlaPolicyPage /></Suspense></RequireRole> },
+  { path: '/settings/quality-analysis', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><QualityWindowPage /></Suspense></RequireRole> },
   { path: '/settings/imports', element: <RequireRole role="admin_cliente" allowPlatformAdmin={false} deniedTo="/access-denied"><Suspense fallback={<RouteContentFallback />}><BatchImportPage /></Suspense></RequireRole> },
   { path: '/settings/company', element: <RequireRole allowPlatformAdmin={false}><Suspense fallback={<RouteContentFallback />}><CompanyProfilePage /></Suspense></RequireRole> },
   { path: '/settings/users', element: <RequireRole role="admin_cliente"><Suspense fallback={<RouteContentFallback />}><UsersPage /></Suspense></RequireRole> },
