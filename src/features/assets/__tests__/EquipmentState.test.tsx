@@ -321,11 +321,18 @@ describe('ficha: origem do Em manutenção (Story 23.1)', () => {
     expect(within(dialog).getByRole('group', { name: /Origem da manutenção/ })).toBeInTheDocument()
     expect(vi.mocked(apiClient.get)).toHaveBeenCalledWith('/ordens-de-trabalho', { params: { equipamentoId: 'equipment-1' } })
     await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Escolha a OT')
+    // erro junto do campo, ligado por aria-describedby, com foco no campo; sem resumo no rodapé (um erro só)
+    const select = within(dialog).getByRole('combobox', { name: 'OT vinculada' })
+    expect(await within(dialog).findByText('Escolha a OT que originou a manutenção.')).toHaveAttribute('id', select.getAttribute('aria-describedby'))
+    expect(select).toHaveAttribute('aria-invalid', 'true')
+    await waitFor(() => expect(select).toHaveFocus())
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
     expect(apiClient.patch).not.toHaveBeenCalled()
-    await user.click(within(dialog).getByRole('combobox', { name: 'OT vinculada' }))
+    await user.click(select)
     expect(screen.queryByRole('option', { name: /OT-PREV-3/ })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('option', { name: 'OT-CORR-7 · Corretiva · Em execução' }))
+    const option = screen.getByRole('option', { name: /^OT-CORR-7 · Corretiva/ })
+    expect(option).toHaveTextContent('Em execução') // status no selo
+    await user.click(option)
     await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
     await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/equipamentos/equipment-1/estado', { estado: 'EM_MANUTENCAO', descricao: 'OT OT-CORR-7', ordemTrabalhoId: 'ot-1' }))
   })
@@ -339,10 +346,16 @@ describe('ficha: origem do Em manutenção (Story 23.1)', () => {
     expect(within(dialog).queryByRole('combobox', { name: 'Retirado por' })).not.toBeInTheDocument()
     await chooseOption(user, 'Destino da manutenção', 'Manutenção externa')
     await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent('fornecedor')
+    // dois erros: cada um abaixo do seu campo, resumo curto no rodapé e foco no primeiro (Fornecedor)
+    expect(await within(dialog).findByText('Informe o fornecedor: ele é obrigatório na manutenção externa.')).toBeInTheDocument()
+    expect(within(dialog).getByText('Informe a justificativa da manutenção.')).toBeInTheDocument()
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('Corrija os campos destacados')
+    await waitFor(() => expect(within(dialog).getByLabelText(/Fornecedor \(obrigatório\)/)).toHaveFocus())
     await user.type(within(dialog).getByLabelText(/Fornecedor \(obrigatório\)/), ' Assistec ')
     await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent('justificativa')
+    expect(await within(dialog).findByText('Informe a justificativa da manutenção.')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText(/Justificativa \(obrigatória\)/)).toHaveAttribute('aria-invalid', 'true')
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument()
     await user.type(within(dialog).getByLabelText(/Justificativa \(obrigatória\)/), 'Placa queimada')
     expect(within(dialog).getByText('14/300')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
@@ -410,7 +423,7 @@ describe('ficha: Histórico de estado', () => {
     expect(screen.getAllByText(/^Motivo:/)).toHaveLength(1) // entrada antiga sem baixa não mostra a linha
   })
 
-  it('mostra a origem do Em manutenção como linha secundária (OT com link só para admin, justificativa e não informada)', async () => {
+  it('origem do Em manutenção nos termos do dossiê: coluna Origem com o resumo, descrição com a justificativa e "Retirado por" abaixo', async () => {
     const at = (id: string, origemManutencao: object) => ({ id, estadoAnterior: 'ATIVO', estadoNovo: 'EM_MANUTENCAO', descricao: 'Parado', alteradoPorId: 'u2', alteradoPorNome: 'Bruno', alteradoEm: '2026-11-10T14:20:00Z', origem: 'MANUAL', ordemTrabalhoId: null, origemManutencao })
     const user = setup({ role: 'admin_cliente', history: [
       at('o1', { tipo: 'ordem_trabalho', ordemTrabalhoId: 'ot-1' }),
@@ -418,10 +431,15 @@ describe('ficha: Histórico de estado', () => {
       at('o3', { tipo: 'nao_informada' }),
     ] })
     const rows = within(await openTab(user)).getAllByRole('row').slice(1)
-    expect(rows[0]).toHaveTextContent('Origem: OT vinculada')
+    const origin = (row: HTMLElement) => within(row).getAllByRole('cell').at(-1)
+    expect(origin(rows[0])).toHaveTextContent('OT vinculada · Abrir OT')
     expect(within(rows[0]).getByRole('link', { name: 'Abrir OT' })).toHaveAttribute('href', '/work-orders/ot-1')
-    expect(rows[1]).toHaveTextContent('Origem: Manutenção externa · Fornecedor: Assistec · Retirado por: Diego · Justificativa: Placa queimada')
-    expect(rows[2]).toHaveTextContent('Origem: não informada')
+    expect(origin(rows[1])).toHaveTextContent('Externa · Assistec')
+    expect(rows[1]).toHaveTextContent('Placa queimada')
+    expect(rows[1]).toHaveTextContent('Retirado por: Diego')
+    expect(rows[1]).not.toHaveTextContent('Parado')
+    expect(origin(rows[2])).toHaveTextContent('Não informada')
+    for (const row of rows) { expect(row).not.toHaveTextContent('Manual'); expect(row).not.toHaveTextContent('Origem:') }
   })
 
   it('técnico vê a origem sem link para a OT', async () => {
