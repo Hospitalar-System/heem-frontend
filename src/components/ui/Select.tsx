@@ -134,7 +134,7 @@ export function Select({
   }
 
   const height = size === 'sm' ? 'h-9 text-xs' : 'h-10 text-sm'
-  const border = ariaInvalid ? 'border-danger' : open ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-text-secondary'
+  const border = ariaInvalid ? 'border-danger' : open ? 'border-primary ring-2 ring-primary/20' : disabled ? 'border-border' : 'border-border hover:border-text-secondary'
   const labelProps = ariaLabel ? { 'aria-label': ariaLabel } : ariaLabelledBy ? { 'aria-labelledby': ariaLabelledBy } : {}
 
   return <>
