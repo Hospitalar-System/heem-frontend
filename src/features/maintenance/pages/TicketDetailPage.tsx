@@ -18,6 +18,12 @@ import { Select } from '@/components/ui/Select'
 import { ticketCode } from '../utils/ticket-code'
 import { severityTone, ticketStatusTone } from '@/lib/status-tones'
 import { Badge } from '@/components/ui/Badge'
+import { comprovanteChamadoBody } from '@/features/dashboard/api/documents'
+import { EXPORT_BACKEND_SUPPORT } from '@/features/dashboard/components/export-builder-model'
+import { GenerateDocumentButton } from '@/features/dashboard/components/GenerateDocumentButton'
+import { FinalizeSignatureModal } from '../components/FinalizeSignatureModal'
+import { SignaturesSection } from '../components/SignaturesSection'
+import { hasSignature } from '../types/signatures'
 
 const fieldClass = 'h-10 w-full rounded-md border border-border bg-bg px-3 text-sm text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const severityLabel: Record<string, string> = { CRITICA: 'Crítica', ALTA: 'Alta', MEDIA: 'Média', BAIXA: 'Baixa' }
@@ -110,6 +116,13 @@ export function TicketDetailPage() {
   const canEditType = Boolean(ticket.data) && !isClosed && (isStaff || isInternal)
   const canAddParts = Boolean(ticket.data) && !isClosed && isStaff
   const isPartReplacement = ticket.data?.tipo === 'peca_reposicao'
+  const isResolved = normalizedStatus === 'RESOLVIDO'
+  // Epic 22: só o técnico assina pelo painel (o nome e o CREA vêm do cadastro de quem está logado).
+  const canSign = isTechnician && isResolved
+  const technicianSigned = hasSignature(ticket.data?.assinaturas, 'tecnico')
+  const managerSigned = hasSignature(ticket.data?.assinaturas, 'responsavel_hospital')
+  const canGenerateReceipt = EXPORT_BACKEND_SUPPORT.comprovanteChamado && isResolved && (isAdmin || isTechnician)
+  const [isSignOpen, setIsSignOpen] = useState(false)
   const partList = parts.data ?? []
   const resolveNeedsPart = isPartReplacement && !parts.isLoading && partList.length === 0
   // Depois do PECA_OBRIGATORIA o campo da peça aparece (chamado recarregado): o foco vai para ele.
@@ -190,6 +203,8 @@ export function TicketDetailPage() {
       })
       toast.success('Chamado resolvido.')
       setDialog(null)
+      // Tela Finalizar: a assinatura do técnico vem logo depois da resolução.
+      if (isTechnician) setIsSignOpen(true)
     } catch (error) {
       setActionError(ticketActionErrorMessage(error))
       // O tipo pode ter virado peça de reposição depois que a tela carregou: atualiza o chamado para mostrar o campo
@@ -253,7 +268,8 @@ export function TicketDetailPage() {
             <h2 className="mt-3 text-xl font-semibold text-text-primary">{equipment.data?.nome ?? 'Chamado de emergência'}</h2>
             <p className="mt-1 text-sm text-text-secondary">{equipment.data?.codigo ?? ticket.data.equipamentoId}</p>
           </div>
-          {canGenerateCorrective && (isAdmin || isTechnician) && <button type="button" onClick={() => setIsCreateOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={15} />Gerar OT corretiva</button>}
+          <div className="flex flex-wrap items-start justify-end gap-3 max-sm:w-full max-sm:justify-start">{canGenerateReceipt ? <GenerateDocumentButton label="Gerar comprovante" body={comprovanteChamadoBody(ticket.data.id)} filename={`comprovante-${ticketCode(ticket.data)}.pdf`} align="start" fullWidthMobile className="max-sm:w-full" /> : null}
+          {canGenerateCorrective && (isAdmin || isTechnician) && <button type="button" onClick={() => setIsCreateOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={15} />Gerar OT corretiva</button>}</div>
         </div>
         <div className="mt-5 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-4">
           <Metadata icon={<MapPin size={15} />} label="Hospital / setor" value={`${hospital?.nome ?? '—'}${sector?.nome ? ` · ${sector.nome}` : ''}`} />
@@ -333,8 +349,11 @@ export function TicketDetailPage() {
               : <p className="mt-4 rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-text-muted">Nenhuma peça trocada registrada neste chamado.</p>}
         {isPartReplacement && !isClosed && !parts.isLoading && partList.length === 0 && <p role="status" className="mt-3 text-xs text-warning">Chamado de peça de reposição: registre a peça trocada antes de resolver.</p>}
       </section>
+
+      {isResolved ? <SignaturesSection signatures={ticket.data.assinaturas} emptyText="Chamado resolvido sem assinatura." actions={canSign && !managerSigned ? <button type="button" onClick={() => setIsSignOpen(true)} className={primaryButton}>{technicianSigned ? 'Assinatura do responsável' : 'Finalizar e assinar'}</button> : null} /> : null}
     </div>
 
+    {isSignOpen && <FinalizeSignatureModal target={{ tipo: 'chamado', id: ticket.data.id }} title="Finalizar chamado" description={`Chamado ${ticketCode(ticket.data)} resolvido`} technicianSigned={technicianSigned} onClose={() => setIsSignOpen(false)} />}
     {isCreateOpen && <Modal title="Gerar OT corretiva" description={`Chamado ${ticketCode(ticket.data)}`} busy={createWorkOrder.isPending} onClose={() => setIsCreateOpen(false)}>
       <form className="space-y-4" onSubmit={(event) => void submitCorrectiveWorkOrder(event)}>
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Código da OT<input autoFocus required maxLength={40} value={codigo} onChange={(event) => setCodigo(event.target.value)} placeholder="Ex.: OT-2042" className={fieldClass} /></label>

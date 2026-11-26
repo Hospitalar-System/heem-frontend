@@ -44,6 +44,8 @@ function renderDetail(data: unknown = campaign) {
   vi.mocked(apiClient.get).mockImplementation(async (url) => {
     if (url === '/campanhas-preventivas/camp-1') return { data } as never
     if (url === '/hospitais') return { data: [{ id: 'hospital-1', nome: 'Santa Casa', cnpj: '' }] } as never
+    // Story 22.3: seção Finalização (fora do escopo destes testes).
+    if (url === '/users' || String(url).startsWith('/campanhas-preventivas/camp-1/finalizacoes')) return { data: [] } as never
     return exportGet(url as string)
   })
   return render(<MemoryRouter initialEntries={['/work-orders/campanhas/camp-1']}><Routes><Route path="/work-orders/campanhas/:id" element={<PreventiveCampaignDetailPage />} /></Routes></MemoryRouter>, { wrapper: Providers })
