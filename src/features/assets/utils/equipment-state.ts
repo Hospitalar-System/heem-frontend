@@ -46,6 +46,10 @@ export function changeStateErrorMessage(error: unknown): string {
     case 'DESCRICAO_OBRIGATORIA': return 'Informe a descrição: ela é obrigatória para Em manutenção.'
     case 'ACESSO_NEGADO': return 'Seu perfil não pode colocar o equipamento neste estado.'
     case 'TRANSICAO_INVALIDA': return 'Este equipamento foi descartado e não pode mais mudar de estado.'
+    case 'ORIGEM_OBRIGATORIA': return 'Informe a origem da manutenção: a OT vinculada ou a justificativa.'
+    case 'OT_DE_OUTRO_EQUIPAMENTO': return 'A OT escolhida não é deste equipamento. Escolha uma OT do próprio equipamento.'
+    case 'FORNECEDOR_OBRIGATORIO': return 'Informe o fornecedor: ele é obrigatório na manutenção externa.'
+    case 'JUSTIFICATIVA_OBRIGATORIA': return 'Informe a justificativa da manutenção.'
     case 'VALIDACAO_FALHOU': return 'Dados inválidos: confira o estado, a descrição (até 200 caracteres) e a data da baixa (não pode ser futura).'
   }
   if (response?.status === 404) return 'Equipamento não encontrado.'

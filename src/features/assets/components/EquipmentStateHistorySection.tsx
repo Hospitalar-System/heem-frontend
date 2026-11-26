@@ -5,6 +5,7 @@ import { useEquipmentStateHistory } from '../api/equipment-state'
 import type { EquipmentStateHistoryEntry } from '../types'
 import { EquipmentStateBadge } from './EquipmentStateBadge'
 import { baixaSummary } from '../utils/baixa'
+import { origemManutencaoLabel } from '../utils/origem-manutencao'
 
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 function formatDateTime(value: string) {
@@ -31,10 +32,18 @@ export function EquipmentStateHistorySection({ equipmentId, isAdmin }: { equipme
     { key: 'para', header: 'Para', className: 'whitespace-nowrap', cell: (row) => <EquipmentStateBadge state={row.estadoNovo} /> },
     { key: 'descricao', header: 'Descrição', className: 'max-w-[320px]', cell: (row) => {
       const baixa = baixaSummary(row)
-      return <><span className="block break-words text-text-secondary">{row.descricao || '—'}</span>{baixa ? <span className="mt-0.5 block break-words text-[11px] text-text-muted">{baixa}</span> : null}</>
+      const origem = row.origemManutencao
+      // Mesmos termos do dossiê: na justificativa, a descrição mostra o texto inteiro e "Retirado por" em cinza abaixo.
+      const text = origem?.tipo === 'justificativa' && origem.justificativa ? origem.justificativa : row.descricao
+      const retirado = origem?.tipo === 'justificativa' ? origem.retiradoPorNome : null
+      return <><span className="block break-words text-text-secondary">{text || '—'}</span>
+        {retirado ? <span className="mt-0.5 block break-words text-[11px] text-text-muted">Retirado por: {retirado}</span> : null}
+        {baixa ? <span className="mt-0.5 block break-words text-[11px] text-text-muted">{baixa}</span> : null}</>
     } },
     { key: 'por', header: 'Alterado por', cell: (row) => <span className="text-text-secondary">{row.alteradoPorNome || '—'}</span> },
-    { key: 'origem', header: 'Origem', className: 'whitespace-nowrap', cell: (row) => row.origem === 'ORDEM_TRABALHO'
+    { key: 'origem', header: 'Origem', className: 'max-w-[220px]', cell: (row) => row.origemManutencao
+      ? <span className="block break-words text-text-secondary">{origemManutencaoLabel(row.origemManutencao)}{isAdmin && row.origemManutencao.tipo === 'ordem_trabalho' && row.origemManutencao.ordemTrabalhoId ? <> · <Link to={`/work-orders/${row.origemManutencao.ordemTrabalhoId}`} className="font-medium text-primary underline">Abrir OT</Link></> : null}</span>
+      : row.origem === 'ORDEM_TRABALHO'
       ? <span className="text-text-secondary">Ordem de trabalho{isAdmin && row.ordemTrabalhoId ? <> · <Link to={`/work-orders/${row.ordemTrabalhoId}`} className="font-medium text-primary underline">Abrir OT</Link></> : null}</span>
       : <span className="text-text-secondary">{row.origem === 'MANUAL' ? 'Manual' : row.origem}</span> },
   ]

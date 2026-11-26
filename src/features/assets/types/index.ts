@@ -1,4 +1,5 @@
 import type { DestinoBaixa, MotivoBaixa } from '../utils/baixa'
+import type { DestinoManutencao, OrigemManutencaoEntry } from '../utils/origem-manutencao'
 export type RiscoSetor = 'CRITICO' | 'SEMI_CRITICO' | 'NAO_CRITICO'
 export type GrupoInstalacao = 'GRUPO_0' | 'GRUPO_1' | 'GRUPO_2'
 
@@ -71,6 +72,15 @@ export interface ChangeEquipmentStateInput {
   destinoBaixa?: DestinoBaixa
   /** AAAA-MM-DD, não futura. */
   dataBaixa?: string
+  /** Story 23.1: ao entrar em EM_MANUTENCAO, a OT do mesmo equipamento OU a justificativa abaixo. */
+  ordemTrabalhoId?: string
+  /** Padrão no backend: quem está logado. */
+  retiradoPor?: string
+  destino?: DestinoManutencao
+  /** Obrigatório na manutenção externa (até 150). */
+  fornecedor?: string
+  /** Até 300 caracteres. */
+  justificativa?: string
 }
 export type EquipmentStateOrigin = 'MANUAL' | 'ORDEM_TRABALHO'
 export interface EquipmentStateHistoryEntry {
@@ -87,6 +97,8 @@ export interface EquipmentStateHistoryEntry {
   motivoBaixa?: string | null
   destinoBaixa?: string | null
   dataBaixa?: string | null
+  /** Story 23.1: só na entrada em EM_MANUTENCAO (nulo nas demais e nas linhas antigas). */
+  origemManutencao?: OrigemManutencaoEntry | null
 }
 
 export interface EquipmentEditableFields {
