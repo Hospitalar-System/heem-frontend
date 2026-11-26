@@ -15,11 +15,12 @@ function login(roles: UserRole[]) {
 afterEach(() => clearAuthSession())
 
 describe('SettingsNav', () => {
-  it('admin_cliente vê as cinco seções e a ativa tem aria-current', () => {
+  it('admin_cliente vê as seis seções e a ativa tem aria-current', () => {
     login(['admin_cliente'])
     render(<MemoryRouter initialEntries={['/settings/sla-policy']}><SettingsNav /></MemoryRouter>)
     const nav = screen.getByRole('navigation', { name: 'Configurações' })
-    expect(within(nav).getAllByRole('link')).toHaveLength(5)
+    expect(within(nav).getAllByRole('link')).toHaveLength(6)
+    expect(screen.getByRole('link', { name: 'Qualidade da análise' })).toHaveAttribute('href', '/settings/quality-analysis')
     expect(screen.getByRole('link', { name: 'Política de SLA' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Categorias' })).not.toHaveAttribute('aria-current')
     expect(screen.getByRole('link', { name: 'Usuários e papéis' })).toHaveAttribute('href', '/settings/users')
