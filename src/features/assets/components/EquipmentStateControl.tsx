@@ -107,7 +107,7 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
         <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Data da baixa (opcional)<DatePicker aria-label="Data da baixa" value={dataBaixa} max={isoOf(todayCivil())} onChange={setDataBaixa} size="sm" disabled={mutation.isPending} /></label>
         <p className="text-[11px] text-text-muted">O documento de baixa é anexado na aba Documentos da ficha (tipo “Documento de baixa”).</p>
       </div> : null}
-      {discarding ? <div className="rounded-md border border-danger/40 p-3 text-xs"><Checkbox checked={confirmed} disabled={mutation.isPending} onCheckedChange={setConfirmed} label="Entendo que Descartado é definitivo: o equipamento não poderá mais mudar de estado." /></div> : null}
+      {discarding ? <div className={`rounded-md border p-3 text-xs ${error && !confirmed ? 'border-danger' : 'border-danger/40'}`}><Checkbox checked={confirmed} invalid={Boolean(error) && !confirmed} disabled={mutation.isPending} onCheckedChange={setConfirmed} label="Entendo que Descartado é definitivo: o equipamento não poderá mais mudar de estado." /></div> : null}
       {error ? <p role="alert" className="text-xs text-danger">{error}</p> : null}
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onClose} disabled={mutation.isPending} className="h-9 rounded-md border border-border px-3 text-xs font-medium hover:bg-bg disabled:opacity-50">Cancelar</button>
