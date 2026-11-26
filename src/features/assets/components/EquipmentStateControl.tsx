@@ -10,7 +10,11 @@ import { useChangeEquipmentState } from '../api/equipment-state'
 import type { Equipment, EquipmentState } from '../types'
 import { ADMIN_ONLY_STATES, DESCRIPTION_MAX, QUICK_STATES, canChangeFrom, changeStateErrorMessage, equipmentStateLabel, isKnownState, type StateRole } from '../utils/equipment-state'
 import { EquipmentStateBadge } from './EquipmentStateBadge'
+import { MaintenanceOriginFields } from './MaintenanceOriginFields'
+import { emptyOrigin, originDescription, originError, originPayload, type OriginValue } from '../utils/origem-manutencao'
 import { BAIXA_STATES, destinoBaixaOptions, motivoBaixaOptions, type DestinoBaixa, type MotivoBaixa } from '../utils/baixa'
+
+const ORIGIN_ERROR_CODES = ['ORIGEM_OBRIGATORIA', 'OT_DE_OUTRO_EQUIPAMENTO', 'FORNECEDOR_OBRIGATORIO', 'JUSTIFICATIVA_OBRIGATORIA']
 
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' })
 function formatDate(value: string | null | undefined) {
@@ -54,28 +58,37 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
   const [motivoBaixa, setMotivoBaixa] = useState('')
   const [destinoBaixa, setDestinoBaixa] = useState('')
   const [dataBaixa, setDataBaixa] = useState('')
+  const [origin, setOrigin] = useState<OriginValue>(emptyOrigin)
+  const [originInvalid, setOriginInvalid] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const needsDescription = state === 'EM_MANUTENCAO'
-  const showDescription = state !== 'ATIVO'
   const discarding = state === 'DESCARTADO'
   const showBaixa = BAIXA_STATES.includes(state)
+  /** Story 23.1: a origem só vale ao ENTRAR em Em manutenção (editar quem já está nele não pede). */
+  const needsOrigin = state === 'EM_MANUTENCAO' && current !== 'EM_MANUTENCAO'
+  /** Ao entrar em Em manutenção a Descrição dá lugar à origem; editando quem já está nele, continua obrigatória. */
+  const needsDescription = state === 'EM_MANUTENCAO' && !needsOrigin
+  const showDescription = state !== 'ATIVO' && !needsOrigin
   const others = role === 'admin' ? ADMIN_ONLY_STATES : []
 
   const submit = () => {
-    const text = description.trim()
+    const text = needsOrigin ? originDescription(origin) : description.trim()
     if (needsDescription && !text) { setError('Informe a descrição: ela é obrigatória para Em manutenção.'); return }
     if (text.length > DESCRIPTION_MAX) { setError(`A descrição pode ter no máximo ${DESCRIPTION_MAX} caracteres.`); return }
     if (discarding && !confirmed) { setError('Confirme o descarte para continuar.'); return }
+    const missingOrigin = needsOrigin ? originError(origin) : null
+    if (missingOrigin) { setOriginInvalid(true); setError(missingOrigin); return }
+    setOriginInvalid(false)
     setError(null)
     mutation.mutate({
       estado: state,
-      ...(showDescription && text ? { descricao: text } : {}),
+      ...((showDescription || needsOrigin) && text ? { descricao: text } : {}),
       ...(showBaixa && motivoBaixa ? { motivoBaixa: motivoBaixa as MotivoBaixa } : {}),
       ...(showBaixa && destinoBaixa ? { destinoBaixa: destinoBaixa as DestinoBaixa } : {}),
       ...(showBaixa && dataBaixa ? { dataBaixa } : {}),
+      ...(needsOrigin ? originPayload(origin) : {}),
     }, {
       onSuccess: () => { toast.success(`Estado alterado para ${equipmentStateLabel(state)}.`); onClose() },
-      onError: (failure) => setError(changeStateErrorMessage(failure)),
+      onError: (failure) => { setError(changeStateErrorMessage(failure)); const code = (failure as { response?: { data?: { code?: string } } }).response?.data?.code; if (code && ORIGIN_ERROR_CODES.includes(code)) setOriginInvalid(true) },
     })
   }
 
@@ -99,6 +112,7 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
         <textarea id="equipment-state-description" value={description} maxLength={DESCRIPTION_MAX} rows={3} aria-required={needsDescription} aria-invalid={Boolean(error) && needsDescription && !description.trim()} disabled={mutation.isPending} onChange={(event) => { setDescription(event.target.value); setError(null) }} className={`w-full rounded-md border bg-bg px-3 py-2 text-xs text-text-primary outline-none focus:ring-2 focus:ring-primary/20 ${needsDescription ? 'border-warning focus:border-warning' : 'border-border focus:border-primary'}`} />
         <p className="text-right text-[11px] text-text-muted" aria-live="polite">{description.length}/{DESCRIPTION_MAX}</p>
       </div> : null}
+      {needsOrigin ? <MaintenanceOriginFields equipmentId={equipment.id} value={origin} onChange={(next) => { setOrigin(next); setError(null); setOriginInvalid(false) }} isAdmin={role === 'admin'} disabled={mutation.isPending} invalid={originInvalid} /> : null}
       {showBaixa ? <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Motivo da baixa (opcional)<Select aria-label="Motivo da baixa" value={motivoBaixa} onChange={setMotivoBaixa} size="sm" disabled={mutation.isPending} options={motivoBaixaOptions} /></label>

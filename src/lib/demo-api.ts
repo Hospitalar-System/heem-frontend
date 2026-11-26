@@ -69,10 +69,26 @@ function sectorView(sector: RecordValue) {
 }
 /** Histórico de estado simulado (contrato #208): mais recente primeiro ao listar. */
 const stateHistory: RecordValue[] = [
-  { id: 'est-1', equipamentoId: 'equipment-demo-2', estadoAnterior: 'ATIVO', estadoNovo: 'EM_MANUTENCAO', descricao: 'Aguardando troca da válvula expiratória', alteradoPorId: 'user-demo-2', alteradoPorNome: 'Bruno Técnico', alteradoEm: '2026-11-08T14:20:00Z', origem: 'MANUAL', ordemTrabalhoId: null },
+  { id: 'est-1', equipamentoId: 'equipment-demo-2', estadoAnterior: 'ATIVO', estadoNovo: 'EM_MANUTENCAO', descricao: 'Aguardando troca da válvula expiratória', alteradoPorId: 'user-demo-2', alteradoPorNome: 'Bruno Técnico', alteradoEm: '2026-11-08T14:20:00Z', origem: 'MANUAL', ordemTrabalhoId: null, origemManutencao: { tipo: 'justificativa', ordemTrabalhoId: null, retiradoPorId: 'user-demo-2', retiradoPorNome: 'Bruno Técnico', destino: 'manutencao_externa', fornecedor: 'Assistência Técnica Sul', justificativa: 'Válvula expiratória enviada ao fornecedor para troca.' } },
   { id: 'est-2', equipamentoId: 'equipment-demo-3', estadoAnterior: 'ATIVO', estadoNovo: 'NAO_APTO', descricao: 'Falha no teste de carga da bateria', alteradoPorId: 'user-demo-2', alteradoPorNome: 'Bruno Técnico', alteradoEm: '2026-11-10T09:05:00Z', origem: 'MANUAL', ordemTrabalhoId: null },
 ]
 const STATE_ENUM = ['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']
+/** Story 23.1: origem obrigatória ao ENTRAR em EM_MANUTENCAO (OT do mesmo equipamento ou justificativa). */
+function maintenanceOrigin(record: RecordValue, body: RecordValue, userId: string | null, userName: string | null) {
+  const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
+  if (body.ordemTrabalhoId) {
+    const order = workOrders.find((item) => item.id === body.ordemTrabalhoId)
+    if (!order || order.equipamentoId !== record.id) throw demoProblem(400, { code: 'OT_DE_OUTRO_EQUIPAMENTO' })
+    return { tipo: 'ordem_trabalho', ordemTrabalhoId: order.id, retiradoPorId: null, retiradoPorNome: null, destino: null, fornecedor: null, justificativa: null }
+  }
+  const destino = text(body.destino), fornecedor = text(body.fornecedor), justificativa = text(body.justificativa)
+  if (!destino && !fornecedor && !justificativa && !body.retiradoPor) throw demoProblem(400, { code: 'ORIGEM_OBRIGATORIA' })
+  if (destino !== 'manutencao_hospital' && destino !== 'manutencao_externa') throw demoProblem(400, { code: 'VALIDACAO_FALHOU' })
+  if (destino === 'manutencao_externa' && !fornecedor) throw demoProblem(400, { code: 'FORNECEDOR_OBRIGATORIO' })
+  if (!justificativa) throw demoProblem(400, { code: 'JUSTIFICATIVA_OBRIGATORIA' })
+  const who = body.retiradoPor ? users.find((item) => item.id === body.retiradoPor) : null
+  return { tipo: 'justificativa', ordemTrabalhoId: null, retiradoPorId: who?.id ?? userId, retiradoPorNome: (who?.nome as string | undefined) ?? userName, destino, fornecedor: fornecedor || null, justificativa }
+}
 /** PATCH /equipamentos/{id}/estado com as regras do contrato (papel, descrição, DESCARTADO terminal). */
 function changeEquipmentState(record: RecordValue, body: RecordValue) {
   const estado = String(body.estado ?? '').trim().toUpperCase()
@@ -88,8 +104,9 @@ function changeEquipmentState(record: RecordValue, body: RecordValue) {
   const descricao = estado === 'ATIVO' ? null : raw || null
   if (record.statusCicloVida === estado && (record.descricaoEstado ?? null) === descricao) return record
   if (record.statusCicloVida === 'DESCARTADO') throw demoProblem(409, { code: 'TRANSICAO_INVALIDA' })
+  const origemManutencao = estado === 'EM_MANUTENCAO' && record.statusCicloVida !== 'EM_MANUTENCAO' ? maintenanceOrigin(record, body, user?.id ?? null, user?.name ?? null) : null
   const alteradoEm = new Date().toISOString()
-  stateHistory.push({ id: makeId('est'), equipamentoId: record.id, estadoAnterior: record.statusCicloVida, estadoNovo: estado, descricao, alteradoPorId: user?.id ?? null, alteradoPorNome: user?.name ?? 'Usuário demo', alteradoEm, origem: 'MANUAL', ordemTrabalhoId: null })
+  stateHistory.push({ id: makeId('est'), equipamentoId: record.id, estadoAnterior: record.statusCicloVida, estadoNovo: estado, descricao, alteradoPorId: user?.id ?? null, alteradoPorNome: user?.name ?? 'Usuário demo', alteradoEm, origem: 'MANUAL', ordemTrabalhoId: null, origemManutencao })
   Object.assign(record, { statusCicloVida: estado, descricaoEstado: descricao, estadoAtualizadoEm: alteradoEm })
   return record
 }

@@ -38,9 +38,21 @@ function Providers({ children, url }: PropsWithChildren<{ url: string }>) {
   return <QueryClientProvider client={client}><MemoryRouter initialEntries={[url]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}><Routes><Route path="/assets/:id" element={<>{children}<Where /></>} /></Routes></MemoryRouter></QueryClientProvider>
 }
 
+const orders = [
+  { id: 'ot-1', codigo: 'OT-CORR-7', tipo: 'CORRETIVA', status: 'EM_EXECUCAO', equipamentoId: 'equipment-1' },
+  { id: 'ot-2', codigo: 'OT-PREV-3', tipo: 'PREVENTIVA', status: 'CANCELADA', equipamentoId: 'equipment-1' },
+]
+const tenantUsers = [
+  { id: 'u1', codigo: 'U1', nome: 'Clara', email: 'c@x', role: 'admin_cliente', ativo: true },
+  { id: 'u5', codigo: 'U5', nome: 'Diego Técnico', email: 'd@x', role: 'tecnico', ativo: true },
+  { id: 'u6', codigo: 'U6', nome: 'Ex Usuário', email: 'e@x', role: 'tecnico', ativo: false },
+]
+
 function setup(opts: { role?: Role; equipment?: object; history?: object[]; total?: number; historyFail?: boolean; query?: string } = {}) {
   setAuthSession('token', { id: 'u1', name: 'Clara', roles: [opts.role ?? 'admin_cliente'], tenantId: 't1' })
   vi.mocked(apiClient.get).mockImplementation(async (url) => {
+    if (url === '/ordens-de-trabalho') return { data: orders } as never
+    if (url === '/users') return { data: tenantUsers } as never
     if (url === '/equipamentos/equipment-1') return { data: { ...base, ...opts.equipment } } as never
     if (url === '/setores/sector-1') return { data: { id: 'sector-1', hospitalId: 'h1', nome: 'UTI' } } as never
     if (url === '/hospitais/h1') return { data: { id: 'h1', nome: 'Hospital' } } as never
@@ -180,10 +192,9 @@ describe('ficha: Alterar estado', () => {
     expect(within(within(dialog).getByRole('radiogroup', { name: 'Outros estados' })).getAllByRole('radio').map((r) => r.getAttribute('aria-label'))).toEqual(['Inativo', 'Descartado'])
   })
 
-  it('Em manutenção exige descrição: bloqueia o envio e mostra o erro', async () => {
-    const user = setup({ role: 'tecnico' })
+  it('já em Em manutenção, a descrição continua obrigatória: bloqueia o envio e mostra o erro', async () => {
+    const user = setup({ role: 'tecnico', equipment: { statusCicloVida: 'EM_MANUTENCAO', descricaoEstado: null } })
     const dialog = await openModal(user)
-    await user.click(within(dialog).getByRole('radio', { name: 'Em manutenção' }))
     expect(within(dialog).getByLabelText(/Descrição \(obrigatória\)/)).toHaveAttribute('aria-required', 'true')
     await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('obrigatória')
@@ -279,6 +290,10 @@ describe('ficha: Alterar estado', () => {
     [problem('DESCRICAO_OBRIGATORIA', 400), 'obrigatória'],
     [problem('ACESSO_NEGADO', 403), 'perfil não pode'],
     [problem('TRANSICAO_INVALIDA', 409), 'descartado'],
+    [problem('ORIGEM_OBRIGATORIA', 400), 'origem da manutenção'],
+    [problem('OT_DE_OUTRO_EQUIPAMENTO', 400), 'não é deste equipamento'],
+    [problem('FORNECEDOR_OBRIGATORIO', 400), 'fornecedor'],
+    [problem('JUSTIFICATIVA_OBRIGATORIA', 400), 'justificativa'],
     [new Error('Network Error'), 'Sem conexão'],
   ])('mapeia o erro do servidor para mensagem em pt-BR (%#)', async (failure, text) => {
     const user = setup({ role: 'tecnico' })
@@ -288,6 +303,84 @@ describe('ficha: Alterar estado', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(text)
     expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+})
+
+describe('ficha: origem do Em manutenção (Story 23.1)', () => {
+  beforeEach(() => { vi.clearAllMocks(); clearAuthSession() })
+  const toMaintenance = async (user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement) => {
+    await user.click(within(dialog).getByRole('radio', { name: 'Em manutenção' }))
+    // ao entrar em Em manutenção, a Descrição dá lugar à origem (descricao derivada)
+    expect(within(dialog).queryByLabelText(/Descrição/)).not.toBeInTheDocument()
+  }
+
+  it('OT vinculada: lista só OTs não canceladas do equipamento, exige a escolha e envia ordemTrabalhoId', async () => {
+    const user = setup({ role: 'tecnico' })
+    const dialog = await openModal(user)
+    await toMaintenance(user, dialog)
+    expect(within(dialog).getByRole('group', { name: /Origem da manutenção/ })).toBeInTheDocument()
+    expect(vi.mocked(apiClient.get)).toHaveBeenCalledWith('/ordens-de-trabalho', { params: { equipamentoId: 'equipment-1' } })
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Escolha a OT')
+    expect(apiClient.patch).not.toHaveBeenCalled()
+    await user.click(within(dialog).getByRole('combobox', { name: 'OT vinculada' }))
+    expect(screen.queryByRole('option', { name: /OT-PREV-3/ })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('option', { name: 'OT-CORR-7 · Corretiva · Em execução' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/equipamentos/equipment-1/estado', { estado: 'EM_MANUTENCAO', descricao: 'OT OT-CORR-7', ordemTrabalhoId: 'ot-1' }))
+  })
+
+  it('justificativa externa exige fornecedor e texto; técnico não escolhe quem retirou', async () => {
+    const user = setup({ role: 'tecnico' })
+    const dialog = await openModal(user)
+    await toMaintenance(user, dialog)
+    await user.click(within(dialog).getByRole('radio', { name: 'Justificativa' }))
+    expect(within(dialog).getByText('Retirado por: você (quem está registrando).')).toBeInTheDocument()
+    expect(within(dialog).queryByRole('combobox', { name: 'Retirado por' })).not.toBeInTheDocument()
+    await chooseOption(user, 'Destino da manutenção', 'Manutenção externa')
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('fornecedor')
+    await user.type(within(dialog).getByLabelText(/Fornecedor \(obrigatório\)/), ' Assistec ')
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('justificativa')
+    await user.type(within(dialog).getByLabelText(/Justificativa \(obrigatória\)/), 'Placa queimada')
+    expect(within(dialog).getByText('14/300')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/equipamentos/equipment-1/estado', { estado: 'EM_MANUTENCAO', descricao: 'Placa queimada', destino: 'manutencao_externa', justificativa: 'Placa queimada', fornecedor: 'Assistec' }))
+    expect(vi.mocked(apiClient.get).mock.calls.some(([url]) => url === '/users')).toBe(false)
+  })
+
+  it('admin escolhe quem retirou entre os usuários ativos', async () => {
+    const user = setup({ role: 'admin_cliente' })
+    const dialog = await openModal(user)
+    await toMaintenance(user, dialog)
+    await user.click(within(dialog).getByRole('radio', { name: 'Justificativa' }))
+    await user.click(within(dialog).getByRole('combobox', { name: 'Retirado por' }))
+    expect(screen.queryByRole('option', { name: 'Ex Usuário' })).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('option', { name: 'Diego Técnico' }))
+    await user.type(within(dialog).getByLabelText(/Justificativa \(obrigatória\)/), 'Levado à oficina')
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/equipamentos/equipment-1/estado', { estado: 'EM_MANUTENCAO', descricao: 'Levado à oficina', destino: 'manutencao_hospital', justificativa: 'Levado à oficina', retiradoPor: 'u5' }))
+  })
+
+  it('justificativa longa: a descricao derivada é cortada em 200 caracteres', async () => {
+    const user = setup({ role: 'tecnico' })
+    const dialog = await openModal(user)
+    await toMaintenance(user, dialog)
+    await user.click(within(dialog).getByRole('radio', { name: 'Justificativa' }))
+    const long = 'a'.repeat(250)
+    await user.click(within(dialog).getByLabelText(/Justificativa \(obrigatória\)/))
+    await user.paste(long)
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/equipamentos/equipment-1/estado', { estado: 'EM_MANUTENCAO', descricao: 'a'.repeat(200), destino: 'manutencao_hospital', justificativa: 'a'.repeat(250).slice(0, 300) }))
+  })
+
+  it('equipamento que já está Em manutenção: editar a descrição não pede origem', async () => {
+    const user = setup({ role: 'tecnico', equipment: { statusCicloVida: 'EM_MANUTENCAO', descricaoEstado: 'Aguardando peça' } })
+    const dialog = await openModal(user)
+    expect(within(dialog).queryByRole('group', { name: /Origem da manutenção/ })).not.toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/equipamentos/equipment-1/estado', { estado: 'EM_MANUTENCAO', descricao: 'Aguardando peça' }))
   })
 })
 
@@ -315,6 +408,20 @@ describe('ficha: Histórico de estado', () => {
     await user.click(await screen.findByRole('tab', { name: 'Histórico de estado' }))
     expect(await screen.findByText('Motivo: Defeito irreparável · Destino: Sucata · Data da baixa: 09/11/2026')).toBeInTheDocument()
     expect(screen.getAllByText(/^Motivo:/)).toHaveLength(1) // entrada antiga sem baixa não mostra a linha
+  })
+
+  it('mostra a origem do Em manutenção como linha secundária (OT com link só para admin, justificativa e não informada)', async () => {
+    const at = (id: string, origemManutencao: object) => ({ id, estadoAnterior: 'ATIVO', estadoNovo: 'EM_MANUTENCAO', descricao: 'Parado', alteradoPorId: 'u2', alteradoPorNome: 'Bruno', alteradoEm: '2026-11-10T14:20:00Z', origem: 'MANUAL', ordemTrabalhoId: null, origemManutencao })
+    const user = setup({ role: 'admin_cliente', history: [
+      at('o1', { tipo: 'ordem_trabalho', ordemTrabalhoId: 'ot-1' }),
+      at('o2', { tipo: 'justificativa', destino: 'manutencao_externa', fornecedor: 'Assistec', retiradoPorNome: 'Diego', justificativa: 'Placa queimada' }),
+      at('o3', { tipo: 'nao_informada' }),
+    ] })
+    const rows = within(await openTab(user)).getAllByRole('row').slice(1)
+    expect(rows[0]).toHaveTextContent('Origem: OT vinculada')
+    expect(within(rows[0]).getByRole('link', { name: 'Abrir OT' })).toHaveAttribute('href', '/work-orders/ot-1')
+    expect(rows[1]).toHaveTextContent('Origem: Manutenção externa · Fornecedor: Assistec · Retirado por: Diego · Justificativa: Placa queimada')
+    expect(rows[2]).toHaveTextContent('Origem: não informada')
   })
 
   it('técnico vê a origem sem link para a OT', async () => {
