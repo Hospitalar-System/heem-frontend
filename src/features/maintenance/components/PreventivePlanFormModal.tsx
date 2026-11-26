@@ -9,14 +9,16 @@ import { useCreatePreventivePlan, useUpdatePreventivePlan, type usePlanLookups }
 import { createPreventivePlanSchema, editPreventivePlanSchema, type PreventivePlanFormValues } from '../schemas/preventive-plans.schema'
 import type { PreventivePlan } from '../types'
 import { planApiError } from '../utils/preventive-plans'
+import { FieldHint } from './FieldHint'
+import { JUSTIFICATIVA_MAX, origemIntervaloOptions, type OrigemIntervalo } from '../utils/intervalo-origem'
 
 type Lookups = ReturnType<typeof usePlanLookups>
 
 const inputClass = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 aria-[invalid=true]:border-danger'
 
-function Row({ id, label, error, hint, children }: { id: string; label: string; error?: string; hint?: ReactNode; children: ReactNode }) {
+function Row({ id, label, error, hint, help, children }: { id: string; label: string; error?: string; hint?: ReactNode; help?: string; children: ReactNode }) {
   return <div className="grid gap-1.5">
-    <label id={`${id}-label`} htmlFor={id} className="text-xs font-medium text-text-secondary">{label}</label>
+    <div className="relative flex items-center gap-1.5"><label id={`${id}-label`} htmlFor={id} className="text-xs font-medium text-text-secondary">{label}</label>{help && <FieldHint label={label}>{help}</FieldHint>}</div>
     {children}
     {hint}
     {error && <p id={`${id}-error`} role="alert" className="text-xs text-danger">{error}</p>}
@@ -38,12 +40,15 @@ export function PreventivePlanFormModal({ plan, lookups, onClose, onStale }: { p
       tecnicoPadraoId: plan?.tecnicoPadraoId ?? '',
       intervaloDias: plan ? String(plan.intervaloDias) : '',
       dataAncora: plan?.dataAncora ?? '',
+      origemIntervalo: plan?.origemIntervalo ?? '',
+      justificativaIntervalo: plan?.justificativaIntervalo ?? '',
     },
   })
   const { errors } = form.formState
   const equipamentoId = form.watch('equipamentoId')
   const hospitalId = lookups.hospitalOfEquipment(equipamentoId)
   const busy = create.isPending || update.isPending
+  const justificativaLength = (form.watch('justificativaIntervalo') ?? '').length
 
   const equipmentOptions = lookups.equipment.map((item) => ({ value: item.id, label: `${item.codigo} · ${item.nome}` }))
   const checklistOptions = isEdit
@@ -57,12 +62,17 @@ export function PreventivePlanFormModal({ plan, lookups, onClose, onStale }: { p
   async function submit(values: PreventivePlanFormValues) {
     setFormError('')
     const intervaloDias = Number(values.intervaloDias)
+    const justificativa = values.justificativaIntervalo.trim()
+    const evidence = {
+      ...(values.origemIntervalo ? { origemIntervalo: values.origemIntervalo as OrigemIntervalo } : {}),
+      ...(justificativa ? { justificativaIntervalo: justificativa } : {}),
+    }
     try {
       if (plan) {
-        await update.mutateAsync({ id: plan.id, tecnicoPadraoId: values.tecnicoPadraoId, intervaloDias, dataAncora: values.dataAncora })
+        await update.mutateAsync({ id: plan.id, tecnicoPadraoId: values.tecnicoPadraoId, intervaloDias, dataAncora: values.dataAncora, ...evidence })
         toast.success('Plano preventivo atualizado.')
       } else {
-        await create.mutateAsync({ equipamentoId: values.equipamentoId, checklistId: values.checklistId, tecnicoPadraoId: values.tecnicoPadraoId, intervaloDias, dataAncora: values.dataAncora })
+        await create.mutateAsync({ equipamentoId: values.equipamentoId, checklistId: values.checklistId, tecnicoPadraoId: values.tecnicoPadraoId, intervaloDias, dataAncora: values.dataAncora, ...evidence })
         toast.success('Plano preventivo criado.')
       }
       onClose()
@@ -75,7 +85,7 @@ export function PreventivePlanFormModal({ plan, lookups, onClose, onStale }: { p
   }
 
   const invalid = (field: keyof PreventivePlanFormValues, id: string) => errors[field] ? { 'aria-invalid': true as const, 'aria-describedby': `${id}-error` } : {}
-  const ids = { equipamento: `${uid}-equipamento`, checklist: `${uid}-checklist`, tecnico: `${uid}-tecnico`, intervalo: `${uid}-intervalo`, ancora: `${uid}-ancora` }
+  const ids = { origem: `${uid}-origem`, justificativa: `${uid}-justificativa`, equipamento: `${uid}-equipamento`, checklist: `${uid}-checklist`, tecnico: `${uid}-tecnico`, intervalo: `${uid}-intervalo`, ancora: `${uid}-ancora` }
 
   return <Modal title={isEdit ? 'Editar plano preventivo' : 'Novo plano preventivo'} description={isEdit ? 'Altere o técnico padrão, o intervalo ou a data âncora.' : 'Defina o equipamento, o checklist, a recorrência e o técnico padrão.'} busy={busy} onClose={onClose}>
     {lookups.isLoading
@@ -104,6 +114,13 @@ export function PreventivePlanFormModal({ plan, lookups, onClose, onStale }: { p
             <FormDatePicker control={form.control} name="dataAncora" id={ids.ancora} aria-labelledby={`${ids.ancora}-label`} placeholder="Selecione a data" {...invalid('dataAncora', ids.ancora)} />
           </Row>
         </div>
+        <Row id={ids.origem} label="Origem do intervalo (opcional)" error={errors.origemIntervalo?.message}>
+          <FormSelect control={form.control} name="origemIntervalo" id={ids.origem} aria-labelledby={`${ids.origem}-label`} options={origemIntervaloOptions} {...invalid('origemIntervalo', ids.origem)} />
+        </Row>
+        <Row id={ids.justificativa} label="Justificativa do intervalo (opcional)" error={errors.justificativaIntervalo?.message} help="Registre por que este intervalo foi escolhido (por exemplo, a recomendação do fabricante ou o histórico de falhas). É só um registro e não altera a geração das OTs.">
+          <textarea id={ids.justificativa} rows={3} maxLength={JUSTIFICATIVA_MAX} placeholder="Ex.: Manual do fabricante: revisão a cada 3 meses." className={`${inputClass} h-auto py-2`} {...invalid('justificativaIntervalo', ids.justificativa)} {...form.register('justificativaIntervalo')} />
+          <p className="text-right text-xs text-text-muted" aria-live="polite">{justificativaLength}/{JUSTIFICATIVA_MAX}</p>
+        </Row>
         <p className="text-[11px] text-text-muted">A próxima geração é a primeira data a partir de hoje na sequência da âncora, somando o intervalo a cada ciclo.</p>
         {formError && <p role="alert" className="text-xs text-danger">{formError}</p>}
         <div className="flex justify-end gap-2 border-t border-border pt-3">

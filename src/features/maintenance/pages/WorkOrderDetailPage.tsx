@@ -1,4 +1,5 @@
 import { workOrderStatusTone } from '@/lib/status-tones'
+import { finalidadeLabel } from '../utils/finalidade'
 import { AlertCircle, ArrowLeft, CalendarClock, ClipboardCheck, Gauge, MapPin, UserRound, Wrench } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -99,6 +100,7 @@ export function WorkOrderDetailPage() {
           <Metadata icon={<CalendarClock size={14} />} label="Iniciada em" value={formatDate(order.data.iniciadaEm)} />
           <Metadata icon={<CalendarClock size={14} />} label="Concluída em" value={formatDate(order.data.concluidaEm)} />
           <Metadata icon={<MapPin size={14} />} label="Local" value={order.data.local ?? '—'} />
+          <Metadata icon={<ClipboardCheck size={14} />} label="Finalidade" value={finalidadeLabel(order.data.finalidade) ?? '—'} />
         </div>
       </section>
 

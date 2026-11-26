@@ -22,6 +22,7 @@ import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 import { DEFAULT_TICKET_SORT, orderingErrorMessage, ticketSortChoicesFor, ticketSortFromUrl } from '../utils/ordering'
 import { useOrderingFallback } from '../utils/useOrderingFallback'
 import { ticketCode } from '../utils/ticket-code'
+import { finalidadeOptions, type Finalidade } from '../utils/finalidade'
 import { severityTone, ticketStatusTone } from '@/lib/status-tones'
 import { ageLabels, parseAge, parseSituation } from '../utils/ticket-filters'
 
@@ -92,6 +93,7 @@ export function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null)
   const [codigo, setCodigo] = useState('')
   const [tecnicoId, setTecnicoId] = useState('')
+  const [finalidade, setFinalidade] = useState('')
 
   const equipmentById = useMemo(() => new Map((equipment.data ?? []).map((item) => [item.id, item])), [equipment.data])
   const sectorById = useMemo(() => new Map((sectors.data ?? []).map((item) => [item.id, item])), [sectors.data])
@@ -139,11 +141,12 @@ export function TicketsPage() {
     event.preventDefault()
     if (!selectedTicket || !codigo.trim() || !tecnicoId) return
     try {
-      const created = await createWorkOrder.mutateAsync({ codigo: codigo.trim(), chamadoId: selectedTicket.id, tecnicoId })
+      const created = await createWorkOrder.mutateAsync({ codigo: codigo.trim(), chamadoId: selectedTicket.id, tecnicoId, ...(finalidade ? { finalidade: finalidade as Finalidade } : {}) })
       toast.success(`OT corretiva ${created.codigo} criada.`)
       setSelectedTicket(null)
       setCodigo('')
       setTecnicoId('')
+      setFinalidade('')
     } catch {
       // Keep the dialog open so the operator can correct or retry the request.
     }
@@ -175,7 +178,7 @@ export function TicketsPage() {
       // Duas posições fixas e compactas: "Gerar OT" e o ícone de detalhes ficam alinhados em todas as linhas.
       return <div className="flex items-center justify-end gap-1.5">
         {canGenerate
-          ? <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId('') }} aria-label="Gerar OT corretiva" title="Gerar OT corretiva" className="inline-flex h-8 w-24 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-primary bg-transparent px-2 text-xs font-semibold text-primary hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT</button>
+          ? <button type="button" onClick={() => { setSelectedTicket(ticket); setCodigo(''); setTecnicoId(''); setFinalidade(''); setFinalidade('') }} aria-label="Gerar OT corretiva" title="Gerar OT corretiva" className="inline-flex h-8 w-24 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-primary bg-transparent px-2 text-xs font-semibold text-primary hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={14} />Gerar OT</button>
           : <span aria-hidden="true" className="inline-block h-8 w-24" />}
         <Link to={`/tickets/${ticket.id}`} aria-label={`Detalhes do chamado ${ticketCode(ticket)}`} title="Detalhes" className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-text-secondary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ArrowUpRight aria-hidden="true" size={14} /></Link>
       </div>
@@ -245,6 +248,7 @@ export function TicketsPage() {
         <form className="space-y-4" onSubmit={(event) => void submitCorrectiveWorkOrder(event)}>
           <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Código da OT<input autoFocus required maxLength={40} value={codigo} onChange={(event) => setCodigo(event.target.value)} placeholder="Ex.: OT-2042" className={`${inputClass} w-full`} /></label>
           <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Técnico responsável<Select required value={tecnicoId} onChange={setTecnicoId} placeholder="Selecione um técnico" options={eligibleTechnicians.map((technician) => ({ value: technician.id, label: technician.nome }))} /></label>
+          <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Finalidade (opcional)<Select aria-label="Finalidade" value={finalidade} onChange={setFinalidade} options={finalidadeOptions} /></label>
           {!users.isLoading && !hospitalLinks.some((query) => query.isLoading) && eligibleTechnicians.length === 0 && <p className="text-xs text-warning">Não há técnicos ativos vinculados ao hospital deste chamado.</p>}
           {createWorkOrder.isError && <p role="alert" className="text-xs text-danger">{getErrorMessage(createWorkOrder.error)}</p>}
           <div className="flex justify-end gap-2 border-t border-border pt-4"><button type="button" disabled={createWorkOrder.isPending} onClick={() => setSelectedTicket(null)} className="h-9 rounded-md border border-border px-3 text-xs font-medium text-text-secondary hover:bg-bg">Cancelar</button><button type="submit" disabled={!codigo.trim() || !tecnicoId || createWorkOrder.isPending} className="h-9 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50">{createWorkOrder.isPending ? 'Criando…' : 'Criar OT'}</button></div>

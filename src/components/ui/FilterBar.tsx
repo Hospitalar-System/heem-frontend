@@ -19,10 +19,14 @@ export function FilterWide({ children, className = '' }: { children: ReactNode; 
 
 /** Intervalo "de ... até ...": linha própria que quebra em coluna quando estreita. */
 export function FilterRange({ label = 'Período', from, to }: { label?: string; from: ReactNode; to: ReactNode }) {
-  return <div role="group" aria-label={label} className="col-span-full flex flex-wrap items-center gap-2">
-    <span className="text-xs text-text-secondary">{label}</span>
-    <div className="min-w-[9.5rem] flex-1 sm:max-w-[13rem]">{from}</div>
-    <span className="text-xs text-text-secondary">até</span>
-    <div className="min-w-[9.5rem] flex-1 sm:max-w-[13rem]">{to}</div>
+  // Mobile: grade de 2 colunas (rótulos à direita na mesma coluna), as duas datas começam no mesmo x e têm a mesma largura.
+  // A partir de sm: uma linha flexível, com "até" junto da segunda data.
+  return <div role="group" aria-label={label} className="col-span-full grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:flex sm:flex-wrap">
+    <span className="text-right text-xs text-text-secondary">{label}</span>
+    <div className="min-w-0 sm:min-w-[9.5rem] sm:max-w-[13rem] sm:flex-1">{from}</div>
+    <div className="contents sm:flex sm:min-w-[11.5rem] sm:max-w-[14.75rem] sm:flex-1 sm:items-center sm:gap-2">
+      <span className="text-right text-xs text-text-secondary">até</span>
+      <div className="min-w-0 sm:flex-1">{to}</div>
+    </div>
   </div>
 }

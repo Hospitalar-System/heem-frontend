@@ -101,6 +101,38 @@ describe('WorkOrdersPage', () => {
     }))
   })
 
+  it('finalidade é opcional ao agendar: lista as opções, envia quando escolhida e a coluna Finalidade vem oculta no menu Colunas', async () => {
+    const user = userEvent.setup()
+    render(<WorkOrdersPage />, { wrapper: TestProviders })
+    await user.click(await screen.findByRole('button', { name: 'Nova OT' }))
+    await user.type(screen.getByRole('textbox', { name: 'Código da OT' }), 'OT-2043')
+    await chooseOption(user, 'Equipamento', 'EQ-01 · Bomba de infusão')
+    await chooseOption(user, 'Checklist preventivo', 'Inspeção preventiva')
+    const technicianSelect = screen.getByRole('combobox', { name: 'Técnico responsável' })
+    await waitFor(async () => expect(await listOptions(user, technicianSelect)).toEqual(['Rafael']))
+    await chooseOption(user, technicianSelect, 'Rafael')
+    await chooseDate(user, 'Data agendada', '2026-10-22')
+    await chooseOption(user, 'Data agendada, hora', '10')
+    await chooseOption(user, 'Data agendada, minuto', '30')
+    expect(await listOptions(user, screen.getByRole('combobox', { name: 'Finalidade' }))).toEqual(['Não informada', 'Recorrente', 'Pós-reparo', 'Aceitação'])
+    await chooseOption(user, 'Finalidade', 'Pós-reparo')
+    await user.click(screen.getByRole('button', { name: 'Agendar OT' }))
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/ordens-de-trabalho/preventivas', expect.objectContaining({ codigo: 'OT-2043', finalidade: 'POS_REPARO' })))
+  })
+
+  it('a coluna Finalidade fica oculta por padrão, aparece pelo menu Colunas e mostra a finalidade (ou traço nas OTs antigas)', async () => {
+    window.localStorage.clear()
+    const user = userEvent.setup()
+    render(<WorkOrdersPage />, { wrapper: TestProviders })
+    await screen.findByText('OT-1001')
+    expect(screen.queryByRole('columnheader', { name: 'Finalidade' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Colunas/ }))
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Finalidade' }))
+    expect(screen.getByRole('columnheader', { name: 'Finalidade' })).toBeInTheDocument()
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+    window.localStorage.clear()
+  })
+
   it('preselects the equipment when the form is opened from an equipment detail link', async () => {
     render(<WorkOrdersPage />, { wrapper: ({ children }) => <TestProviders initialEntry="/work-orders/new?equipamentoId=equipment-1">{children}</TestProviders> })
     const equipmentSelect = await screen.findByRole('combobox', { name: 'Equipamento' })

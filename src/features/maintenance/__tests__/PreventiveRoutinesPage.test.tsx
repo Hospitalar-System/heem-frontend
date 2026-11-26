@@ -189,6 +189,50 @@ describe('PreventiveRoutinesPage', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
+  it('cria o plano com origem e justificativa do intervalo (opcionais), com contador de 300 caracteres', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByText('Bomba de infusão')
+    await openNewPlan(user)
+    const dialog = await screen.findByRole('dialog', { name: 'Novo plano preventivo' })
+    await chooseOption(user, 'Equipamento', 'EQ-01 · Bomba de infusão')
+    await waitFor(async () => expect(await listOptions(user, screen.getByRole('combobox', { name: 'Técnico padrão' }))).toEqual(['Rafael']))
+    await chooseOption(user, 'Checklist', 'Inspeção geral')
+    await chooseOption(user, 'Técnico padrão', 'Rafael')
+    await user.type(within(dialog).getByRole('textbox', { name: 'Intervalo (dias)' }), '90')
+    await chooseDate(user, 'Data âncora', '2026-12-01')
+    expect(await listOptions(user, screen.getByRole('combobox', { name: 'Origem do intervalo (opcional)' }))).toEqual(['Não informada', 'Fabricante', 'Risco do equipamento', 'Histórico de falhas', 'Outro'])
+    await chooseOption(user, 'Origem do intervalo (opcional)', 'Fabricante')
+    await user.type(within(dialog).getByRole('textbox', { name: /Justificativa do intervalo/ }), 'Manual do fabricante: revisão a cada 3 meses.')
+    expect(within(dialog).getByText('45/300')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Criar plano' }))
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/planos-preventivos', {
+      equipamentoId: 'equipment-1', checklistId: 'checklist-1', tecnicoPadraoId: 'tech-1', intervaloDias: 90, dataAncora: '2026-12-01',
+      origemIntervalo: 'FABRICANTE', justificativaIntervalo: 'Manual do fabricante: revisão a cada 3 meses.',
+    }))
+  })
+
+  it('a lista mostra origem e justificativa do intervalo só quando preenchidas; a edição reenvia os valores atuais', async () => {
+    const original = plans[0]
+    plans[0] = { ...original, origemIntervalo: 'RISCO', justificativaIntervalo: 'Equipamento de risco alto.' } as typeof original
+    try {
+      const user = userEvent.setup()
+      renderPage()
+      await screen.findByText('Bomba de infusão')
+      expect(screen.getByText('Origem do intervalo: Risco do equipamento')).toBeInTheDocument()
+      expect(screen.getByText('Justificativa: Equipamento de risco alto.')).toBeInTheDocument()
+      expect(screen.getAllByText(/^Origem do intervalo:/)).toHaveLength(1)
+      expect(screen.getByText('Justificativa: Equipamento de risco alto.')).toHaveAttribute('title', 'Equipamento de risco alto.')
+      await chooseRowAction(user, 'Ações de plano de EQ-01 · Bomba de infusão', 'Editar plano')
+      const dialog = await screen.findByRole('dialog', { name: 'Editar plano preventivo' })
+      expect(within(dialog).getByRole('textbox', { name: /Justificativa do intervalo/ })).toHaveValue('Equipamento de risco alto.')
+      await user.click(within(dialog).getByRole('button', { name: /Salvar/ }))
+      await waitFor(() => expect(apiClient.put).toHaveBeenCalledWith('/planos-preventivos/plan-1', expect.objectContaining({ origemIntervalo: 'RISCO', justificativaIntervalo: 'Equipamento de risco alto.' })))
+    } finally {
+      plans[0] = original
+    }
+  })
+
   it('filtra checklists e técnicos pelo hospital do equipamento', async () => {
     const user = userEvent.setup()
     renderPage()

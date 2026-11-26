@@ -11,10 +11,10 @@ describe('FilterBar', () => {
     expect(screen.getByLabelText('Buscar')).toBeInTheDocument()
   })
 
-  it('agrupa o período em linha própria que quebra em telas estreitas', () => {
+  it('agrupa o período em linha própria: grade alinhada no mobile, linha flexível a partir de sm', () => {
     render(<FilterBar label="Filtros"><FilterRange from={<input aria-label="Data inicial" />} to={<input aria-label="Data final" />} /></FilterBar>)
     const group = screen.getByRole('group', { name: 'Período' })
-    expect(group).toHaveClass('col-span-full', 'flex-wrap')
+    expect(group).toHaveClass('col-span-full', 'grid', 'grid-cols-[auto_minmax(0,1fr)]', 'sm:flex', 'sm:flex-wrap')
     expect(group).toContainElement(screen.getByLabelText('Data inicial'))
     expect(group).toContainElement(screen.getByLabelText('Data final'))
     expect(screen.getByText('até')).toBeInTheDocument()

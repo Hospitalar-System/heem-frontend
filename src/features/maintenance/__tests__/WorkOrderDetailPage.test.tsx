@@ -65,6 +65,16 @@ describe('WorkOrderDetailPage', () => {
     expect(screen.getByText(/não disponibiliza o histórico de transições/)).toBeInTheDocument()
   })
 
+  it('mostra a finalidade da OT (ou traço quando a OT é antiga)', async () => {
+    const { unmount } = render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+    expect(await screen.findByRole('heading', { name: 'OT-2041' })).toBeInTheDocument()
+    expect(screen.getByText('Finalidade').nextElementSibling).toHaveTextContent('—') // eslint-disable-line testing-library/no-node-access
+    unmount()
+    vi.mocked(apiClient.get).mockImplementation(async (url) => (url === '/ordens-de-trabalho/order-1' ? { data: { ...order, finalidade: 'POS_REPARO' } } : { data: [] }) as never)
+    render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+    expect(await screen.findByText('Pós-reparo')).toBeInTheDocument()
+  })
+
   it('reassigns to a technician linked to the equipment hospital and sends no status field', async () => {
     const user = userEvent.setup()
     render(<WorkOrderDetailPage />, { wrapper: TestProviders })

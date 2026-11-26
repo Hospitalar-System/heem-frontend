@@ -24,6 +24,7 @@ import {
 } from '../utils/routines'
 import { type RowAction } from '@/components/ui/RowActionsMenu'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
+import { origemIntervaloLabel } from '../utils/intervalo-origem'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 
 const scopeOptions = [{ value: '', label: 'Todos os escopos' }, { value: 'equipamento', label: 'Equipamento' }, { value: 'setor', label: 'Setor' }, { value: 'hospital', label: 'Hospital' }]
@@ -117,7 +118,12 @@ export function PreventiveRoutinesPage() {
       const details = routine.kind === 'campanha'
         ? [[hospitalById.get(routine.campaign.hospitalId), ...(routine.scope === 'setor' ? routine.campaign.setorIds.map((id) => sectorById.get(id)) : [])].filter(Boolean).join(' · ')]
         : [checklistById.get(routine.plan.checklistId)?.nome ?? '', `Técnico ${userById.get(routine.plan.tecnicoPadraoId)?.nome ?? '—'}`]
-      return <><Badge variant={routine.scope === 'equipamento' ? 'info' : 'neutral'}>{routineScopeLabels[routine.scope]}</Badge>{details.filter(Boolean).map((detail) => <span key={detail} className="mt-1 block text-[11px] text-text-muted">{detail}</span>)}</>
+      const justificativa = routine.kind === 'plano' ? routine.plan.justificativaIntervalo : null
+      return <><Badge variant={routine.scope === 'equipamento' ? 'info' : 'neutral'}>{routineScopeLabels[routine.scope]}</Badge>{details.filter(Boolean).map((detail) => <span key={detail} className="mt-1 block text-[11px] text-text-muted">{detail}</span>)}
+        {routine.kind === 'plano' ? <>
+          {routine.plan.origemIntervalo ? <span className="mt-1 block text-[11px] text-text-muted">Origem do intervalo: {origemIntervaloLabel(routine.plan.origemIntervalo)}</span> : null}
+          {justificativa ? <span title={justificativa} className="line-clamp-1 max-w-[260px] break-words text-[11px] text-text-muted">Justificativa: {justificativa}</span> : null}
+        </> : null}</>
     } },
     { key: 'proxima', header: 'Próxima execução', cell: (routine) => <span className="text-text-secondary">{routine.next ? formatPlanDate(routine.next) : '—'}</span> },
     { key: 'situacao', header: 'Situação', cell: (routine) => <StatusBadge tone={routineSituationTones[routine.situation]}>{routineSituationLabels[routine.situation]}</StatusBadge> },

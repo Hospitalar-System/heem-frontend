@@ -60,7 +60,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(function Che
       aria-checked={indeterminate ? 'mixed' : undefined}
       aria-invalid={isInvalid || undefined}
       aria-describedby={describedByIds}
-      className={`peer m-0 size-4 cursor-pointer appearance-none rounded border bg-bg outline-none transition-colors checked:border-primary checked:bg-primary indeterminate:border-primary indeterminate:bg-primary hover:border-text-secondary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50 ${isInvalid ? 'border-danger' : 'border-border'} ${className}`}
+      className={`peer m-0 size-4 cursor-pointer appearance-none rounded-[4px] border bg-surface outline-none transition-colors checked:border-primary checked:bg-primary indeterminate:border-primary indeterminate:bg-primary hover:border-text-secondary focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50 ${isInvalid ? 'border-danger' : 'border-text-muted'} ${className}`}
     />
     <Check aria-hidden strokeWidth={3} size={12} className="pointer-events-none absolute hidden text-bg-brand peer-checked:block peer-indeterminate:hidden peer-disabled:opacity-50" />
     <Minus aria-hidden strokeWidth={3} size={12} className="pointer-events-none absolute hidden text-bg-brand peer-indeterminate:block peer-disabled:opacity-50" />
