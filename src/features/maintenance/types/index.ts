@@ -1,4 +1,6 @@
-export type TicketStatus = 'ABERTO' | 'EM_ANDAMENTO' | 'AGUARDANDO_PECA' | 'RESOLVIDO' | 'CANCELADO' | string
+import type { Signature } from './signatures'
+
+export type TicketStatus ='ABERTO' | 'EM_ANDAMENTO' | 'AGUARDANDO_PECA' | 'RESOLVIDO' | 'CANCELADO' | string
 export type TicketSeverity = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA' | string
 export type TicketSlaStatus = 'no_prazo' | 'em_risco' | 'vencido' | null
 
@@ -25,6 +27,10 @@ export interface Ticket {
   prontoParaResolver?: boolean | null
   /** Story 25.1: tipo do chamado; nulo em chamado antigo ou aberto por app antigo ("Não informado"). */
   tipo?: string | null
+  /** Story 22.2: o chamado tem a assinatura do técnico. */
+  assinada?: boolean
+  /** Story 22.2: assinaturas na ordem do registro; só no detalhe (nulo na lista). */
+  assinaturas?: Signature[] | null
 }
 
 /** Story 25.1 (FR-I1): tipos de chamado aceitos pela API. */
@@ -246,6 +252,10 @@ export interface WorkOrderDetail {
   iniciadaEm: string | null
   concluidaEm: string | null
   fotosCount?: number
+  /** Story 22.2: a OT tem a assinatura do técnico. */
+  assinada?: boolean
+  /** Story 22.2: assinaturas na ordem do registro. */
+  assinaturas?: Signature[] | null
 }
 
 export interface WorkOrderChecklistItem {

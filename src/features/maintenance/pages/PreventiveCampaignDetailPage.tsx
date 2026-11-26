@@ -8,6 +8,10 @@ import { useHospitals } from '@/features/assets/api/assets'
 import { getAuthState, subscribeAuthState } from '@/features/auth/session'
 import { isCampaignRunning, useCampaign, useCancelCampaign } from '../api/preventive-campaigns'
 import { CampaignExport } from '../components/CampaignExport'
+import { CampaignFinalizationSection } from '../components/CampaignFinalization'
+import { useQuery } from '@tanstack/react-query'
+import { apiClient } from '@/lib/axios'
+import type { TenantUser } from '@/features/tenants-users/types'
 import { CampaignStatusBadge, CampaignSummary, Metric, PendingBreakdown, SkippedBreakdown } from '../components/CampaignParts'
 import type { CampaignPendingReason } from '../types/campaigns'
 import { formatPlanDate } from '../utils/preventive-plans'
@@ -22,6 +26,9 @@ export function PreventiveCampaignDetailPage() {
   const cancel = useCancelCampaign()
   const auth = useSyncExternalStore(subscribeAuthState, getAuthState, getAuthState)
   const isAdmin = auth.user?.roles.includes('admin_cliente') ?? false
+  // Story 22.3: o Admin vê o nome do técnico de cada finalização.
+  const users = useQuery({ queryKey: ['tenant-users'], queryFn: async () => (await apiClient.get<TenantUser[]>('/users')).data, enabled: isAdmin })
+  const technicianNames = useMemo(() => Object.fromEntries((Array.isArray(users.data) ? users.data : []).map((user) => [user.id, user.nome])), [users.data])
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [cancelError, setCancelError] = useState('')
   const data = campaign.data
@@ -97,6 +104,8 @@ export function PreventiveCampaignDetailPage() {
             <Metric label="Concluídas" value={data.ots.concluidas} /><Metric label="Canceladas" value={data.ots.canceladas} /><Metric label="Atrasadas" value={data.ots.atrasadas} tone={data.ots.atrasadas > 0 ? 'danger' : undefined} />
           </dl>
         </section>
+
+        {isAdmin && <CampaignFinalizationSection campaignId={data.id} technicianNames={technicianNames} />}
 
         <section aria-label="Pendências da campanha" className="rounded-lg border border-border bg-surface p-4 md:p-5">
           <h2 className="mb-3 text-sm font-semibold text-text-primary">Pendências</h2>

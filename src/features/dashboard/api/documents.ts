@@ -8,9 +8,12 @@ export const DOCUMENT_ENDPOINT = '/relatorios/exportacoes'
 export const EMERGENCIAS_CONTEUDO = 'emergencias'
 export const LAUDO_OT_CONTEUDO = 'laudo_ot'
 export const DOSSIE_EQUIPAMENTO_CONTEUDO = 'dossie_equipamento'
+/** Story 22.4: comprovante individual do chamado (HEEM-CH), só PDF. */
+export const COMPROVANTE_CHAMADO_CONTEUDO = 'comprovante_chamado'
 
 export const laudoOtBody = (ordemTrabalhoId: string) => ({ conteudo: LAUDO_OT_CONTEUDO, formato: 'pdf', ordemTrabalhoId })
 export const dossieEquipamentoBody = (equipamentoId: string) => ({ conteudo: DOSSIE_EQUIPAMENTO_CONTEUDO, formato: 'pdf', equipamentoId })
+export const comprovanteChamadoBody = (chamadoId: string) => ({ conteudo: COMPROVANTE_CHAMADO_CONTEUDO, formato: 'pdf', chamadoId })
 
 export const OT_TIPO_VALUES = ['preventiva', 'corretiva'] as const
 export const OT_STATUS_VALUES = ['agendada', 'em_execucao', 'concluida', 'cancelada'] as const

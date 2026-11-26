@@ -261,6 +261,8 @@ const demoTopEquipment = [
 ]
 
 function handleRequest(method: string, path: string, body: RecordValue, params?: Record<string, unknown>): unknown {
+  const signatureResult = handleSignatures(method, path, body)
+  if (signatureResult !== undefined) return signatureResult
   if (path.startsWith('/campanhas-preventivas')) return handleCampaigns(method, path, body, params)
   if (path === '/planos-preventivos' && method === 'get') {
     return preventivePlans.filter((plan) => (!params?.equipamentoId || plan.equipamentoId === params.equipamentoId) && (params?.ativo === undefined || plan.ativo === params.ativo)).map(planView)
@@ -853,6 +855,54 @@ function demoAddParts(id: string, pecas: unknown) {
   const { user } = getAuthState()
   list.forEach((part) => demoParts.push({ id: makeId('peca'), chamadoId: id, equipamentoId: record.equipamentoId, chamadoCodigo: record.codigo, descricao: String(part.descricao).trim(), quantidade: Number(part.quantidade ?? 1), codigo: part.codigo ?? null, registradoPor: user?.id ?? null, registradoPorNome: user?.name ?? 'Usuário demo', registradoEm: new Date().toISOString() }))
   return demoParts.filter((part) => part.chamadoId === id)
+}
+
+// Epic 22 (assinatura na finalização): sem storage real no demo; o PUT para demo:// é pulado e a imagem é um SVG local.
+const demoSignatureImage = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="320" height="80" viewBox="0 0 320 80"><polyline points="10,60 60,20 90,55 140,15 170,60 230,25 300,50" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>')}`
+const demoSignatures: RecordValue[] = []
+/** Seeds para o Admin ver a OT assinada e a lista de finalizações (no web, OT e campanha só são assinadas pelo app). */
+const demoSignature = (id: string, alvoId: string, papel: string, nome: string, extra: RecordValue) => ({ id, alvoTipo: 'ot', alvoId, papel, clientId: id, nome, registroProfissional: null, cargo: null, assinadoEm: now, registradoEm: now, urlImagem: demoSignatureImage, ...extra })
+const seededOrder = workOrders.find((item) => item.id === 'order-demo-3')
+if (seededOrder) {
+  seededOrder.assinaturas = [
+    demoSignature('assinatura-demo-1', 'order-demo-3', 'tecnico', 'Rafael Souza', { registroProfissional: '123456/SP' }),
+    demoSignature('assinatura-demo-2', 'order-demo-3', 'responsavel_hospital', 'Carla Gestora', { cargo: 'Coordenadora de enfermagem' }),
+  ]
+  seededOrder.assinada = true
+}
+const demoFinalizedOts = [
+  { id: 'order-demo-c1', codigo: 'OT-2026-101', equipamentoId: 'eq-demo', concluidaEm: now, veredito: 'ATIVO' },
+  { id: 'order-demo-c2', codigo: 'OT-2026-102', equipamentoId: 'eq-demo', concluidaEm: now, veredito: 'ATIVO' },
+  { id: 'order-demo-c3', codigo: 'OT-2026-103', equipamentoId: 'eq-demo', concluidaEm: now, veredito: 'NAO_APTO' },
+  { id: 'order-demo-c4', codigo: 'OT-2026-104', equipamentoId: 'eq-demo', concluidaEm: now, veredito: 'EM_MANUTENCAO' },
+]
+const demoFinalizations: RecordValue[] = [
+  { id: 'finalizacao-demo-1', campanhaId: 'campaign-demo-1', tecnicoId: 'user-demo-2', clientId: 'finalizacao-demo-1', finalizadoEm: now, resumo: { totalOts: 4, aptos: 2, naoAptos: 1, emManutencao: 1, semVeredito: 0, ots: demoFinalizedOts } },
+]
+
+function handleSignatures(method: string, path: string, body: RecordValue): unknown {
+  if (path === '/assinaturas/upload-url' && method === 'post') return { url: 'demo://assinaturas', chave: `demo/assinaturas/${makeId('assinatura')}.png`, expiraEm: now }
+  if (path === '/assinaturas' && method === 'post') {
+    const repeated = demoSignatures.find((item) => item.clientId === body.clientId)
+    if (repeated) return repeated
+    const alvo = body.alvoTipo === 'ot' ? workOrders.find((item) => item.id === body.alvoId) : body.alvoTipo === 'chamado' ? tickets.find((item) => item.id === body.alvoId) : undefined
+    if (!alvo) throw demoProblem(404, { code: 'ALVO_NAO_ENCONTRADO' })
+    const status = String(alvo.status ?? '').toUpperCase()
+    if ((body.alvoTipo === 'ot' && status !== 'CONCLUIDA') || (body.alvoTipo === 'chamado' && status !== 'RESOLVIDO')) throw demoProblem(409, { code: 'ALVO_NAO_FINALIZADO' })
+    const list = (alvo.assinaturas as RecordValue[] | undefined) ?? []
+    if (body.papel === 'responsavel_hospital' && !list.some((item) => item.papel === 'tecnico')) throw demoProblem(409, { code: 'ASSINATURA_TECNICO_AUSENTE' })
+    const { user } = getAuthState()
+    const tecnico = body.papel === 'tecnico'
+    const created = { id: makeId('assinatura'), alvoTipo: body.alvoTipo, alvoId: body.alvoId, papel: body.papel, clientId: body.clientId, nome: tecnico ? user?.name ?? 'Técnico demo' : body.nome, registroProfissional: tecnico ? '123456/SP' : null, cargo: tecnico ? null : body.cargo, assinadoEm: body.assinadoEm, registradoEm: new Date().toISOString(), urlImagem: demoSignatureImage }
+    demoSignatures.push(created)
+    const next = [...list, created]
+    alvo.assinaturas = next
+    alvo.assinada = next.some((item) => item.papel === 'tecnico')
+    return created
+  }
+  const finalization = path.match(/^\/campanhas-preventivas\/([^/]+)\/finalizacoes$/)
+  if (finalization && method === 'get') return demoFinalizations.filter((item) => item.campanhaId === finalization[1])
+  return undefined
 }
 
 /** Peças na transição de status do chamado no demo: mesmas regras do backend (Story 25.2). */
