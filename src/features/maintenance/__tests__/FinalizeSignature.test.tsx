@@ -134,10 +134,19 @@ describe('CampaignFinalizationSection (web, só leitura)', () => {
     vi.mocked(apiClient.get).mockResolvedValue({ data: [{ id: 'fin-1', campanhaId: 'c1', tecnicoId: 't1', clientId: 'x', finalizadoEm: '2026-11-26T13:00:00Z', resumo: summary }] } as never)
     render(<CampaignFinalizationSection campaignId="c1" technicianNames={{ t1: 'Ana Técnica' }} />, { wrapper: Providers })
     expect(await screen.findByText('Ana Técnica')).toBeInTheDocument()
-    expect(screen.getByText(/OT-101, OT-102, OT-103/)).toBeInTheDocument()
+    expect(screen.getByText('OT-103')).toBeInTheDocument()
     expect(screen.getByText('3 OTs · 1 aptos · 1 não aptos · 1 em manutenção')).toBeInTheDocument()
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
     expect(apiClient.get).toHaveBeenCalledWith('/campanhas-preventivas/c1/finalizacoes')
+  })
+
+  it('shows at most 5 covered OT codes followed by "e mais N"', async () => {
+    const ots = Array.from({ length: 8 }, (_, index) => ({ id: `o${index}`, codigo: `OT-${200 + index}`, equipamentoId: 'e', concluidaEm: 'x', veredito: 'ATIVO' }))
+    vi.mocked(apiClient.get).mockResolvedValue({ data: [{ id: 'fin-1', campanhaId: 'c1', tecnicoId: 't1', clientId: 'x', finalizadoEm: '2026-11-26T13:00:00Z', resumo: { ...summary, totalOts: 8, ots } }] } as never)
+    render(<CampaignFinalizationSection campaignId="c1" />, { wrapper: Providers })
+    expect(await screen.findByText('OT-204,')).toBeInTheDocument()
+    expect(screen.queryByText(/OT-205/)).not.toBeInTheDocument()
+    expect(screen.getByText('e mais 3')).toBeInTheDocument()
   })
 
   it('shows the empty state', async () => {

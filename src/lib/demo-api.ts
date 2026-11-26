@@ -875,9 +875,11 @@ const demoFinalizedOts = [
   { id: 'order-demo-c2', codigo: 'OT-2026-102', equipamentoId: 'eq-demo', concluidaEm: now, veredito: 'ATIVO' },
   { id: 'order-demo-c3', codigo: 'OT-2026-103', equipamentoId: 'eq-demo', concluidaEm: now, veredito: 'NAO_APTO' },
   { id: 'order-demo-c4', codigo: 'OT-2026-104', equipamentoId: 'eq-demo', concluidaEm: now, veredito: 'EM_MANUTENCAO' },
+  // Campanha grande: o painel mostra só 5 códigos e "e mais N".
+  ...Array.from({ length: 8 }, (_, index) => ({ id: `order-demo-c${index + 5}`, codigo: `OT-2026-${105 + index}`, equipamentoId: 'eq-demo', concluidaEm: now, veredito: 'ATIVO' })),
 ]
 const demoFinalizations: RecordValue[] = [
-  { id: 'finalizacao-demo-1', campanhaId: 'campaign-demo-1', tecnicoId: 'user-demo-2', clientId: 'finalizacao-demo-1', finalizadoEm: now, resumo: { totalOts: 4, aptos: 2, naoAptos: 1, emManutencao: 1, semVeredito: 0, ots: demoFinalizedOts } },
+  { id: 'finalizacao-demo-1', campanhaId: 'campaign-demo-1', tecnicoId: 'user-demo-2', clientId: 'finalizacao-demo-1', finalizadoEm: now, resumo: { totalOts: 12, aptos: 10, naoAptos: 1, emManutencao: 1, semVeredito: 0, ots: demoFinalizedOts } },
 ]
 
 function handleSignatures(method: string, path: string, body: RecordValue): unknown {

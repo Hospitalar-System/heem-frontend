@@ -268,7 +268,7 @@ export function TicketDetailPage() {
             <h2 className="mt-3 text-xl font-semibold text-text-primary">{equipment.data?.nome ?? 'Chamado de emergência'}</h2>
             <p className="mt-1 text-sm text-text-secondary">{equipment.data?.codigo ?? ticket.data.equipamentoId}</p>
           </div>
-          <div className="flex flex-wrap items-start justify-end gap-3">{canGenerateReceipt ? <GenerateDocumentButton label="Gerar comprovante" body={comprovanteChamadoBody(ticket.data.id)} filename={`comprovante-${ticketCode(ticket.data)}.pdf`} /> : null}
+          <div className="flex flex-wrap items-start justify-end gap-3 max-sm:w-full max-sm:justify-start">{canGenerateReceipt ? <GenerateDocumentButton label="Gerar comprovante" body={comprovanteChamadoBody(ticket.data.id)} filename={`comprovante-${ticketCode(ticket.data)}.pdf`} align="start" fullWidthMobile className="max-sm:w-full" /> : null}
           {canGenerateCorrective && (isAdmin || isTechnician) && <button type="button" onClick={() => setIsCreateOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-xs font-semibold text-bg-brand hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><ClipboardPlus aria-hidden="true" size={15} />Gerar OT corretiva</button>}</div>
         </div>
         <div className="mt-5 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-4">
