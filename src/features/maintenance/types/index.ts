@@ -2,7 +2,7 @@ import type { Signature } from './signatures'
 import type { Finalidade } from '../utils/finalidade'
 import type { OrigemIntervalo } from '../utils/intervalo-origem'
 
-export type TicketStatus ='ABERTO' | 'EM_ANDAMENTO' | 'AGUARDANDO_PECA' | 'RESOLVIDO' | 'CANCELADO' | string
+export type TicketStatus ='ABERTO' | 'EM_ANDAMENTO' | 'AGUARDANDO_PECA' | 'PAUSADO' | 'RESOLVIDO' | 'CANCELADO' | string
 export type TicketSeverity = 'BAIXA' | 'MEDIA' | 'ALTA' | 'CRITICA' | string
 export type TicketSlaStatus = 'no_prazo' | 'em_risco' | 'vencido' | null
 
