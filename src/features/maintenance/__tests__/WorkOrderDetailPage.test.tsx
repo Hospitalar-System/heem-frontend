@@ -10,7 +10,7 @@ import { apiClient } from '@/lib/axios'
 import { WorkOrderDetailPage } from '../pages/WorkOrderDetailPage'
 import { chooseOption, listOptions } from '@/test/select-helpers'
 
-vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), put: vi.fn() } }))
+vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), put: vi.fn(), post: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
   AdminPageShell: ({ title, children }: PropsWithChildren<{ title: string }>) => <main><h1>{title}</h1>{children}</main>,
 }))
