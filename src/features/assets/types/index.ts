@@ -63,7 +63,12 @@ export interface Equipment {
   descricaoEstado?: string | null
   /** Instante da última mudança de estado; nulo/ausente = nunca alterado. */
   estadoAtualizadoEm?: string | null
+  /** Story 23.8: selo de reincidência; nulo = não reincidente (ou backend antigo). */
+  reincidencia?: EquipmentRecurrence | null
 }
+
+/** Story 23.8: N chamados de falha (ou sem tipo) nos últimos D dias. */
+export interface EquipmentRecurrence { chamados: number; dias: number }
 
 export interface ChangeEquipmentStateInput {
   estado: EquipmentState
@@ -100,6 +105,8 @@ export interface EquipmentStateHistoryEntry {
   dataBaixa?: string | null
   /** Story 23.1: só na entrada em EM_MANUTENCAO (nulo nas demais e nas linhas antigas). */
   origemManutencao?: OrigemManutencaoEntry | null
+  /** Story 23.6: laudo de obsolescência da entrada em OBSOLETO (pode ter sido excluído depois). */
+  laudoDocumentoId?: string | null
 }
 
 export interface EquipmentEditableFields {

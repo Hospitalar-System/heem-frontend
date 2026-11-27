@@ -2,6 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
 import { PAGINATION_SIZES } from '@/components/ui/Pagination'
 import { useEquipmentStateHistory } from '../api/equipment-state'
+import { useEquipmentDocuments } from '../api/equipment-documents'
 import type { EquipmentStateHistoryEntry } from '../types'
 import { EquipmentStateBadge } from './EquipmentStateBadge'
 import { baixaSummary } from '../utils/baixa'
@@ -26,18 +27,23 @@ export function EquipmentStateHistorySection({ equipmentId, isAdmin }: { equipme
     return next
   })
   const query = useEquipmentStateHistory(equipmentId, { pagina: page - 1, tamanho: size })
+  // Story 23.6: nome do laudo de obsolescência citado no histórico (o documento pode ter sido excluído).
+  const documents = useEquipmentDocuments(equipmentId, { pagina: 0, tamanho: 100 })
+  const reportName = (id: string) => (documents.data?.items ?? []).find((document) => document.id === id)?.nomeArquivo
   const columns: DataColumn<EquipmentStateHistoryEntry>[] = [
     { key: 'data', header: 'Data', className: 'whitespace-nowrap', cell: (row) => <span className="text-text-secondary">{formatDateTime(row.alteradoEm)}</span> },
     { key: 'de', header: 'De', className: 'whitespace-nowrap', cell: (row) => row.estadoAnterior ? <EquipmentStateBadge state={row.estadoAnterior} /> : <span className="text-text-muted">—</span> },
     { key: 'para', header: 'Para', className: 'whitespace-nowrap', cell: (row) => <EquipmentStateBadge state={row.estadoNovo} /> },
     { key: 'descricao', header: 'Descrição', className: 'max-w-[320px]', cell: (row) => {
       const baixa = baixaSummary(row)
+      const laudo = row.laudoDocumentoId ? (reportName(row.laudoDocumentoId) ? `Laudo: ${reportName(row.laudoDocumentoId)}` : documents.isLoading ? 'Laudo: …' : 'Laudo excluído do equipamento') : null
       const origem = row.origemManutencao
       // Mesmos termos do dossiê: na justificativa, a descrição mostra o texto inteiro e "Retirado por" em cinza abaixo.
       const text = origem?.tipo === 'justificativa' && origem.justificativa ? origem.justificativa : row.descricao
       const retirado = origem?.tipo === 'justificativa' ? origem.retiradoPorNome : null
       return <><span className="block break-words text-text-secondary">{text || '—'}</span>
         {retirado ? <span className="mt-0.5 block break-words text-[11px] text-text-muted">Retirado por: {retirado}</span> : null}
+        {laudo ? <span className="mt-0.5 block break-words text-[11px] text-text-muted">{laudo}</span> : null}
         {baixa ? <span className="mt-0.5 block break-words text-[11px] text-text-muted">{baixa}</span> : null}</>
     } },
     { key: 'por', header: 'Alterado por', cell: (row) => <span className="text-text-secondary">{row.alteradoPorNome || '—'}</span> },

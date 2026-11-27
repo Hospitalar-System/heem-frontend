@@ -48,12 +48,13 @@ const tenantUsers = [
   { id: 'u6', codigo: 'U6', nome: 'Ex Usuário', email: 'e@x', role: 'tecnico', ativo: false },
 ]
 
-function setup(opts: { role?: Role; equipment?: object; history?: object[]; total?: number; historyFail?: boolean; query?: string } = {}) {
+function setup(opts: { role?: Role; equipment?: object; history?: object[]; total?: number; historyFail?: boolean; query?: string; documents?: object[] } = {}) {
   setAuthSession('token', { id: 'u1', name: 'Clara', roles: [opts.role ?? 'admin_cliente'], tenantId: 't1' })
   vi.mocked(apiClient.get).mockImplementation(async (url) => {
     if (url === '/ordens-de-trabalho') return { data: orders } as never
     if (url === '/users') return { data: tenantUsers } as never
     if (url === '/equipamentos/equipment-1') return { data: { ...base, ...opts.equipment } } as never
+    if (url === '/equipamentos/equipment-1/documentos') { const data = opts.documents ?? []; return { data, headers: { 'x-total-count': String(data.length) } } as never }
     if (url === '/setores/sector-1') return { data: { id: 'sector-1', hospitalId: 'h1', nome: 'UTI' } } as never
     if (url === '/hospitais/h1') return { data: { id: 'h1', nome: 'Hospital' } } as never
     if (url === '/equipamentos/equipment-1/historico-estado') {
@@ -180,7 +181,7 @@ describe('ficha: Alterar estado', () => {
   it('técnico vê só os 4 estados rápidos; admin vê também Inativo e Descartado', async () => {
     const user = setup({ role: 'tecnico' })
     const dialog = await openModal(user)
-    expect(within(dialog).getAllByRole('radio').map((radio) => radio.getAttribute('aria-label'))).toEqual(['Apto', 'Não apto', 'Em manutenção', 'Desativado'])
+    expect(within(dialog).getAllByRole('radio').map((radio) => radio.getAttribute('aria-label'))).toEqual(['Apto', 'Não apto', 'Em manutenção', 'Obsoleto', 'Desativado'])
     expect(within(dialog).queryByRole('radio', { name: 'Inativo' })).not.toBeInTheDocument()
     expect(within(dialog).queryByRole('radio', { name: 'Descartado' })).not.toBeInTheDocument()
   })
@@ -188,7 +189,7 @@ describe('ficha: Alterar estado', () => {
   it('admin vê Inativo e Descartado em "Outros"', async () => {
     const user = setup({ role: 'admin_cliente' })
     const dialog = await openModal(user)
-    expect(within(dialog).getAllByRole('radio')).toHaveLength(6)
+    expect(within(dialog).getAllByRole('radio')).toHaveLength(7)
     expect(within(within(dialog).getByRole('radiogroup', { name: 'Outros estados' })).getAllByRole('radio').map((r) => r.getAttribute('aria-label'))).toEqual(['Inativo', 'Descartado'])
   })
 
@@ -481,5 +482,71 @@ describe('ficha: Histórico de estado', () => {
     const rows = within(await openTab(user)).getAllByRole('row').slice(1)
     expect(rows[0]).toHaveTextContent('QUARENTENA')
     expect(rows[0]).toHaveTextContent('IMPORTACAO')
+  })
+})
+
+describe('ficha: Obsoleto com laudo (Story 23.6)', () => {
+  beforeEach(() => { vi.clearAllMocks(); clearAuthSession() })
+  const laudo = { id: 'doc-laudo', equipamentoId: 'equipment-1', tipoDocumento: 'LAUDO_OBSOLESCENCIA', nomeArquivo: 'laudo-obsolescencia.pdf', uploadedEm: '2026-11-20T10:00:00Z', validadeAte: null, vencido: false, vencendo: false }
+
+  it('sem laudo anexado: pede o laudo, bloqueia o envio e oferece anexar', async () => {
+    const user = setup({ role: 'tecnico' })
+    const dialog = await openModal(user)
+    await user.click(within(dialog).getByRole('radio', { name: 'Obsoleto' }))
+    const field = await within(dialog).findByRole('group', { name: 'Laudo de obsolescência (obrigatório)' })
+    expect(await within(field).findByRole('button', { name: 'Anexar laudo' })).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    expect(await within(field).findByText('Anexe o laudo de obsolescência para marcar como Obsoleto.')).toBeInTheDocument()
+    expect(apiClient.patch).not.toHaveBeenCalled()
+  })
+
+  it('com laudo anexado: mostra o arquivo e envia OBSOLETO', async () => {
+    const user = setup({ role: 'admin_cliente', documents: [laudo] })
+    const dialog = await openModal(user)
+    await user.click(within(dialog).getByRole('radio', { name: 'Obsoleto' }))
+    expect(await within(dialog).findByText('Laudo anexado: laudo-obsolescencia.pdf')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith('/equipamentos/equipment-1/estado', { estado: 'OBSOLETO' }))
+  })
+
+  it('o backend recusa sem laudo (LAUDO_OBSOLESCENCIA_OBRIGATORIO): a mensagem fica no campo do laudo', async () => {
+    const user = setup({ role: 'admin_cliente', documents: [laudo] })
+    vi.mocked(apiClient.patch).mockRejectedValue(problem('LAUDO_OBSOLESCENCIA_OBRIGATORIO', 400))
+    const dialog = await openModal(user)
+    await user.click(within(dialog).getByRole('radio', { name: 'Obsoleto' }))
+    await within(dialog).findByText('Laudo anexado: laudo-obsolescencia.pdf')
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar estado' }))
+    const field = within(dialog).getByRole('group', { name: 'Laudo de obsolescência (obrigatório)' })
+    expect(await within(field).findByText('Anexe o laudo de obsolescência antes de marcar o equipamento como Obsoleto.')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('já Obsoleto: editar não pede o laudo de novo', async () => {
+    const user = setup({ role: 'admin_cliente', equipment: { statusCicloVida: 'OBSOLETO', descricaoEstado: 'Condenado em 2026' } })
+    const dialog = await openModal(user)
+    expect(within(dialog).queryByRole('group', { name: 'Laudo de obsolescência (obrigatório)' })).not.toBeInTheDocument()
+  })
+
+  it('histórico mostra o laudo citado (ou que foi excluído)', async () => {
+    const at = (id: string, laudoDocumentoId: string) => ({ id, estadoAnterior: 'ATIVO', estadoNovo: 'OBSOLETO', descricao: 'Condenado', alteradoPorId: 'u2', alteradoPorNome: 'Bruno', alteradoEm: '2026-11-10T14:20:00Z', origem: 'MANUAL', ordemTrabalhoId: null, laudoDocumentoId })
+    const user = setup({ role: 'admin_cliente', documents: [laudo], history: [at('l1', 'doc-laudo'), at('l2', 'doc-apagado')] })
+    await user.click(await screen.findByRole('tab', { name: 'Histórico de estado' }))
+    expect(await screen.findByText('Laudo: laudo-obsolescencia.pdf')).toBeInTheDocument()
+    expect(screen.getByText('Laudo excluído do equipamento')).toBeInTheDocument()
+  })
+})
+
+describe('ficha e lista: selo de reincidência (Story 23.8)', () => {
+  beforeEach(() => { vi.clearAllMocks(); clearAuthSession() })
+
+  it('a ficha mostra "Reincidente" com a contagem; sem reincidência não mostra', async () => {
+    setup({ role: 'tecnico', equipment: { reincidencia: { chamados: 4, dias: 90 } } })
+    const badge = await screen.findByText('Reincidente')
+    expect(badge.closest('[title]')).toHaveAttribute('title', '4 chamados de falha nos últimos 90 dias') // eslint-disable-line testing-library/no-node-access
+  })
+
+  it('a lista mostra o selo ao lado do estado', () => {
+    render(<MemoryRouter><EquipmentListTable items={[{ ...base, id: 'e1', reincidencia: { chamados: 3, dias: 90 } } as unknown as Equipment, { ...base, id: 'e2' } as unknown as Equipment]} sectorNameById={new Map()} /></MemoryRouter>)
+    expect(screen.getAllByText('Reincidente')).toHaveLength(1)
   })
 })

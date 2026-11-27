@@ -13,7 +13,7 @@ const isTenantOrPlatformAdmin = (roles: readonly UserRole[]) => roles.includes('
 export const settingsSections: SettingsSection[] = [
   { label: 'Categorias', to: '/settings/categories', canAccess: isTenantAdmin },
   { label: 'Política de SLA', to: '/settings/sla-policy', canAccess: isTenantAdmin },
-  { label: 'Qualidade da análise', to: '/settings/quality-analysis', canAccess: isTenantAdmin },
+  { label: 'Qualidade e reincidência', to: '/settings/quality-analysis', canAccess: isTenantAdmin },
   { label: 'Importação em lote', to: '/settings/imports', canAccess: isTenantAdmin },
   { label: 'Usuários e papéis', to: '/settings/users', canAccess: isTenantOrPlatformAdmin },
   // Edição só do admin; técnico e interno leem pela URL direta (sem item de menu).

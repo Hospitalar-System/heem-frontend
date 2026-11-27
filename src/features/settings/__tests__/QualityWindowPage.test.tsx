@@ -90,3 +90,50 @@ describe('QualityWindowPage (Story 23.2)', () => {
     expect(apiClient.get).not.toHaveBeenCalledWith('/configuracao-cliente')
   })
 })
+
+describe('Selo de reincidência (Story 23.8)', () => {
+  beforeEach(() => vi.clearAllMocks())
+  const withRule = { ...defaults, reincidenciaChamados: 3, reincidenciaDias: 90 }
+
+  it('backend sem a regra: a seção não aparece', async () => {
+    setup()
+    await screen.findByLabelText('Janela (dias)')
+    expect(screen.queryByRole('region', { name: 'Selo de reincidência' })).not.toBeInTheDocument()
+  })
+
+  it('mostra N e D atuais e salva os dois juntos', async () => {
+    const user = setup('admin_cliente', withRule)
+    vi.mocked(apiClient.put).mockResolvedValue({ data: { ...withRule, reincidenciaChamados: 4, reincidenciaDias: 60 } } as never)
+    const count = await screen.findByLabelText('Chamados (N)')
+    expect(count).toHaveValue(3)
+    expect(screen.getByLabelText('Dias (D)')).toHaveValue(90)
+    expect(screen.getByRole('button', { name: 'Salvar regra' })).toBeDisabled()
+    await user.clear(count)
+    await user.type(count, '4')
+    await user.clear(screen.getByLabelText('Dias (D)'))
+    await user.type(screen.getByLabelText('Dias (D)'), '60')
+    await user.click(screen.getByRole('button', { name: 'Salvar regra' }))
+    await waitFor(() => expect(apiClient.put).toHaveBeenCalledWith('/configuracao-cliente', { reincidenciaChamados: 4, reincidenciaDias: 60 }))
+    expect(toast.success).toHaveBeenCalledWith('Regra de reincidência salva.')
+  })
+
+  it.each([['1', '90'], ['21', '90'], ['3', '6'], ['3', '366']])('fora da faixa (N=%s, D=%s) bloqueia o envio', async (n, d) => {
+    const user = setup('admin_cliente', withRule)
+    const count = await screen.findByLabelText('Chamados (N)')
+    await user.clear(count)
+    await user.type(count, n)
+    await user.clear(screen.getByLabelText('Dias (D)'))
+    await user.type(screen.getByLabelText('Dias (D)'), d)
+    expect(screen.getByRole('button', { name: 'Salvar regra' })).toBeDisabled()
+  })
+
+  it('REINCIDENCIA_INVALIDA do servidor em pt-BR', async () => {
+    const user = setup('admin_cliente', withRule)
+    vi.mocked(apiClient.put).mockRejectedValue(Object.assign(new Error('x'), { response: { status: 400, data: { code: 'REINCIDENCIA_INVALIDA' } } }))
+    const count = await screen.findByLabelText('Chamados (N)')
+    await user.clear(count)
+    await user.type(count, '5')
+    await user.click(screen.getByRole('button', { name: 'Salvar regra' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('de 2 a 20 chamados e de 7 a 365 dias')
+  })
+})

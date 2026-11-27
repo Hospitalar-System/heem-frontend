@@ -10,7 +10,9 @@ import { useChangeEquipmentState } from '../api/equipment-state'
 import type { Equipment, EquipmentState } from '../types'
 import { ADMIN_ONLY_STATES, DESCRIPTION_MAX, QUICK_STATES, canChangeFrom, changeStateErrorMessage, equipmentStateLabel, isKnownState, type StateRole } from '../utils/equipment-state'
 import { EquipmentStateBadge } from './EquipmentStateBadge'
+import { RecurrenceBadge } from './RecurrenceBadge'
 import { MaintenanceOriginFields } from './MaintenanceOriginFields'
+import { ObsolescenceReportField } from './ObsolescenceReportField'
 import { emptyOrigin, originDescription, originErrors, originErrorsFromCode, originFieldIds, originPayload, type OriginErrors, type OriginValue } from '../utils/origem-manutencao'
 import { BAIXA_STATES, destinoBaixaOptions, motivoBaixaOptions, type DestinoBaixa, type MotivoBaixa } from '../utils/baixa'
 
@@ -23,7 +25,7 @@ function formatDate(value: string | null | undefined) {
 
 /** Selo do estado atual, para ficar junto ao título da ficha. */
 export function EquipmentStateSummary({ equipment }: { equipment: Equipment }) {
-  return <EquipmentStateBadge state={equipment.statusCicloVida} />
+  return <span className="inline-flex flex-wrap items-center gap-1.5"><EquipmentStateBadge state={equipment.statusCicloVida} /><RecurrenceBadge recurrence={equipment.reincidencia} /></span>
 }
 
 /** Descrição e data do estado atual, abaixo do título. */
@@ -63,6 +65,10 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
   const showBaixa = BAIXA_STATES.includes(state)
   /** Story 23.1: a origem só vale ao ENTRAR em Em manutenção (editar quem já está nele não pede). */
   const needsOrigin = state === 'EM_MANUTENCAO' && current !== 'EM_MANUTENCAO'
+  /** Story 23.6: entrar em Obsoleto exige o laudo anexado (editar quem já está Obsoleto não pede de novo). */
+  const needsReport = state === 'OBSOLETO' && current !== 'OBSOLETO'
+  const [reportReady, setReportReady] = useState(false)
+  const [reportError, setReportError] = useState<string | null>(null)
   /** Ao entrar em Em manutenção a Descrição dá lugar à origem; editando quem já está nele, continua obrigatória. */
   const needsDescription = state === 'EM_MANUTENCAO' && !needsOrigin
   const showDescription = state !== 'ATIVO' && !needsOrigin
@@ -83,6 +89,8 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
     if (needsDescription && !text) { setError('Informe a descrição: ela é obrigatória para Em manutenção.'); return }
     if (text.length > DESCRIPTION_MAX) { setError(`A descrição pode ter no máximo ${DESCRIPTION_MAX} caracteres.`); return }
     if (discarding && !confirmed) { setError('Confirme o descarte para continuar.'); return }
+    if (needsReport && !reportReady) { setReportError('Anexe o laudo de obsolescência para marcar como Obsoleto.'); return }
+    setReportError(null)
     const missing = needsOrigin ? originErrors(origin) : {}
     if (showOriginErrors(missing)) return
     setOriginErrs({})
@@ -97,6 +105,7 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
     }, {
       onSuccess: () => { toast.success(`Estado alterado para ${equipmentStateLabel(state)}.`); onClose() },
       onError: (failure) => {
+        if (needsReport && (failure as { response?: { data?: { code?: string } } }).response?.data?.code === 'LAUDO_OBSOLESCENCIA_OBRIGATORIO') { setReportError(changeStateErrorMessage(failure)); return }
         const fieldErrors = needsOrigin ? originErrorsFromCode((failure as { response?: { data?: { code?: string } } }).response?.data?.code) : null
         if (fieldErrors && showOriginErrors(fieldErrors)) return
         setError(changeStateErrorMessage(failure))
@@ -105,7 +114,7 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
   }
 
   const option = (value: EquipmentState) => <label key={value} className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-md border border-border px-3 text-xs ${state === value ? 'bg-bg font-semibold' : ''}`}>
-    <input type="radio" name="equipment-state" value={value} aria-label={equipmentStateLabel(value)} checked={state === value} disabled={mutation.isPending} onChange={() => { setState(value); setError(null); setConfirmed(false) }} className="accent-[var(--primary)]" />
+    <input type="radio" name="equipment-state" value={value} aria-label={equipmentStateLabel(value)} checked={state === value} disabled={mutation.isPending} onChange={() => { setState(value); setError(null); setConfirmed(false); setReportError(null) }} className="accent-[var(--primary)]" />
     <EquipmentStateBadge state={value} />
   </label>
 
@@ -125,6 +134,7 @@ function ChangeStateModal({ equipment, role, onClose }: { equipment: Equipment; 
         <p className="text-right text-[11px] text-text-muted" aria-live="polite">{description.length}/{DESCRIPTION_MAX}</p>
       </div> : null}
       {needsOrigin ? <MaintenanceOriginFields equipmentId={equipment.id} value={origin} onChange={(next) => { setOrigin(next); setError(null); setOriginErrs({}) }} isAdmin={role === 'admin'} disabled={mutation.isPending} errors={originErrs} /> : null}
+      {needsReport ? <ObsolescenceReportField equipmentId={equipment.id} disabled={mutation.isPending} error={reportError} onReady={setReportReady} /> : null}
       {showBaixa ? <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1.5 text-xs font-medium text-text-secondary">Motivo da baixa (opcional)<Select aria-label="Motivo da baixa" value={motivoBaixa} onChange={setMotivoBaixa} size="sm" disabled={mutation.isPending} options={motivoBaixaOptions} /></label>

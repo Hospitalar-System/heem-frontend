@@ -272,3 +272,15 @@ export function useReportExport(id: string | null) {
   const pollStopped = query.data?.status === 'pendente' && (client.getQueryState(queryKey)?.dataUpdateCount ?? 0) >= EXPORT_POLL_MAX_UPDATES
   return { ...query, pollStopped }
 }
+
+/** Story 23.8: equipamentos reincidentes pela regra do cliente (N chamados de falha nos últimos D dias). */
+export interface RecurrentEquipment { equipamentoId: string; codigo: string; nome: string; hospitalId: string; hospitalNome: string; setorId: string; setorNome: string; chamados: number }
+export interface RecurrentEquipments { chamadosMinimos: number; dias: number; equipamentos: RecurrentEquipment[] }
+
+/** GET /relatorios/reincidentes (só admin): situação atual, sem período; aceita hospital e setor. */
+export function useRecurrentEquipments(filters: Pick<ReportFilters, 'hospitalId' | 'setorId'>) {
+  return useQuery({
+    queryKey: ['report-recurrent-equipments', filters],
+    queryFn: async () => (await apiClient.get<RecurrentEquipments>('/relatorios/reincidentes', { params: filters })).data,
+  })
+}
