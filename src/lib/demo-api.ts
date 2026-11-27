@@ -166,6 +166,8 @@ const checklistItemsById = new Map<string, RecordValue[]>([[checklists[0].id as 
 const userHospitals = new Map<string, string[]>(users.map((user) => [user.id as string, [hospitals[0].id as string]]))
 const exportsById = new Map<string, RecordValue>()
 const importsById = new Map<string, { tipo: string; polls: number }>()
+/** Story 23.2: configuração do cliente (janela da qualidade da análise). */
+let clientConfig: RecordValue = { janelaQualidadeAnaliseDias: 30, padrao: true, atualizadoEm: null, atualizadoPor: null }
 let slaPolicy: RecordValue[] = [
   { severidade: 'CRITICA', atendimentoMin: 15, resolucaoMin: 120, padrao: true },
   { severidade: 'ALTA', atendimentoMin: 30, resolucaoMin: 240, padrao: true },
@@ -336,6 +338,14 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path.startsWith('/relatorios/exportacoes/')) return exportsById.get(lastPart(path)) ?? { id: lastPart(path), status: 'concluido', urlDownload: demoExportDataUrl('chamados', 'csv') }
   if (path === '/importacoes' && method === 'post') return startDemoImport(body)
   if (path.startsWith('/importacoes/') && method === 'get') return pollDemoImport(lastPart(path))
+  if (path === '/configuracao-cliente') {
+    if (method === 'put') {
+      const dias = Number(body.janelaQualidadeAnaliseDias)
+      if (!Number.isInteger(dias) || dias < 7 || dias > 365) throw demoProblem(400, { code: 'JANELA_INVALIDA' })
+      clientConfig = { janelaQualidadeAnaliseDias: dias, padrao: false, atualizadoEm: new Date().toISOString(), atualizadoPor: getAuthState().user?.id ?? null }
+    }
+    return clientConfig
+  }
   if (path === '/sla/politica') {
     if (method === 'put') slaPolicy = body as unknown as RecordValue[]
     return slaPolicy
