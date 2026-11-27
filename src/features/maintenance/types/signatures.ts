@@ -34,6 +34,8 @@ export interface CampaignFinalizationSummary {
   naoAptos: number
   emManutencao: number
   semVeredito: number
+  /** Story 23.7: OTs que ficaram sem fazer porque o equipamento estava em uso. */
+  emUso?: number
   ots: FinalizedWorkOrder[]
 }
 

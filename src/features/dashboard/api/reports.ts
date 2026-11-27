@@ -272,3 +272,26 @@ export function useReportExport(id: string | null) {
   const pollStopped = query.data?.status === 'pendente' && (client.getQueryState(queryKey)?.dataUpdateCount ?? 0) >= EXPORT_POLL_MAX_UPDATES
   return { ...query, pollStopped }
 }
+
+/** Story 23.7: visitas preventivas não realizadas porque o equipamento estava em uso. */
+export interface NotDoneVisitsGroup { id: string | null; nome: string; encerradas: number; naoRealizadas: number; percentual: number | null }
+export interface NotDoneVisitsEquipment { equipamentoId: string; codigo: string; nome: string; hospitalNome: string; setorNome: string; seguidas: number; ultimaEm: string }
+export interface NotDoneVisits {
+  encerradas: number
+  naoRealizadas: number
+  percentual: number | null
+  porHospital: NotDoneVisitsGroup[]
+  porSetor: NotDoneVisitsGroup[]
+  porTecnico: NotDoneVisitsGroup[]
+  /** Situação atual (sem período): 2 ou mais preventivas seguidas não realizadas, mais seguidas primeiro. */
+  emUsoSeguidas: NotDoneVisitsEquipment[]
+}
+
+/** GET /relatorios/visitas-nao-realizadas (só admin do cliente); aceita hospital e setor. */
+export function useNotDoneVisits(filters: ReportFilters) {
+  return useQuery({
+    queryKey: ['report-not-done-visits', filters],
+    queryFn: async () => (await apiClient.get<NotDoneVisits>('/relatorios/visitas-nao-realizadas', { params: filters })).data,
+    enabled: validPeriod(filters),
+  })
+}

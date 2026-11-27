@@ -18,7 +18,7 @@ import { EXPORT_BACKEND_SUPPORT } from '@/features/dashboard/components/export-b
 import { GenerateDocumentButton } from '@/features/dashboard/components/GenerateDocumentButton'
 import { SignaturesSection } from '../components/SignaturesSection'
 
-const statusLabels: Record<string, string> = { AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída', CANCELADA: 'Cancelada', CANCELADO: 'Cancelada' }
+const statusLabels: Record<string, string> = { AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída', CANCELADA: 'Cancelada', CANCELADO: 'Cancelada', NAO_REALIZADA: 'Não realizada' }
 
 function canonical(value: string) { return value.toLocaleUpperCase('pt-BR').replaceAll('Ç', 'C').replaceAll('Ã', 'A') }
 const statusTone = workOrderStatusTone
@@ -102,6 +102,11 @@ export function WorkOrderDetailPage() {
           <Metadata icon={<MapPin size={14} />} label="Local" value={order.data.local ?? '—'} />
           <Metadata icon={<ClipboardCheck size={14} />} label="Finalidade" value={finalidadeLabel(order.data.finalidade) ?? '—'} />
         </div>
+        {order.data.naoRealizada ? <div role="note" aria-label="Visita não realizada" className="mt-4 rounded-md border border-warning/40 bg-warning/5 px-4 py-3 text-xs text-text-secondary">
+          <p className="font-semibold text-text-primary">Visita não realizada: {order.data.naoRealizada.motivo === 'em_uso' ? 'equipamento em uso' : order.data.naoRealizada.motivo}</p>
+          <p className="mt-1">Encerrada em {formatDate(order.data.naoRealizada.em)}{order.data.naoRealizada.por ? ` por ${users.data?.find((user) => user.id === order.data?.naoRealizada?.por)?.nome ?? 'técnico'}` : ''}. O técnico confirmou que o equipamento estava visivelmente apto; o estado não mudou e a próxima visita segue a recorrência.</p>
+          {order.data.naoRealizada.observacao ? <p className="mt-1 break-words">Observação: {order.data.naoRealizada.observacao}</p> : null}
+        </div> : null}
       </section>
 
       <div className="grid gap-4 xl:grid-cols-2">

@@ -16,6 +16,6 @@ export const dossieEquipamentoBody = (equipamentoId: string) => ({ conteudo: DOS
 export const comprovanteChamadoBody = (chamadoId: string) => ({ conteudo: COMPROVANTE_CHAMADO_CONTEUDO, formato: 'pdf', chamadoId })
 
 export const OT_TIPO_VALUES = ['preventiva', 'corretiva'] as const
-export const OT_STATUS_VALUES = ['agendada', 'em_execucao', 'concluida', 'cancelada'] as const
+export const OT_STATUS_VALUES = ['agendada', 'em_execucao', 'concluida', 'cancelada', 'nao_realizada'] as const
 export const otTipoOptions = [{ value: 'preventiva', label: 'Preventiva' }, { value: 'corretiva', label: 'Corretiva' }]
-export const otStatusOptions = [{ value: 'agendada', label: 'Agendada' }, { value: 'em_execucao', label: 'Em execução' }, { value: 'concluida', label: 'Concluída' }, { value: 'cancelada', label: 'Cancelada' }]
+export const otStatusOptions = [{ value: 'agendada', label: 'Agendada' }, { value: 'em_execucao', label: 'Em execução' }, { value: 'concluida', label: 'Concluída' }, { value: 'cancelada', label: 'Cancelada' }, { value: 'nao_realizada', label: 'Não realizada' }]
