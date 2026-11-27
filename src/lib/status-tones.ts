@@ -29,8 +29,19 @@ export function workOrderStatusTone(status: string): BadgeVariant {
     case 'CONCLUIDO': return 'success'
     case 'CANCELADA':
     case 'CANCELADO': return 'muted'
+    // Story 23.7: encerrada sem execução porque o equipamento estava em uso (não é falha do equipamento).
+    case 'NAO_REALIZADA': return 'warning'
     default: return 'neutral'
   }
+}
+
+/** Rótulos dos status de OT (inclui NAO_REALIZADA da Story 23.7); valor desconhecido sai como texto cru. */
+export const workOrderStatusLabels: Record<string, string> = {
+  AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída',
+  CANCELADA: 'Cancelada', CANCELADO: 'Cancelada', NAO_REALIZADA: 'Não realizada',
+}
+export function workOrderStatusLabel(status: string) {
+  return workOrderStatusLabels[canonicalStatus(status)] ?? status.replaceAll('_', ' ')
 }
 
 export function severityTone(severity: string): BadgeVariant {

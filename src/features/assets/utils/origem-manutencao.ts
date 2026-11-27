@@ -23,7 +23,7 @@ export interface OrigemManutencaoEntry {
   justificativa?: string | null
 }
 
-export const workOrderStatusLabels: Record<string, string> = { AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', CONCLUIDA: 'Concluída', CANCELADA: 'Cancelada' }
+export const workOrderStatusLabels: Record<string, string> = { AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', CONCLUIDA: 'Concluída', CANCELADA: 'Cancelada', NAO_REALIZADA: 'Não realizada' }
 const workOrderTypeLabels: Record<string, string> = { PREVENTIVA: 'Preventiva', CORRETIVA: 'Corretiva' }
 
 /** Rótulo da OT no seletor: "PV-12 · Corretiva" (o status vai no selo). */

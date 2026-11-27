@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -73,6 +73,18 @@ describe('WorkOrderDetailPage', () => {
     vi.mocked(apiClient.get).mockImplementation(async (url) => (url === '/ordens-de-trabalho/order-1' ? { data: { ...order, finalidade: 'POS_REPARO' } } : { data: [] }) as never)
     render(<WorkOrderDetailPage />, { wrapper: TestProviders })
     expect(await screen.findByText('Pós-reparo')).toBeInTheDocument()
+  })
+
+  it('Story 23.7: OT não realizada mostra o selo e o encerramento (em uso, quem, quando e observação)', async () => {
+    vi.mocked(apiClient.get).mockImplementation(async (url) => (url === '/ordens-de-trabalho/order-1'
+      ? { data: { ...order, status: 'NAO_REALIZADA', naoRealizada: { em: '2026-11-20T13:00:00Z', por: 'tech-x', motivo: 'em_uso', observacao: 'Em uso na sala 2' } } }
+      : url === '/users' ? { data: [{ id: 'tech-x', codigo: 'T', nome: 'Bruno Técnico', email: 'b@x', role: 'tecnico', ativo: true }] } : { data: [] }) as never)
+    render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+    expect(await screen.findByText('Não realizada')).toBeInTheDocument()
+    const note = screen.getByRole('note', { name: 'Visita não realizada' })
+    expect(note).toHaveTextContent('Visita não realizada: equipamento em uso')
+    expect(note).toHaveTextContent('Observação: Em uso na sala 2')
+    expect(await within(note).findByText(/por Bruno Técnico/)).toBeInTheDocument()
   })
 
   it('reassigns to a technician linked to the equipment hospital and sends no status field', async () => {

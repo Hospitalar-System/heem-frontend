@@ -35,7 +35,7 @@ export function CampaignSummary({ campaign, pendingCounts }: { campaign: Campaig
     <h2 className="text-sm font-semibold text-text-primary">Resumo da campanha</h2>
     <dl className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-5">
       <Metric label="Previstas" value={execucao.totalEquipamentos} /><Metric label="Geradas" value={ots.total} /><Metric label="Concluídas" value={ots.concluidas} />
-      <Metric label="Em andamento" value={ots.emExecucao} /><Metric label="Agendadas" value={ots.agendadas} /><Metric label="Canceladas" value={ots.canceladas} />
+      <Metric label="Em andamento" value={ots.emExecucao} /><Metric label="Agendadas" value={ots.agendadas} /><Metric label="Canceladas" value={ots.canceladas} /><Metric label="Não realizadas (em uso)" value={ots.naoRealizadas ?? 0} />
       <Metric label="Atrasadas" value={ots.atrasadas} tone={ots.atrasadas > 0 ? 'danger' : undefined} /><Metric label="Puladas" value={execucao.puladas} /><Metric label="Pendências" value={execucao.pendencias} />
       <Metric label="% de execução" value={percent} />
     </dl>
