@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react'
 import { endOfSystemDay, startOfSystemDay } from '@/lib/system-day'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { useHospitals, useSectors } from '@/features/assets/api/assets'
-import { POSICAO_PARQUE_CONTEUDO, useNotDoneVisits, useQualityAnalysis, useReportBacklog, useReportIndicators, useReportPartReplacements, useReportTopEquipment, useRiskCompliance } from '../api/reports'
+import { POSICAO_PARQUE_CONTEUDO, useNotDoneVisits, useQualityAnalysis, useTicketRatings, useReportBacklog, useReportIndicators, useReportPartReplacements, useReportTopEquipment, useRiskCompliance } from '../api/reports'
 import { ReportQualityAnalysis } from '../components/ReportQualityAnalysis'
 import { ReportNotDoneVisits } from '../components/ReportNotDoneVisits'
+import { ReportTicketRatings } from '../components/ReportTicketRatings'
 import type { ReportFilters, ReportGrouping } from '../api/reports'
 import { ExportBuilder } from '../components/ExportBuilder'
 import { ReportBacklog } from '../components/ReportBacklog'
@@ -67,6 +68,7 @@ export function ReportsPage() {
   const compliance = useRiskCompliance(filters)
   const quality = useQualityAnalysis(filters)
   const notDone = useNotDoneVisits(filters)
+  const ratings = useTicketRatings(filters)
   const invalidRange = !desde || !ate || desde > ate
   const metrics = indicators.data
 
@@ -141,6 +143,10 @@ export function ReportsPage() {
         {notDone.isLoading ? <SectionSkeleton label="Carregando visitas não realizadas" /> : notDone.isError ? (
           <SectionError message={getErrorMessage(notDone.error, 'Não foi possível carregar as visitas não realizadas.')} onRetry={() => void notDone.refetch()} />
         ) : typeof notDone.data?.encerradas === 'number' && <ReportNotDoneVisits data={notDone.data} />}
+
+        {ratings.isLoading ? <SectionSkeleton label="Carregando avaliações" /> : ratings.isError ? (
+          <SectionError message={getErrorMessage(ratings.error, 'Não foi possível carregar as avaliações.')} onRetry={() => void ratings.refetch()} />
+        ) : typeof ratings.data?.quantidade === 'number' && <ReportTicketRatings data={ratings.data} />}
 
         {partReplacements.isLoading ? <SectionSkeleton label="Carregando trocas de peça" /> : partReplacements.isError ? (
           <SectionError message={getErrorMessage(partReplacements.error, 'Não foi possível carregar as trocas de peça.')} onRetry={() => void partReplacements.refetch()} />

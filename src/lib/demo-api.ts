@@ -36,6 +36,7 @@ const tickets: RecordValue[] = [
   { id: 'ticket-demo-1', hospitalId: hospitals[0].id, setorId: sectors[0].id, equipamentoId: equipment[0].id, abertoPor: 'user-demo-1', descricao: 'Leitura de SpO2 oscilando durante o monitoramento.', severidade: 'ALTA', status: 'ABERTO', abertoEm: now, slaStatus: 'em_risco', codigo: 'CH-0001', tecnicoResponsavelId: null, primeiraRespostaEm: null, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false },
   { id: 'ticket-demo-2', hospitalId: hospitals[0].id, setorId: sectors[1].id, equipamentoId: equipment[1].id, abertoPor: 'user-demo-2', descricao: 'Alarme de pressão recorrente durante o autoteste.', severidade: 'MEDIA', status: 'EM_ANDAMENTO', abertoEm: now, slaStatus: 'no_prazo', codigo: 'CH-0002', tecnicoResponsavelId: 'user-demo-2', primeiraRespostaEm: now, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: true },
 ]
+tickets.push({ id: 'ticket-demo-3', hospitalId: hospitals[0].id, setorId: sectors[0].id, equipamentoId: equipment[0].id, abertoPor: 'user-demo-2', descricao: 'Aguardando retorno do fornecedor sobre o sensor.', severidade: 'MEDIA', status: 'PAUSADO', abertoEm: now, slaStatus: 'no_prazo', codigo: 'CH-0003', tecnicoResponsavelId: 'user-demo-2', primeiraRespostaEm: now, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false, pausaMotivo: 'aguardando_fornecedor', pausaDescricao: 'Sensor em cotação', pausadoEm: now })
 const workOrders: RecordValue[] = [
   { id: 'order-demo-1', codigo: 'OT-2026-001', tipo: 'PREVENTIVA', status: 'AGENDADA', equipamentoId: equipment[0].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', local: 'UTI Adulto', dataAgendada: now, iniciadaEm: null, concluidaEm: null, atrasada: false, planoPreventivoId: 'plan-demo-1', campanhaPreventivaId: null },
   { id: 'order-demo-2', codigo: 'OT-2026-002', tipo: 'CORRETIVA', status: 'EM_EXECUCAO', equipamentoId: equipment[1].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', chamadoId: tickets[1].id, local: 'Centro Cirúrgico', dataAgendada: now, iniciadaEm: now, concluidaEm: null, atrasada: false, planoPreventivoId: null, campanhaPreventivaId: null },
@@ -255,6 +256,8 @@ const demoPreventive = { atrasadas: 2, concluidasNoPrazo: 19, concluidasForaDoPr
 
 function demoIndicators(agrupar: unknown) {
   const total = { mtbfHoras: 186, mttaHoras: 1.8, triagemHoras: 3.2, mttrHoras: 5.4, esperaPecaHoras: 12.5, slaAtendimentoPct: 94.5, slaResolucaoPct: 88.2, disponibilidadePercentual: 98.6, qtdOtsPreventivas: 24, qtdOtsCorretivas: 8, preventiva: demoPreventive }
+  // Story 29.2 (só no total): resolvidos com e sem OT e assinaturas pendentes.
+  const sinais = { chamadosResolvidosComOt: 6, chamadosResolvidosSemOt: 4, resolvidosSemOtPct: 40, assinaturasPendentes: { ots: 2, chamados: 1, campanhas: 0 } }
   const groups = agrupar === 'setor'
     ? [
       { grupoId: 'sector-demo-1', grupoNome: 'UTI Adulto', ...total, mttaHoras: 1.2, mttrHoras: 4.1, qtdOtsPreventivas: 10, qtdOtsCorretivas: 3 },
@@ -267,7 +270,7 @@ function demoIndicators(agrupar: unknown) {
         { grupoId: 'hospital-demo-2', grupoNome: 'Clínica Vital Norte', ...total, mttaHoras: 2.4, mttrHoras: 6.9, qtdOtsPreventivas: 6, qtdOtsCorretivas: 2 },
       ]
       : null
-  return { ...total, severidadesConsideradas: ['ALTA', 'CRITICA'], grupos: groups }
+  return { ...total, ...sinais, severidadesConsideradas: ['ALTA', 'CRITICA'], grupos: groups }
 }
 
 const demoBacklog = {
@@ -334,6 +337,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path === '/relatorios/top-equipamentos') return demoTopEquipment
   if (path === '/relatorios/trocas-pecas') return demoPartReplacements()
   if (path === '/relatorios/visitas-nao-realizadas') return demoNotDoneVisits
+  if (path === '/relatorios/avaliacoes-chamados') return { quantidade: 9, media: 4.4, porTecnico: [{ id: 'user-demo-2', nome: 'Bruno Técnico', quantidade: 7, media: 4.6 }, { id: null, nome: 'Sem responsável', quantidade: 2, media: 3.5 }], porHospital: [{ id: 'hospital-demo-1', nome: 'Hospital São Lucas', quantidade: 9, media: 4.4 }] }
   if (path === '/relatorios/conformidade') return ['CRITICO', 'ALTO', 'MEDIO', 'BAIXO'].map((nivelRisco, index) => ({ nivelRisco, percentualConforme: [96, 92, 98, 100][index], totalMedicoes: [25, 38, 54, 12][index] }))
   if (path === '/relatorios/exportacoes' && method === 'post') {
     const id = makeId('export')

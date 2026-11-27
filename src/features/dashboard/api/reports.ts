@@ -34,6 +34,12 @@ export interface IndicatorValues {
   qtdOtsPreventivas: number
   qtdOtsCorretivas: number
   preventiva: PreventiveIndicators
+  /** Story 29.2 (aditivo): chamados resolvidos no período com e sem OT. */
+  chamadosResolvidosComOt?: number | null
+  chamadosResolvidosSemOt?: number | null
+  resolvidosSemOtPct?: number | null
+  /** Story 29.2: finalizados no período sem a assinatura do técnico (só no total). */
+  assinaturasPendentes?: { ots: number; chamados: number; campanhas: number } | null
 }
 
 export interface IndicatorGroup extends IndicatorValues {
@@ -292,6 +298,19 @@ export function useNotDoneVisits(filters: ReportFilters) {
   return useQuery({
     queryKey: ['report-not-done-visits', filters],
     queryFn: async () => (await apiClient.get<NotDoneVisits>('/relatorios/visitas-nao-realizadas', { params: filters })).data,
+    enabled: validPeriod(filters),
+  })
+}
+
+/** Story 23.5: avaliação dos chamados pelo solicitante (nota 1 a 5). */
+export interface RatingGroup { id: string | null; nome: string; quantidade: number; media: number | null }
+export interface TicketRatings { quantidade: number; media: number | null; porTecnico: RatingGroup[]; porHospital: RatingGroup[] }
+
+/** GET /relatorios/avaliacoes-chamados (só admin do cliente); aceita hospital e setor. */
+export function useTicketRatings(filters: ReportFilters) {
+  return useQuery({
+    queryKey: ['report-ticket-ratings', filters],
+    queryFn: async () => (await apiClient.get<TicketRatings>('/relatorios/avaliacoes-chamados', { params: filters })).data,
     enabled: validPeriod(filters),
   })
 }

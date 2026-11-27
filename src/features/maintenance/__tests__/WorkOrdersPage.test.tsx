@@ -47,6 +47,19 @@ describe('WorkOrdersPage', () => {
     vi.mocked(apiClient.post).mockResolvedValue({ data: { ...orders[0], id: 'ot-new', codigo: 'OT-NEW' } } as never)
   })
 
+  it('Story 23.7: selo "Não realizada" na lista e opção no filtro de status', async () => {
+    const base = vi.mocked(apiClient.get).getMockImplementation()!
+    vi.mocked(apiClient.get).mockImplementation(async (url, config) => (url === '/ordens-de-trabalho'
+      ? { data: [{ ...orders[0], id: 'ot-nr', codigo: 'OT-NR', status: 'NAO_REALIZADA', atrasada: false }], headers: { 'x-total-count': '1' } } as never
+      : base(url, config)))
+    const user = userEvent.setup()
+    render(<WorkOrdersPage />, { wrapper: TestProviders })
+    expect(await screen.findByText('OT-NR')).toBeInTheDocument()
+    expect(screen.getByText('Não realizada')).toBeInTheDocument()
+    await chooseOption(user, 'Filtrar por status', 'Não realizada')
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/ordens-de-trabalho', expect.objectContaining({ params: expect.objectContaining({ status: 'NAO_REALIZADA' }) })))
+  })
+
   it('lists API work orders, applies filters, and links to the order detail', async () => {
     const user = userEvent.setup()
     render(<WorkOrdersPage />, { wrapper: TestProviders })
