@@ -100,9 +100,12 @@ describe('CategoriesPage', () => {
       fireEvent.change(screen.getByRole('searchbox', { name: 'Buscar categoria' }), { target: { value: 'ventilador' } })
       expect(apiClient.get).not.toHaveBeenCalledWith('/categorias-equipamento', { params: { q: 'ventilador', pagina: 0, tamanho: 25 } })
       await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+      await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { q: 'ventilador', pagina: 0, tamanho: 25 } }))
+      // Ainda com os timers falsos (que avançam sozinhos): a resposta da busca agenda a atualização da tela num timer.
+      // Voltar aos timers reais antes disso deixava esse timer falso sem rodar e a lista nunca trocava (falha
+      // intermitente, dependente da ordem dos testes).
+      expect(await screen.findByText('Mostrando 1–1 de 1')).toBeInTheDocument()
     } finally { vi.useRealTimers() }
-    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/categorias-equipamento', { params: { q: 'ventilador', pagina: 0, tamanho: 25 } }))
-    expect(await screen.findByText('Mostrando 1–1 de 1')).toBeInTheDocument()
     expect(screen.queryByText('Monitor MX')).not.toBeInTheDocument()
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
