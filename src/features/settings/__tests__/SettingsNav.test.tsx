@@ -20,7 +20,7 @@ describe('SettingsNav', () => {
     render(<MemoryRouter initialEntries={['/settings/sla-policy']}><SettingsNav /></MemoryRouter>)
     const nav = screen.getByRole('navigation', { name: 'Configurações' })
     expect(within(nav).getAllByRole('link')).toHaveLength(6)
-    expect(screen.getByRole('link', { name: 'Qualidade e reincidência' })).toHaveAttribute('href', '/settings/quality-analysis')
+    expect(screen.getByRole('link', { name: 'Regras do cliente' })).toHaveAttribute('href', '/settings/quality-analysis')
     expect(screen.getByRole('link', { name: 'Política de SLA' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Categorias' })).not.toHaveAttribute('aria-current')
     expect(screen.getByRole('link', { name: 'Usuários e papéis' })).toHaveAttribute('href', '/settings/users')

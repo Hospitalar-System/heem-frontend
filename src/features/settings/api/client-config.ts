@@ -12,6 +12,8 @@ export interface ClientConfig {
   reincidenciaChamados?: number
   /** Story 23.8 (aditivo): D de 7 a 365, padrão 90. */
   reincidenciaDias?: number
+  /** Story 29.6 (aditivo): preventiva Não apto abre o chamado sozinha; padrão false. */
+  abrirChamadoAutomatico?: boolean
 }
 
 export const JANELA_MIN = 7
@@ -60,4 +62,13 @@ export function recurrenceRuleErrorMessage(error: unknown) {
   const response = (error as { response?: { status?: number; data?: { code?: string } } } | null)?.response
   if (response?.data?.code === 'REINCIDENCIA_INVALIDA') return `Use de ${REINCIDENCIA_CHAMADOS_MIN} a ${REINCIDENCIA_CHAMADOS_MAX} chamados e de ${REINCIDENCIA_DIAS_MIN} a ${REINCIDENCIA_DIAS_MAX} dias.`
   return clientConfigErrorMessage(error)
+}
+
+/** Story 29.6: liga ou desliga a abertura automática do chamado da preventiva Não apto (só admin). */
+export function useSaveAutoOpenTicket() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (abrirChamadoAutomatico: boolean) => (await apiClient.put<ClientConfig>('/configuracao-cliente', { abrirChamadoAutomatico })).data,
+    onSuccess: (config) => queryClient.setQueryData(clientConfigKey, config),
+  })
 }

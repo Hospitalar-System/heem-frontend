@@ -17,6 +17,7 @@ import { laudoOtBody } from '@/features/dashboard/api/documents'
 import { EXPORT_BACKEND_SUPPORT } from '@/features/dashboard/components/export-builder-model'
 import { GenerateDocumentButton } from '@/features/dashboard/components/GenerateDocumentButton'
 import { SignaturesSection } from '../components/SignaturesSection'
+import { SuggestedTicketCard } from '../components/SuggestedTicketCard'
 
 const statusLabels: Record<string, string> = { AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída', CANCELADA: 'Cancelada', CANCELADO: 'Cancelada', NAO_REALIZADA: 'Não realizada' }
 
@@ -108,6 +109,8 @@ export function WorkOrderDetailPage() {
           {order.data.naoRealizada.observacao ? <p className="mt-1 break-words">Observação: {order.data.naoRealizada.observacao}</p> : null}
         </div> : null}
       </section>
+
+      <SuggestedTicketCard order={order.data} canOpen={roles.includes('admin_cliente') || roles.includes('tecnico')} />
 
       <div className="grid gap-4 xl:grid-cols-2">
         <section aria-labelledby="checklist-title" className="rounded-lg border border-border bg-surface p-5">

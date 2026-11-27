@@ -1,3 +1,4 @@
+import { pauseReasonLabel, pausedFor } from '../utils/pausa'
 import { AlertTriangle, ArrowUpRight, ClipboardPlus, Search, X } from 'lucide-react'
 import { useMemo, useState, useSyncExternalStore } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -158,7 +159,7 @@ export function TicketsPage() {
       <p title={ticket.descricao || undefined} className="mt-0.5 line-clamp-2 text-xs leading-5 text-text-secondary">{ticket.descricao || 'Sem descrição'}</p>
     </> },
     { key: 'severidade', header: 'Severidade', cell: (ticket) => <StatusBadge tone={severityTone(ticket.severidade)}>{severityText[ticket.severidade] ?? 'Severidade não informada'}</StatusBadge> },
-    { key: 'status', header: 'Status', cell: (ticket) => { const status = canonicalStatus(ticket.status); return <StatusBadge tone={ticketStatusTone(ticket.status)}>{statusText[status] ?? ticket.status}</StatusBadge> } },
+    { key: 'status', header: 'Status', cell: (ticket) => { const status = canonicalStatus(ticket.status); return <><StatusBadge tone={ticketStatusTone(ticket.status)}>{statusText[status] ?? ticket.status}</StatusBadge>{status === 'PAUSADO' ? <span className="mt-1 block text-[11px] text-text-muted">{pauseReasonLabel(ticket.pausaMotivo)}{ticket.pausadoEm ? ` · parado ${pausedFor(ticket.pausadoEm)}` : ''}{ticket.pausadoPorNome ? ` · por ${ticket.pausadoPorNome}` : ''}</span> : null}</> } },
     { key: 'sla', header: 'SLA', cell: (ticket) => ticket.slaStatus ? <TicketSlaBadge status={ticket.slaStatus} /> : <span className="text-text-muted" aria-label="Sem SLA">—</span> },
     { key: 'equipamento', header: 'Equipamento', menuLabel: 'Equipamento e local', className: 'w-full min-w-[160px] max-w-0', cell: (ticket) => {
       const equip = equipmentById.get(ticket.equipamentoId)

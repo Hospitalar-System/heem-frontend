@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useTenantUsers } from '@/features/tenants-users/api/users'
 import { SettingsNav } from '../components/SettingsNav'
 import { RecurrenceRuleSection } from '../components/RecurrenceRuleSection'
+import { AutoOpenTicketSection } from '../components/AutoOpenTicketSection'
 import { clientConfigErrorMessage, JANELA_MAX, JANELA_MIN, JANELA_PADRAO, useClientConfig, useSaveClientConfig } from '../api/client-config'
 
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
@@ -34,7 +35,7 @@ export function QualityWindowPage() {
     save.mutate(parsed, { onSuccess: () => toast.success('Janela salva. Vale para os próximos cálculos.') })
   }
 
-  return <AdminPageShell tabs={<SettingsNav />} title="Qualidade e reincidência" subtitle="Janela da qualidade da análise e regra do selo de reincidência">
+  return <AdminPageShell tabs={<SettingsNav />} title="Regras do cliente" subtitle="Qualidade da análise, selo de reincidência e chamado da preventiva Não apto">
     <div className="mx-auto max-w-3xl space-y-4">
       <section className="rounded-lg border border-border bg-surface p-4 md:p-5">
         <div className="mb-4">
@@ -66,6 +67,8 @@ export function QualityWindowPage() {
       </section>
       {/* Story 23.8: só aparece quando o backend já devolve a regra (contrato aditivo). */}
       {typeof config.data?.reincidenciaChamados === 'number' ? <RecurrenceRuleSection config={config.data} /> : null}
+      {/* Story 29.6: só aparece quando o backend já devolve a opção. */}
+      {typeof config.data?.abrirChamadoAutomatico === 'boolean' ? <AutoOpenTicketSection config={config.data} /> : null}
     </div>
   </AdminPageShell>
 }
