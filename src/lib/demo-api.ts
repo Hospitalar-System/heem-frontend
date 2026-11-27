@@ -22,6 +22,11 @@ const equipment: RecordValue[] = [
   { id: 'equipment-demo-2', setorId: 'sector-demo-2', codigo: 'EQ-1002', nome: 'Ventilador pulmonar', categoriaId: 'category-demo-2', categoriaNome: 'Ventilador Pulmonar', modelo: 'Vento 4', numeroSerie: 'DEMO-V4-02', marca: 'MedTech', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'EM_MANUTENCAO', descricaoEstado: 'Aguardando troca da válvula expiratória', estadoAtualizadoEm: '2026-11-08T14:20:00Z', criticidade: 'ALTA', tipoProtecao: 'CLASSE_I', parteAplicada: 'TIPO_BF', modoOperacao: 'CONTINUO', dataInstalacao: '2023-08-10', dataGarantiaFim: '2026-08-10', nivelRisco: 'MEDIO' },
   { id: 'equipment-demo-3', setorId: 'sector-demo-3', codigo: 'EQ-1003', nome: 'Desfibrilador', categoriaId: null, categoriaNome: null, modelo: 'Heart 2', numeroSerie: 'DEMO-H2-03', marca: 'CardioCare', fotoUrl: null, dadosGerais: {}, classeRiscoAnvisa: 'III', statusCicloVida: 'NAO_APTO', descricaoEstado: 'Falha no teste de carga da bateria', estadoAtualizadoEm: '2026-11-10T09:05:00Z', criticidade: 'ALTA', tipoProtecao: 'CLASSE_II', parteAplicada: 'TIPO_BF', modoOperacao: 'INTERMITENTE', dataInstalacao: '2024-01-20', dataGarantiaFim: '2027-01-20', nivelRisco: 'BAIXO' },
 ]
+/** Movimentações de exemplo (Stories 24.2/24.5): uma com tipo e uma anterior à 24.5, sem tipo ("Não informado"). */
+const movements: RecordValue[] = [
+  { id: 'mov-demo-1', equipamentoId: 'equipment-demo-1', movimentadoEm: '2026-11-04T13:30:00Z', setorOrigemId: 'sector-demo-2', setorOrigemNome: 'Centro Cirúrgico', hospitalOrigemId: 'hospital-demo-1', hospitalOrigemNome: 'Hospital São Lucas', setorDestinoId: 'sector-demo-1', setorDestinoNome: 'UTI Adulto', hospitalDestinoId: 'hospital-demo-1', hospitalDestinoNome: 'Hospital São Lucas', movimentadoPor: 'user-demo-2', movimentadoPorNome: 'Rafael Costa', motivo: 'Leito novo da UTI, empréstimo até a chegada do monitor próprio', tipoMotivo: 'emprestimo', clientId: null },
+  { id: 'mov-demo-0', equipamentoId: 'equipment-demo-1', movimentadoEm: '2026-09-18T10:00:00Z', setorOrigemId: 'sector-demo-3', setorOrigemNome: 'Emergência', hospitalOrigemId: 'hospital-demo-2', hospitalOrigemNome: 'Clínica Vital Norte', setorDestinoId: 'sector-demo-2', setorDestinoNome: 'Centro Cirúrgico', hospitalDestinoId: 'hospital-demo-1', hospitalDestinoNome: 'Hospital São Lucas', movimentadoPor: 'user-demo-1', movimentadoPorNome: 'Clara Mendes', motivo: 'Remanejamento entre unidades', tipoMotivo: null, clientId: null },
+]
 const categories: RecordValue[] = [
   { id: 'category-demo-1', nome: 'Monitor Multiparamétrico', ativa: true, checklistPadraoId: 'checklist-demo-1', origem: 'manual', revisada: true },
   { id: 'category-demo-2', nome: 'Ventilador Pulmonar', ativa: true, checklistPadraoId: null, origem: 'carga', revisada: false },
@@ -192,7 +197,7 @@ export const demoApiAdapter: AxiosAdapter = async (config) => {
 
 /** Rotas que o backend pagina (`pagina` 0-based + `tamanho`, total em X-Total-Count). */
 const PAGINATED_PATHS = new Set(['/chamados', '/ordens-de-trabalho', '/users', '/hospitais', '/planos-preventivos', '/campanhas-preventivas', '/checklists', '/equipamentos', '/categorias-equipamento'])
-const PAGINATED_PATTERNS = [/^\/equipamentos\/[^/]+\/historico-estado$/, /^\/hospitais\/[^/]+\/setores$/, /^\/equipamentos\/[^/]+\/documentos$/, /^\/equipamentos\/[^/]+\/execucoes-checklist$/]
+const PAGINATED_PATTERNS = [/^\/equipamentos\/[^/]+\/historico-estado$/, /^\/equipamentos\/[^/]+\/movimentacoes$/, /^\/hospitais\/[^/]+\/setores$/, /^\/equipamentos\/[^/]+\/documentos$/, /^\/equipamentos\/[^/]+\/execucoes-checklist$/]
 
 const SEVERITY_RANK: Record<string, number> = { CRITICA: 0, ALTA: 1, MEDIA: 2, BAIXA: 3 }
 const SORTABLE: Record<string, string[]> = {
@@ -381,6 +386,30 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     if (!record) throw demoProblem(404, { code: 'EQUIPAMENTO_NAO_ENCONTRADO' })
     return changeEquipmentState(record, body)
   }
+  // Stories 24.1/24.2/24.5: transferência (idempotente por clientId) e histórico de movimentações.
+  const transferMatch = path.match(/^\/equipamentos\/([^/]+)\/transferencias$/)
+  if (transferMatch && method === 'post') {
+    const record = equipment.find((item) => item.id === transferMatch[1])
+    if (!record) throw demoProblem(404, { code: 'EQUIPAMENTO_NAO_ENCONTRADO' })
+    const repetida = movements.find((item) => item.clientId && item.clientId === body.clientId)
+    if (repetida) return repetida
+    if (body.setorDestinoId === record.setorId) throw demoProblem(400, { code: 'DESTINO_IGUAL_ORIGEM' })
+    const origem = sectors.find((item) => item.id === record.setorId)
+    const destino = sectors.find((item) => item.id === body.setorDestinoId)
+    if (!destino) throw demoProblem(404, { code: 'SETOR_NAO_ENCONTRADO' })
+    const hospitalNome = (id: unknown) => hospitals.find((item) => item.id === id)?.nome ?? null
+    const entry = {
+      id: makeId('mov'), equipamentoId: record.id, movimentadoEm: (body.movimentadoEm as string | undefined) ?? new Date().toISOString(),
+      setorOrigemId: record.setorId ?? null, setorOrigemNome: origem?.nome ?? null, hospitalOrigemId: origem?.hospitalId ?? null, hospitalOrigemNome: hospitalNome(origem?.hospitalId),
+      setorDestinoId: destino.id, setorDestinoNome: destino.nome, hospitalDestinoId: destino.hospitalId, hospitalDestinoNome: hospitalNome(destino.hospitalId),
+      movimentadoPor: getAuthState().user?.id ?? null, movimentadoPorNome: getAuthState().user?.name ?? null, motivo: body.motivo ?? null, tipoMotivo: body.tipoMotivo ?? 'outro', clientId: body.clientId ?? null,
+    }
+    movements.push(entry)
+    record.setorId = destino.id
+    return entry
+  }
+  const movementsMatch = path.match(/^\/equipamentos\/([^/]+)\/movimentacoes$/)
+  if (movementsMatch && method === 'get') return movements.filter((item) => item.equipamentoId === movementsMatch[1]).sort((a, b) => String(b.movimentadoEm).localeCompare(String(a.movimentadoEm))).map(({ equipamentoId, clientId, ...entry }) => { void equipamentoId; void clientId; return entry })
   const stateHistoryMatch = path.match(/^\/equipamentos\/([^/]+)\/historico-estado$/)
   if (stateHistoryMatch && method === 'get') return stateHistory.filter((item) => item.equipamentoId === stateHistoryMatch[1]).sort((a, b) => String(b.alteradoEm).localeCompare(String(a.alteradoEm))).map(({ equipamentoId, ...entry }) => { void equipamentoId; return entry })
   const equipmentUpdate = path.match(/^\/equipamentos\/([^/]+)$/)
