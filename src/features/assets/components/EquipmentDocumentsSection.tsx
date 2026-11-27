@@ -16,7 +16,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { usePageClamp, usePaginationParams } from '@/hooks/usePaginationParams'
 
 const documentTypeNames: Record<DocumentType, string> = {
-  MANUAL: 'Manual', CERTIFICADO_CALIBRACAO: 'Certificado de calibração', LAUDO_SEGURANCA: 'Laudo de segurança', NOTA_FISCAL: 'Nota fiscal', DOCUMENTO_BAIXA: 'Documento de baixa', OUTRO: 'Outro',
+  MANUAL: 'Manual', CERTIFICADO_CALIBRACAO: 'Certificado de calibração', LAUDO_SEGURANCA: 'Laudo de segurança', NOTA_FISCAL: 'Nota fiscal', DOCUMENTO_BAIXA: 'Documento de baixa', LAUDO_OBSOLESCENCIA: 'Laudo de obsolescência', OUTRO: 'Outro',
 }
 const typeOptions = (Object.keys(documentTypeNames) as DocumentType[]).map((value) => ({ value, label: documentTypeNames[value] }))
 const fieldLabel = 'grid gap-1.5 text-xs font-medium text-text-secondary'

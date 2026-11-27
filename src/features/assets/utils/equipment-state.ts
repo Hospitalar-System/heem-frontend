@@ -5,6 +5,7 @@ export const equipmentStateLabels: Record<EquipmentState, string> = {
   ATIVO: 'Apto',
   NAO_APTO: 'Não apto',
   EM_MANUTENCAO: 'Em manutenção',
+  OBSOLETO: 'Obsoleto',
   DESATIVADO: 'Desativado',
   INATIVO: 'Inativo',
   DESCARTADO: 'Descartado',
@@ -12,7 +13,8 @@ export const equipmentStateLabels: Record<EquipmentState, string> = {
 
 export const DESCRIPTION_MAX = 200
 /** Escolha rápida: disponível para técnico e admin. */
-export const QUICK_STATES: readonly EquipmentState[] = ['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO', 'DESATIVADO']
+/** Story 23.6: Obsoleto (com laudo) também é escolha do técnico e do admin. */
+export const QUICK_STATES: readonly EquipmentState[] = ['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO', 'OBSOLETO', 'DESATIVADO']
 /** Só admin: fora da escolha rápida. */
 export const ADMIN_ONLY_STATES: readonly EquipmentState[] = ['INATIVO', 'DESCARTADO']
 
@@ -46,6 +48,7 @@ export function changeStateErrorMessage(error: unknown): string {
     case 'DESCRICAO_OBRIGATORIA': return 'Informe a descrição: ela é obrigatória para Em manutenção.'
     case 'ACESSO_NEGADO': return 'Seu perfil não pode colocar o equipamento neste estado.'
     case 'TRANSICAO_INVALIDA': return 'Este equipamento foi descartado e não pode mais mudar de estado.'
+    case 'LAUDO_OBSOLESCENCIA_OBRIGATORIO': return 'Anexe o laudo de obsolescência antes de marcar o equipamento como Obsoleto.'
     case 'ORIGEM_OBRIGATORIA': return 'Informe a origem da manutenção: a OT vinculada ou a justificativa.'
     case 'OT_DE_OUTRO_EQUIPAMENTO': return 'A OT escolhida não é deste equipamento. Escolha uma OT do próprio equipamento.'
     case 'FORNECEDOR_OBRIGATORIO': return 'Informe o fornecedor: ele é obrigatório na manutenção externa.'

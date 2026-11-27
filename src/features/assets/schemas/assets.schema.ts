@@ -20,7 +20,7 @@ export const equipmentSchema = z.object({
   marca: z.string(),
   dadosGerais: z.array(z.object({ key: z.string(), value: z.string() })),
   classeRiscoAnvisa: z.enum(['I', 'II', 'III', 'IV']),
-  statusCicloVida: z.enum(['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']),
+  statusCicloVida: z.enum(['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO', 'OBSOLETO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']),
   criticidade: z.enum(['ALTA', 'MEDIA', 'BAIXA']),
   tipoProtecao: z.enum(['CLASSE_I', 'CLASSE_II', 'ALIMENTACAO_INTERNA']),
   parteAplicada: z.enum(['TIPO_B', 'TIPO_BF', 'TIPO_CF']),
@@ -78,7 +78,7 @@ export function toEquipmentInput(values: EquipmentFormValues, fotoUrl: string | 
   }
 }
 
-export const documentTypes = ['MANUAL', 'CERTIFICADO_CALIBRACAO', 'LAUDO_SEGURANCA', 'NOTA_FISCAL', 'DOCUMENTO_BAIXA', 'OUTRO'] as const
+export const documentTypes = ['MANUAL', 'CERTIFICADO_CALIBRACAO', 'LAUDO_SEGURANCA', 'NOTA_FISCAL', 'DOCUMENTO_BAIXA', 'LAUDO_OBSOLESCENCIA', 'OUTRO'] as const
 // O backend não limita tamanho/tipo do documento; este teto é só uma proteção do cliente.
 export const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024
 

@@ -19,7 +19,8 @@ export interface HospitalMetrics { setores: number; equipamentos: number; ordens
 export interface EquipamentoResumo { id: string }
 export interface OrdemResumo { equipamentoId: string; dataAgendada: string; status: 'AGENDADA' | 'EM_EXECUCAO' }
 
-export type EquipmentLifecycle = 'ATIVO' | 'NAO_APTO' | 'EM_MANUTENCAO' | 'INATIVO' | 'DESATIVADO' | 'DESCARTADO'
+/** OBSOLETO: Story 23.6 (condenado por laudo, ainda em uso; fica no parque). */
+export type EquipmentLifecycle = 'ATIVO' | 'NAO_APTO' | 'EM_MANUTENCAO' | 'OBSOLETO' | 'INATIVO' | 'DESATIVADO' | 'DESCARTADO'
 /** Estado do equipamento (contrato heem-backend#208): mesmo enum do ciclo de vida, por nome no JSON. */
 export type EquipmentState = EquipmentLifecycle
 export type EquipmentRiskClass = 'I' | 'II' | 'III' | 'IV'
@@ -199,7 +200,7 @@ export interface EquipmentPageFilters extends EquipmentFilters {
   direcao?: 'asc' | 'desc'
 }
 
-export type DocumentType = 'MANUAL' | 'CERTIFICADO_CALIBRACAO' | 'LAUDO_SEGURANCA' | 'NOTA_FISCAL' | 'DOCUMENTO_BAIXA' | 'OUTRO'
+export type DocumentType = 'MANUAL' | 'CERTIFICADO_CALIBRACAO' | 'LAUDO_SEGURANCA' | 'NOTA_FISCAL' | 'DOCUMENTO_BAIXA' | 'LAUDO_OBSOLESCENCIA' | 'OUTRO'
 
 export interface EquipmentDocument {
   id: string

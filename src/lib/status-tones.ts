@@ -53,6 +53,8 @@ export function equipmentStateTone(state: string): BadgeVariant {
     case 'ATIVO': return 'success'
     case 'NAO_APTO': return 'danger'
     case 'EM_MANUTENCAO': return 'warning'
+    // Story 23.6: condenado por laudo, ainda em uso.
+    case 'OBSOLETO': return 'danger'
     case 'INATIVO':
     case 'DESCARTADO': return 'muted'
     default: return 'neutral'
