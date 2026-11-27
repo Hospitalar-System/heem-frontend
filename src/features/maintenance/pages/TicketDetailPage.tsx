@@ -1,3 +1,4 @@
+import { pauseReasonLabel, pausedFor, PAUSE_REASONS_STOP_SLA, timelineLabel } from '../utils/pausa'
 import { AlertTriangle, ArrowLeft, CalendarClock, ClipboardPlus, MapPin, UserRound } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode, type RefObject } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -108,9 +109,10 @@ export function TicketDetailPage() {
   const hasResponsible = Boolean(ticket.data?.tecnicoResponsavelId)
   const canAssume = isTechnician && normalizedStatus === 'ABERTO' && !hasResponsible
   const canHold = isStaff && normalizedStatus === 'EM_ANDAMENTO'
-  const canResume = isStaff && normalizedStatus === 'AGUARDANDO_PECA'
+  // Story 29.3: de PAUSADO o PUT /status só retoma (em_andamento) ou cancela; pausar é só pelo app.
+  const canResume = isStaff && (normalizedStatus === 'AGUARDANDO_PECA' || normalizedStatus === 'PAUSADO')
   const canResolve = isStaff && normalizedStatus === 'EM_ANDAMENTO'
-  const canCancel = isStaff && (normalizedStatus === 'ABERTO' || normalizedStatus === 'EM_ANDAMENTO')
+  const canCancel = isStaff && (normalizedStatus === 'ABERTO' || normalizedStatus === 'EM_ANDAMENTO' || normalizedStatus === 'PAUSADO')
   const canAssign = isAdmin && ['ABERTO', 'EM_ANDAMENTO', 'AGUARDANDO_PECA'].includes(normalizedStatus)
   const canReopen = isAdmin && normalizedStatus === 'RESOLVIDO'
   const isClosed = normalizedStatus === 'RESOLVIDO' || normalizedStatus === 'CANCELADO'
@@ -280,7 +282,15 @@ export function TicketDetailPage() {
           <Metadata icon={<UserRound size={15} />} label="Aberto por" value={actor.data?.nome ?? (isAdmin && actor.isLoading ? 'Carregando…' : ticket.data.abertoPor)} />
           <Metadata icon={<AlertTriangle size={15} />} label="Equipamento" value={equipment.data ? `${equipment.data.codigo} · ${equipment.data.nome}` : ticket.data.equipamentoId} />
         </div>
+        {ticket.data.otOrigemId ? <p className="mt-4 text-xs text-text-secondary">Aberto a partir da preventiva que saiu Não apto: <Link to={`/work-orders/${ticket.data.otOrigemId}`} className="font-medium text-primary underline">abrir OT de origem</Link>{ticket.data.abertoAutomaticamente ? <span className="ml-2"><Badge variant="info" outline>Aberto automaticamente</Badge></span> : null}</p> : null}
       </section>
+
+      {normalizedStatus === 'PAUSADO' ? <section aria-label="Atendimento pausado" className="rounded-lg border border-warning/40 bg-warning/5 px-5 py-4 text-xs text-text-secondary">
+        <h3 className="text-sm font-semibold text-text-primary">Atendimento pausado: {pauseReasonLabel(ticket.data.pausaMotivo)}</h3>
+        <p className="mt-1">{ticket.data.pausadoEm ? `Desde ${formatDate(ticket.data.pausadoEm)} (${pausedFor(ticket.data.pausadoEm) ?? ''})${ticket.data.pausadoPorNome ? `, por ${ticket.data.pausadoPorNome}` : ''}.` : 'Sem a data da pausa.'} {ticket.data.pausaMotivo && PAUSE_REASONS_STOP_SLA.includes(ticket.data.pausaMotivo) ? 'Esta pausa não conta no prazo de resolução.' : 'Esta pausa conta no prazo de resolução.'}</p>
+        {ticket.data.pausaDescricao ? <p className="mt-1 break-words">Descrição: {ticket.data.pausaDescricao}</p> : null}
+        <p className="mt-1 text-[11px] text-text-muted">O técnico retoma o atendimento pelo app.</p>
+      </section> : null}
 
       {ticket.data.slaStatus && <section aria-label="Prazos de SLA" className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface px-5 py-4">
         <div>
@@ -306,8 +316,8 @@ export function TicketDetailPage() {
         </div>
 
         <section aria-labelledby="history-title" className="rounded-lg border border-border bg-surface p-5">
-          <div className="flex items-center justify-between gap-3"><div><h3 id="history-title" className="text-sm font-semibold text-text-primary">Histórico</h3><p className="mt-1 text-xs text-text-muted">Eventos registrados pela API</p></div>{history.isError && <button type="button" onClick={() => void history.refetch()} className="text-xs font-medium text-primary hover:underline">Tentar novamente</button>}</div>
-          {history.isLoading ? <div aria-label="Carregando histórico" aria-busy="true" className="mt-5 space-y-4"><span className="sr-only">Carregando histórico.</span>{[0, 1, 2].map((item) => <div key={item} className="h-12 animate-pulse rounded bg-bg" />)}</div> : history.isError ? <p role="alert" className="mt-5 text-xs text-danger">Não foi possível carregar o histórico.</p> : history.data?.length ? <ol className="mt-5 space-y-0">{[...history.data].sort((a, b) => Date.parse(a.ocorridoEm) - Date.parse(b.ocorridoEm)).map((item, index) => <li key={`${item.ocorridoEm}-${item.acao}-${index}`} className="relative flex gap-3 pb-5 last:pb-0"><span aria-hidden="true" className="relative mt-1 flex size-3 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-surface after:absolute after:top-[10px] after:h-[calc(100%+12px)] after:w-px after:bg-border last:after:hidden" /><div className="min-w-0"><p className="text-xs font-medium text-text-primary">{actionLabel[item.acao] ?? item.acao.replaceAll('_', ' ').toLocaleLowerCase('pt-BR')}</p><p className="mt-1 text-[11px] text-text-muted">{item.atorId ? `Usuário ${item.atorId}` : 'Sistema'} · {formatDate(item.ocorridoEm)}</p></div></li>)}</ol> : <p className="mt-5 rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-text-muted">Nenhum evento de histórico foi retornado.</p>}
+          <div className="flex items-center justify-between gap-3"><div><h3 id="history-title" className="text-sm font-semibold text-text-primary">Linha do tempo</h3><p className="mt-1 text-xs text-text-muted">Abertura, início, pausas, retomadas e resolução</p></div>{history.isError && <button type="button" onClick={() => void history.refetch()} className="text-xs font-medium text-primary hover:underline">Tentar novamente</button>}</div>
+          {history.isLoading ? <div aria-label="Carregando histórico" aria-busy="true" className="mt-5 space-y-4"><span className="sr-only">Carregando histórico.</span>{[0, 1, 2].map((item) => <div key={item} className="h-12 animate-pulse rounded bg-bg" />)}</div> : history.isError ? <p role="alert" className="mt-5 text-xs text-danger">Não foi possível carregar o histórico.</p> : history.data?.length ? <ol className="mt-5 space-y-0">{[...history.data].sort((a, b) => Date.parse(a.ocorridoEm) - Date.parse(b.ocorridoEm)).map((item, index) => <li key={`${item.ocorridoEm}-${item.acao}-${index}`} className="relative flex gap-3 pb-5 last:pb-0"><span aria-hidden="true" className="relative mt-1 flex size-3 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-surface after:absolute after:top-[10px] after:h-[calc(100%+12px)] after:w-px after:bg-border last:after:hidden" /><div className="min-w-0"><p className="text-xs font-medium text-text-primary">{timelineLabel(item, actionLabel)}</p>{item.statusNovo === 'PAUSADO' && item.pausaDescricao ? <p className="mt-0.5 break-words text-[11px] text-text-secondary">{item.pausaDescricao}</p> : null}<p className="mt-1 text-[11px] text-text-muted">{item.atorNome ?? (item.atorId ? `Usuário ${item.atorId}` : 'Sistema')} · {formatDate(item.ocorridoEm)}</p></div></li>)}</ol> : <p className="mt-5 rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-text-muted">Nenhum evento de histórico foi retornado.</p>}
         </section>
       </section>
 

@@ -129,13 +129,45 @@ describe('TicketDetailPage', () => {
       expect(within(care).getByText('Falha mecânica')).toBeInTheDocument()
     })
 
-    it('pausado (Story 29.3): mostra "Pausado" e não oferece ações de status', async () => {
+    it('pausado (Stories 29.3 e 29.5): cartão com motivo, desde quando e quem pausou; só retomar ou cancelar', async () => {
       loginAs('admin_cliente')
-      mockTicket({ status: 'PAUSADO', tecnicoResponsavelId: 'tech-1', pausaMotivo: 'aguardando_fornecedor', pausaDescricao: 'Peça em cotação', pausadoEm: '2026-10-14T12:00:00Z' })
+      mockTicket({ status: 'PAUSADO', tecnicoResponsavelId: 'tech-1', pausaMotivo: 'aguardando_orcamento', pausaDescricao: 'Orçamento da placa', pausadoEm: '2026-10-14T12:00:00Z', pausadoPorId: 'tech-1', pausadoPorNome: 'Rafael' })
       render(<TicketDetailPage />, { wrapper: TestProviders })
       expect(await screen.findByText('Pausado')).toBeInTheDocument()
+      const card = screen.getByRole('region', { name: 'Atendimento pausado' })
+      expect(card).toHaveTextContent('Atendimento pausado: Aguardando orçamento')
+      expect(card).toHaveTextContent('por Rafael')
+      expect(card).toHaveTextContent('Esta pausa não conta no prazo de resolução.')
+      expect(card).toHaveTextContent('Descrição: Orçamento da placa')
       const names = buttonNames()
-      for (const action of ['Aguardando peça', 'Peça chegou', 'Resolver', 'Cancelar chamado', 'Reabrir chamado']) expect(names).not.toContain(action)
+      expect(names).toContain('Retomar atendimento')
+      expect(names).toContain('Cancelar chamado')
+      for (const action of ['Aguardando peça', 'Resolver', 'Reabrir chamado']) expect(names).not.toContain(action)
+    })
+
+    it('Story 29.5: a linha do tempo nomeia início, pausa com motivo, retomada e resolução', async () => {
+      loginAs('admin_cliente')
+      mockTicket({ status: 'RESOLVIDO' })
+      const base = vi.mocked(apiClient.get).getMockImplementation()!
+      vi.mocked(apiClient.get).mockImplementation(async (url, config) => (url === '/chamados/ticket-12345678/historico' ? { data: [
+        { acao: 'ABRIR_CHAMADO', atorId: 'u1', atorNome: 'Clara', ocorridoEm: '2026-10-14T10:00:00Z' },
+        { acao: 'TRANSICIONAR_CHAMADO', atorId: 't1', atorNome: 'Rafael', ocorridoEm: '2026-10-14T10:10:00Z', statusAnterior: 'ABERTO', statusNovo: 'EM_ANDAMENTO' },
+        { acao: 'TRANSICIONAR_CHAMADO', atorId: 't1', atorNome: 'Rafael', ocorridoEm: '2026-10-14T11:00:00Z', statusAnterior: 'EM_ANDAMENTO', statusNovo: 'PAUSADO', pausaMotivo: 'fornecedor_externo', pausaDescricao: 'Sensor na assistência' },
+        { acao: 'TRANSICIONAR_CHAMADO', atorId: 't1', atorNome: 'Rafael', ocorridoEm: '2026-10-15T09:00:00Z', statusAnterior: 'PAUSADO', statusNovo: 'EM_ANDAMENTO' },
+        { acao: 'TRANSICIONAR_CHAMADO', atorId: 't1', atorNome: 'Rafael', ocorridoEm: '2026-10-15T12:00:00Z', statusAnterior: 'EM_ANDAMENTO', statusNovo: 'RESOLVIDO' },
+      ] } as never : base(url, config)))
+      render(<TicketDetailPage />, { wrapper: TestProviders })
+      const timeline = await screen.findByRole('region', { name: 'Linha do tempo' })
+      for (const label of ['Atendimento iniciado', 'Atendimento pausado: Fornecedor externo', 'Sensor na assistência', 'Atendimento retomado', 'Chamado resolvido']) expect(await within(timeline).findByText(label)).toBeInTheDocument()
+      expect(within(timeline).getAllByText(/^Rafael ·/).length).toBe(4)
+    })
+
+    it('Story 29.6: mostra a OT de origem e se foi aberto automaticamente', async () => {
+      loginAs('admin_cliente')
+      mockTicket({ otOrigemId: 'ot-77', abertoAutomaticamente: true })
+      render(<TicketDetailPage />, { wrapper: TestProviders })
+      expect(await screen.findByRole('link', { name: 'abrir OT de origem' })).toHaveAttribute('href', '/work-orders/ot-77')
+      expect(screen.getByText('Aberto automaticamente')).toBeInTheDocument()
     })
 
     it('lets a technician assume an open ticket without responsible and hides admin-only actions', async () => {

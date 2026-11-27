@@ -85,3 +85,23 @@ describe('Equipamentos reincidentes (Story 23.8)', () => {
     expect(screen.getByText('Nenhum equipamento reincidente para os filtros selecionados.')).toBeInTheDocument()
   })
 })
+
+describe('Espera por motivo de pausa (29.3) e chamados de preventiva (29.6)', () => {
+  const base = { mtbfHoras: 1, mttaHoras: 1, triagemHoras: 1, mttrHoras: 1, esperaPecaHoras: 1, slaAtendimentoPct: 90, slaResolucaoPct: 90, disponibilidadePercentual: 99, qtdOtsPreventivas: 1, qtdOtsCorretivas: 1, preventiva: { atrasadas: 0, concluidasNoPrazo: 0, concluidasForaDoPrazo: 0, percentualNoPrazo: null, canceladas: 0 }, severidadesConsideradas: [] } as ReportIndicators
+
+  it('mostra a tabela de espera por motivo e os chamados de preventiva manuais e automáticos', () => {
+    render(<ReportIndicatorCards metrics={{ ...base, esperaPorMotivo: [{ motivo: 'aguardando_orcamento', chamados: 2, horasTotais: 52, horasMedias: 26 }], chamadosDePreventiva: { manuais: 2, automaticos: 1 } }} />)
+    const wait = screen.getByRole('table', { name: 'Espera por motivo de pausa' })
+    expect(within(wait).getAllByRole('row')[1]).toHaveTextContent('Aguardando orçamento')
+    expect(screen.getByRole('group', { name: 'Chamados de preventiva: automáticos' })).toHaveTextContent('1')
+  })
+
+  it('lista vazia mostra a mensagem; backend antigo não mostra as seções', () => {
+    const { unmount } = render(<ReportIndicatorCards metrics={{ ...base, esperaPorMotivo: [] }} />)
+    expect(screen.getByText('Nenhum chamado pausado no período.')).toBeInTheDocument()
+    unmount()
+    render(<ReportIndicatorCards metrics={base} />)
+    expect(screen.queryByRole('region', { name: 'Espera por motivo de pausa' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Chamados de preventiva Não apto' })).not.toBeInTheDocument()
+  })
+})

@@ -1,3 +1,4 @@
+import { pauseReasonLabel } from '@/features/maintenance/utils/pausa'
 import type { ReportIndicators } from '../api/reports'
 import { formatCount, reportGlossary, formatHours, formatPercent } from './report-format'
 
@@ -55,6 +56,20 @@ export function ReportIndicatorCards({ metrics }: { metrics: ReportIndicators })
           <Stat label="Assinaturas pendentes: chamados" value={formatCount(metrics.assinaturasPendentes.chamados)} />
           <Stat label="Assinaturas pendentes: campanhas" value={formatCount(metrics.assinaturasPendentes.campanhas)} />
         </>}
+      </section>}
+
+      {metrics.chamadosDePreventiva && <section aria-label="Chamados de preventiva Não apto" className="flex flex-wrap items-center gap-6 rounded-lg border border-border bg-surface px-5 py-4">
+        <Stat label="Chamados de preventiva: abertos à mão" value={formatCount(metrics.chamadosDePreventiva.manuais)} />
+        <Stat label="Chamados de preventiva: automáticos" value={formatCount(metrics.chamadosDePreventiva.automaticos)} />
+      </section>}
+
+      {Array.isArray(metrics.esperaPorMotivo) && <section aria-labelledby="pause-wait-title" className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="border-b border-border px-5 py-4"><h2 id="pause-wait-title" className="text-sm font-semibold text-text-primary">Espera por motivo de pausa</h2><p className="mt-1 text-xs text-text-muted">Chamados pausados no período e o tempo parado por motivo. Aguardando orçamento e fornecedor externo não contam no prazo de resolução.</p></div>
+        {metrics.esperaPorMotivo.length === 0 ? <p className="px-5 py-4 text-xs text-text-muted">Nenhum chamado pausado no período.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[480px] text-xs tabular-nums">
+          <caption className="sr-only">Espera por motivo de pausa</caption>
+          <thead className="text-text-secondary"><tr className="table-head">{['Motivo', 'Chamados', 'Horas médias', 'Horas totais'].map((label, index) => <th key={label} scope="col" className={`px-4 py-2 font-medium ${index ? 'text-right' : 'text-left'}`}>{label}</th>)}</tr></thead>
+          <tbody>{metrics.esperaPorMotivo.map((row) => <tr key={row.motivo} className="row-divider"><th scope="row" className="px-4 py-2 text-left font-medium text-text-primary">{pauseReasonLabel(row.motivo)}</th><td className="px-4 py-2 text-right text-text-secondary">{formatCount(row.chamados)}</td><td className="px-4 py-2 text-right text-text-secondary">{formatHours(row.horasMedias)}</td><td className="px-4 py-2 text-right text-text-secondary">{formatHours(row.horasTotais)}</td></tr>)}</tbody>
+        </table></div>}
       </section>}
     </>
   )

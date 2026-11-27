@@ -36,7 +36,7 @@ const tickets: RecordValue[] = [
   { id: 'ticket-demo-1', hospitalId: hospitals[0].id, setorId: sectors[0].id, equipamentoId: equipment[0].id, abertoPor: 'user-demo-1', descricao: 'Leitura de SpO2 oscilando durante o monitoramento.', severidade: 'ALTA', status: 'ABERTO', abertoEm: now, slaStatus: 'em_risco', codigo: 'CH-0001', tecnicoResponsavelId: null, primeiraRespostaEm: null, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false },
   { id: 'ticket-demo-2', hospitalId: hospitals[0].id, setorId: sectors[1].id, equipamentoId: equipment[1].id, abertoPor: 'user-demo-2', descricao: 'Alarme de pressão recorrente durante o autoteste.', severidade: 'MEDIA', status: 'EM_ANDAMENTO', abertoEm: now, slaStatus: 'no_prazo', codigo: 'CH-0002', tecnicoResponsavelId: 'user-demo-2', primeiraRespostaEm: now, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: true },
 ]
-tickets.push({ id: 'ticket-demo-3', hospitalId: hospitals[0].id, setorId: sectors[0].id, equipamentoId: equipment[0].id, abertoPor: 'user-demo-2', descricao: 'Aguardando retorno do fornecedor sobre o sensor.', severidade: 'MEDIA', status: 'PAUSADO', abertoEm: now, slaStatus: 'no_prazo', codigo: 'CH-0003', tecnicoResponsavelId: 'user-demo-2', primeiraRespostaEm: now, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false, pausaMotivo: 'aguardando_fornecedor', pausaDescricao: 'Sensor em cotação', pausadoEm: now })
+tickets.push({ id: 'ticket-demo-3', hospitalId: hospitals[0].id, setorId: sectors[0].id, equipamentoId: equipment[0].id, abertoPor: 'user-demo-2', descricao: 'Aguardando retorno do fornecedor sobre o sensor.', severidade: 'MEDIA', status: 'PAUSADO', abertoEm: now, slaStatus: 'no_prazo', codigo: 'CH-0003', tecnicoResponsavelId: 'user-demo-2', primeiraRespostaEm: now, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false, pausaMotivo: 'fornecedor_externo', pausaDescricao: 'Sensor em cotação com o fornecedor', pausadoEm: new Date(Date.parse(now) - 26 * 3600 * 1000).toISOString(), pausadoPorId: 'user-demo-2', pausadoPorNome: 'Bruno Técnico' })
 const workOrders: RecordValue[] = [
   { id: 'order-demo-1', codigo: 'OT-2026-001', tipo: 'PREVENTIVA', status: 'AGENDADA', equipamentoId: equipment[0].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', local: 'UTI Adulto', dataAgendada: now, iniciadaEm: null, concluidaEm: null, atrasada: false, planoPreventivoId: 'plan-demo-1', campanhaPreventivaId: null },
   { id: 'order-demo-2', codigo: 'OT-2026-002', tipo: 'CORRETIVA', status: 'EM_EXECUCAO', equipamentoId: equipment[1].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', chamadoId: tickets[1].id, local: 'Centro Cirúrgico', dataAgendada: now, iniciadaEm: now, concluidaEm: null, atrasada: false, planoPreventivoId: null, campanhaPreventivaId: null },
@@ -150,6 +150,14 @@ function withDocumentStats(collection: RecordValue[], params?: Record<string, un
 const history: Record<string, RecordValue[]> = {
   [tickets[0].id as string]: [{ acao: 'Chamado aberto', atorId: 'user-demo-1', ocorridoEm: now }],
   [tickets[1].id as string]: [{ acao: 'Chamado atribuído à equipe técnica', atorId: 'user-demo-1', ocorridoEm: now }],
+  // Story 29.5: linha do tempo do chamado pausado (início, pausa, retomada, nova pausa).
+  'ticket-demo-3': [
+    { acao: 'ABRIR_CHAMADO', atorId: 'user-demo-2', atorNome: 'Bruno Técnico', ocorridoEm: new Date(Date.parse(now) - 72 * 3600 * 1000).toISOString() },
+    { acao: 'TRANSICIONAR_CHAMADO', atorId: 'user-demo-2', atorNome: 'Bruno Técnico', ocorridoEm: new Date(Date.parse(now) - 70 * 3600 * 1000).toISOString(), statusAnterior: 'ABERTO', statusNovo: 'EM_ANDAMENTO' },
+    { acao: 'TRANSICIONAR_CHAMADO', atorId: 'user-demo-2', atorNome: 'Bruno Técnico', ocorridoEm: new Date(Date.parse(now) - 60 * 3600 * 1000).toISOString(), statusAnterior: 'EM_ANDAMENTO', statusNovo: 'PAUSADO', pausaMotivo: 'aguardando_orcamento', pausaDescricao: 'Orçamento da placa enviado ao gestor' },
+    { acao: 'TRANSICIONAR_CHAMADO', atorId: 'user-demo-2', atorNome: 'Bruno Técnico', ocorridoEm: new Date(Date.parse(now) - 40 * 3600 * 1000).toISOString(), statusAnterior: 'PAUSADO', statusNovo: 'EM_ANDAMENTO' },
+    { acao: 'TRANSICIONAR_CHAMADO', atorId: 'user-demo-2', atorNome: 'Bruno Técnico', ocorridoEm: new Date(Date.parse(now) - 26 * 3600 * 1000).toISOString(), statusAnterior: 'EM_ANDAMENTO', statusNovo: 'PAUSADO', pausaMotivo: 'fornecedor_externo', pausaDescricao: 'Sensor em cotação com o fornecedor' },
+  ],
 }
 /** Execuções de checklist de exemplo (mais recente primeiro) para a ficha do equipamento. */
 function checklistExecutionsFor(equipmentId: string): RecordValue[] {
@@ -180,7 +188,7 @@ const userHospitals = new Map<string, string[]>(users.map((user) => [user.id as 
 const exportsById = new Map<string, RecordValue>()
 const importsById = new Map<string, { tipo: string; polls: number }>()
 /** Story 23.2: configuração do cliente (janela da qualidade da análise). */
-let clientConfig: RecordValue = { janelaQualidadeAnaliseDias: 30, padrao: true, atualizadoEm: null, atualizadoPor: null, reincidenciaChamados: 3, reincidenciaDias: 90 }
+let clientConfig: RecordValue = { janelaQualidadeAnaliseDias: 30, padrao: true, atualizadoEm: null, atualizadoPor: null, reincidenciaChamados: 3, reincidenciaDias: 90, abrirChamadoAutomatico: false }
 let slaPolicy: RecordValue[] = [
   { severidade: 'CRITICA', atendimentoMin: 15, resolucaoMin: 120, padrao: true },
   { severidade: 'ALTA', atendimentoMin: 30, resolucaoMin: 240, padrao: true },
@@ -262,7 +270,7 @@ const demoPreventive = { atrasadas: 2, concluidasNoPrazo: 19, concluidasForaDoPr
 function demoIndicators(agrupar: unknown) {
   const total = { mtbfHoras: 186, mttaHoras: 1.8, triagemHoras: 3.2, mttrHoras: 5.4, esperaPecaHoras: 12.5, slaAtendimentoPct: 94.5, slaResolucaoPct: 88.2, disponibilidadePercentual: 98.6, qtdOtsPreventivas: 24, qtdOtsCorretivas: 8, preventiva: demoPreventive }
   // Story 29.2 (só no total): resolvidos com e sem OT e assinaturas pendentes.
-  const sinais = { chamadosResolvidosComOt: 6, chamadosResolvidosSemOt: 4, resolvidosSemOtPct: 40, assinaturasPendentes: { ots: 2, chamados: 1, campanhas: 0 } }
+  const sinais = { chamadosResolvidosComOt: 6, chamadosResolvidosSemOt: 4, resolvidosSemOtPct: 40, assinaturasPendentes: { ots: 2, chamados: 1, campanhas: 0 }, esperaPorMotivo: [{ motivo: 'aguardando_orcamento', chamados: 2, horasTotais: 52, horasMedias: 26 }, { motivo: 'fornecedor_externo', chamados: 1, horasTotais: 18, horasMedias: 18 }], chamadosDePreventiva: { manuais: 2, automaticos: 1 } }
   const groups = agrupar === 'setor'
     ? [
       { grupoId: 'sector-demo-1', grupoNome: 'UTI Adulto', ...total, mttaHoras: 1.2, mttrHoras: 4.1, qtdOtsPreventivas: 10, qtdOtsCorretivas: 3 },
@@ -341,6 +349,13 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path === '/relatorios/qualidade-analise') return demoQualityAnalysis()
   if (path === '/relatorios/top-equipamentos') return demoTopEquipment
   if (path === '/relatorios/trocas-pecas') return demoPartReplacements()
+  const suggestedMatch = path.match(/^\/ordens-de-trabalho\/([^/]+)\/chamado-sugerido$/)
+  if (suggestedMatch && method === 'get') {
+    const order = workOrders.find((item) => item.id === suggestedMatch[1])
+    if (!order || order.tipo !== 'PREVENTIVA' || order.status !== 'CONCLUIDA') throw demoProblem(409, { code: 'OT_SEM_CHAMADO_SUGERIDO' })
+    const open = tickets.find((item) => item.otOrigemId === order.id && !['RESOLVIDO', 'CANCELADO'].includes(String(item.status)))
+    return { otOrigemId: order.id, otCodigo: order.codigo, equipamentoId: order.equipamentoId, descricao: 'Itens não conformes: Alarme de SpO2 sem som (medido: não). Bateria abaixo do mínimo (medido: 9,8 V; mínimo 11 V).\nObservações do técnico: equipamento separado para revisão.', severidade: 'ALTA', chamadoExistenteId: open?.id ?? null }
+  }
   if (path === '/relatorios/reincidentes') return { chamadosMinimos: Number(clientConfig.reincidenciaChamados ?? 3), dias: Number(clientConfig.reincidenciaDias ?? 90), equipamentos: [{ equipamentoId: 'equipment-demo-2', codigo: 'EQ-1002', nome: 'Ventilador pulmonar', hospitalId: 'hospital-demo-1', hospitalNome: 'Hospital São Lucas', setorId: 'sector-demo-2', setorNome: 'Centro Cirúrgico', chamados: 3 }] }
   if (path === '/relatorios/visitas-nao-realizadas') return demoNotDoneVisits
   if (path === '/relatorios/avaliacoes-chamados') return { quantidade: 9, media: 4.4, porTecnico: [{ id: 'user-demo-2', nome: 'Bruno Técnico', quantidade: 7, media: 4.6 }, { id: null, nome: 'Sem responsável', quantidade: 2, media: 3.5 }], porHospital: [{ id: 'hospital-demo-1', nome: 'Hospital São Lucas', quantidade: 9, media: 4.4 }] }
@@ -386,6 +401,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
         if (!Number.isInteger(n) || n < 2 || n > 20 || !Number.isInteger(d) || d < 7 || d > 365) throw demoProblem(400, { code: 'REINCIDENCIA_INVALIDA' })
         clientConfig = { ...clientConfig, reincidenciaChamados: n, reincidenciaDias: d, ...stamp }
       }
+      if (typeof body.abrirChamadoAutomatico === 'boolean') clientConfig = { ...clientConfig, abrirChamadoAutomatico: body.abrirChamadoAutomatico, ...stamp }
       if (body.janelaQualidadeAnaliseDias !== undefined) {
         const dias = Number(body.janelaQualidadeAnaliseDias)
         if (!Number.isInteger(dias) || dias < 7 || dias > 365) throw demoProblem(400, { code: 'JANELA_INVALIDA' })
@@ -445,7 +461,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
     const created = {
       id: (body.id as string | undefined) ?? makeId('ticket-demo'), hospitalId: sector?.hospitalId ?? hospitals[0].id, setorId: target.setorId, equipamentoId: target.id,
       abertoPor: 'user-demo-1', descricao: body.descricao, severidade: body.severidade ?? 'MEDIA', status: 'ABERTO', abertoEm: now, slaStatus: 'no_prazo',
-      codigo: `CH-${String(tickets.length + 1).padStart(4, '0')}`, tecnicoResponsavelId: (body.tecnicoResponsavelId as string | undefined) ?? null, primeiraRespostaEm: null, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false,
+      codigo: `CH-${String(tickets.length + 1).padStart(4, '0')}`, otOrigemId: (body.otOrigemId as string | undefined) ?? null, abertoAutomaticamente: false, tecnicoResponsavelId: (body.tecnicoResponsavelId as string | undefined) ?? null, primeiraRespostaEm: null, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false,
     }
     tickets.unshift(created)
     return created

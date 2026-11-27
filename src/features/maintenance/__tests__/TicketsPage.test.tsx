@@ -20,7 +20,7 @@ const tickets = [
   { id: 'ticket-resolved', codigo: 'CH-7', hospitalId: 'hospital-1', setorId: 'sector-1', equipamentoId: 'equipment-1', abertoPor: 'user-2', descricao: 'Falha resolvida', severidade: 'ALTA', status: 'RESOLVIDO', abertoEm: '2026-10-13T10:00:00Z' },
 ]
 // Story 29.3: atendimento pausado (só no teste do selo).
-const pausedTicket = { id: 'ticket-paused', codigo: 'CH-8', hospitalId: 'hospital-1', setorId: 'sector-1', equipamentoId: 'equipment-1', abertoPor: 'user-2', descricao: 'Falha pausada', severidade: 'MEDIA', status: 'PAUSADO', abertoEm: '2026-10-12T10:00:00Z', pausaMotivo: 'aguardando_fornecedor', pausadoEm: '2026-10-12T12:00:00Z' }
+const pausedTicket = { id: 'ticket-paused', codigo: 'CH-8', hospitalId: 'hospital-1', setorId: 'sector-1', equipamentoId: 'equipment-1', abertoPor: 'user-2', descricao: 'Falha pausada', severidade: 'MEDIA', status: 'PAUSADO', abertoEm: '2026-10-12T10:00:00Z', pausaMotivo: 'aguardando_orcamento', pausadoEm: '2026-10-12T12:00:00Z', pausadoPorNome: 'Rafael' }
 let currentTickets = [...tickets]
 
 function TestProviders({ children }: PropsWithChildren) {
@@ -88,6 +88,7 @@ describe('TicketsPage', () => {
     await screen.findByText('Falha pausada')
     const row = screen.getAllByRole('row').find((candidate) => within(candidate).queryByText('Falha pausada')) as HTMLElement
     expect(within(row).getByText('Pausado')).toBeInTheDocument()
+    expect(row).toHaveTextContent(/Aguardando orçamento · parado há \d+ d · por Rafael/)
     expect(within(row).queryByRole('button', { name: 'Gerar OT corretiva' })).not.toBeInTheDocument()
     await chooseOption(userEvent.setup(), 'Filtrar por status', 'Pausado')
     expect(await screen.findByText('Falha pausada')).toBeInTheDocument()

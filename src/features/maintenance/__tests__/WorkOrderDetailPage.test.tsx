@@ -155,3 +155,52 @@ describe('WorkOrderDetailPage', () => {
     })
   })
 })
+
+describe('WorkOrderDetailPage: chamado sugerido pela preventiva Não apto (Story 29.6)', () => {
+  const done = { ...order, status: 'CONCLUIDA', concluidaEm: '2026-10-12T15:00:00Z' }
+  const draft = { otOrigemId: 'order-1', otCodigo: 'OT-2041', equipamentoId: 'equipment-1', descricao: 'Itens não conformes: Alarme sem som.', severidade: 'ALTA', chamadoExistenteId: null }
+  const mockGet = (overrides: Record<string, unknown>) => vi.mocked(apiClient.get).mockImplementation(async (url) => {
+    if (url in overrides) { const value = overrides[url]; if (value instanceof Error) throw value; return { data: value } as never }
+    return { data: [] } as never
+  })
+  beforeEach(() => {
+    vi.clearAllMocks()
+    clearAuthSession()
+    setAuthSession('token', { id: 'admin-1', name: 'Clara', roles: ['admin_cliente'], tenantId: 'tenant-1' })
+  })
+
+  it('oferece "Abrir chamado" já preenchido e abre com a OT de origem', async () => {
+    mockGet({ '/ordens-de-trabalho/order-1': done, '/ordens-de-trabalho/order-1/chamado-sugerido': draft })
+    vi.mocked(apiClient.post).mockResolvedValue({ data: { id: 'ticket-9' } } as never)
+    const user = userEvent.setup()
+    render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+    const card = await screen.findByRole('region', { name: 'Chamado sugerido' })
+    await user.click(within(card).getByRole('button', { name: 'Abrir chamado' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Abrir chamado da preventiva' })
+    expect(within(dialog).getByLabelText(/Descrição/)).toHaveValue('Itens não conformes: Alarme sem som.')
+    expect(within(dialog).getByRole('combobox', { name: 'Severidade' })).toHaveTextContent('Alta')
+    await user.click(within(dialog).getByRole('button', { name: 'Abrir chamado' }))
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/chamados', expect.objectContaining({ equipamentoId: 'equipment-1', descricao: 'Itens não conformes: Alarme sem som.', severidade: 'ALTA', tipo: 'falha', otOrigemId: 'order-1' })))
+  })
+
+  it('com chamado já aberto para a OT, mostra o link em vez de abrir outro', async () => {
+    mockGet({ '/ordens-de-trabalho/order-1': done, '/ordens-de-trabalho/order-1/chamado-sugerido': { ...draft, chamadoExistenteId: 'ticket-5' } })
+    render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+    const card = await screen.findByRole('region', { name: 'Chamado sugerido' })
+    expect(within(card).getByRole('link', { name: 'abrir chamado' })).toHaveAttribute('href', '/tickets/ticket-5')
+    expect(within(card).queryByRole('button', { name: 'Abrir chamado' })).not.toBeInTheDocument()
+  })
+
+  it('OT com chamado gerado mostra o link; sem sugestão (409) não mostra nada', async () => {
+    mockGet({ '/ordens-de-trabalho/order-1': { ...done, chamadoGeradoId: 'ticket-7' } })
+    const { unmount } = render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+    expect(await screen.findByRole('link', { name: 'abrir chamado' })).toHaveAttribute('href', '/tickets/ticket-7')
+    expect(vi.mocked(apiClient.get).mock.calls.some(([url]) => url === '/ordens-de-trabalho/order-1/chamado-sugerido')).toBe(false)
+    unmount()
+    mockGet({ '/ordens-de-trabalho/order-1': done, '/ordens-de-trabalho/order-1/chamado-sugerido': Object.assign(new Error('409'), { response: { status: 409, data: { code: 'OT_SEM_CHAMADO_SUGERIDO' } } }) })
+    render(<WorkOrderDetailPage />, { wrapper: TestProviders })
+    expect(await screen.findByRole('heading', { name: 'OT-2041' })).toBeInTheDocument()
+    await waitFor(() => expect(vi.mocked(apiClient.get)).toHaveBeenCalledWith('/ordens-de-trabalho/order-1/chamado-sugerido'))
+    expect(screen.queryByRole('region', { name: 'Chamado sugerido' })).not.toBeInTheDocument()
+  })
+})

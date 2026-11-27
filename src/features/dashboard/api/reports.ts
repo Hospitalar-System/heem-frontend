@@ -40,6 +40,10 @@ export interface IndicatorValues {
   resolvidosSemOtPct?: number | null
   /** Story 29.2: finalizados no período sem a assinatura do técnico (só no total). */
   assinaturasPendentes?: { ots: number; chamados: number; campanhas: number } | null
+  /** Story 29.3 (aditivo, só no total): espera por motivo de pausa. */
+  esperaPorMotivo?: { motivo: string; chamados: number; horasTotais: number | null; horasMedias: number | null }[] | null
+  /** Story 29.6 (aditivo, só no total): chamados abertos a partir de preventiva Não apto. */
+  chamadosDePreventiva?: { manuais: number; automaticos: number } | null
 }
 
 export interface IndicatorGroup extends IndicatorValues {

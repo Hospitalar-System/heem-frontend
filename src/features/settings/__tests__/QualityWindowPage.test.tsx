@@ -137,3 +137,23 @@ describe('Selo de reincidência (Story 23.8)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('de 2 a 20 chamados e de 7 a 365 dias')
   })
 })
+
+describe('Chamado da preventiva Não apto (Story 29.6)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('liga a abertura automática (desligada por padrão) e some com backend antigo', async () => {
+    const user = setup('admin_cliente', { ...defaults, abrirChamadoAutomatico: false })
+    vi.mocked(apiClient.put).mockResolvedValue({ data: { ...defaults, abrirChamadoAutomatico: true } } as never)
+    const toggle = await screen.findByRole('checkbox', { name: 'Abrir o chamado automaticamente' })
+    expect(toggle).not.toBeChecked()
+    await user.click(toggle)
+    await waitFor(() => expect(apiClient.put).toHaveBeenCalledWith('/configuracao-cliente', { abrirChamadoAutomatico: true }))
+    expect(toast.success).toHaveBeenCalledWith('Abertura automática ligada.')
+  })
+
+  it('backend sem a opção: a seção não aparece', async () => {
+    setup()
+    await screen.findByLabelText('Janela (dias)')
+    expect(screen.queryByRole('region', { name: 'Chamado da preventiva Não apto' })).not.toBeInTheDocument()
+  })
+})

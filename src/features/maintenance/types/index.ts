@@ -33,6 +33,16 @@ export interface Ticket {
   assinada?: boolean
   /** Story 22.2: assinaturas na ordem do registro; só no detalhe (nulo na lista). */
   assinaturas?: Signature[] | null
+  /** Story 29.3: pausa atual (nulos fora de PAUSADO). */
+  pausaMotivo?: string | null
+  pausaDescricao?: string | null
+  pausadoEm?: string | null
+  /** Story 29.5: quem fez a pausa mais recente (nulos fora de PAUSADO). */
+  pausadoPorId?: string | null
+  pausadoPorNome?: string | null
+  /** Story 29.6: OT preventiva (Não apto) que originou o chamado; aberto automaticamente pela regra do cliente. */
+  otOrigemId?: string | null
+  abertoAutomaticamente?: boolean
 }
 
 /** Story 25.1 (FR-I1): tipos de chamado aceitos pela API. */
@@ -114,7 +124,15 @@ export interface ChangeTicketStatusInput {
 export interface TicketHistoryEvent {
   acao: string
   atorId: string | null
+  /** Nome de exibição de quem fez a ação (nulo se não é usuário do cliente). */
+  atorNome?: string | null
   ocorridoEm: string
+  /** Story 29.5 (aditivo): só nas linhas TRANSICIONAR_CHAMADO. */
+  statusAnterior?: string | null
+  statusNovo?: string | null
+  /** Story 29.5: na ida para PAUSADO. */
+  pausaMotivo?: string | null
+  pausaDescricao?: string | null
 }
 
 /** Corpo de POST /chamados (Story 18.1); `tecnicoResponsavelId` só para admin_cliente. */
@@ -126,6 +144,19 @@ export interface CreateTicketInput {
   tecnicoResponsavelId?: string
   /** Story 25.1: opcional. */
   tipo?: TicketType
+  /** Story 29.6: OT preventiva Não apto que originou o chamado. */
+  otOrigemId?: string
+}
+
+/** Story 29.6: rascunho do chamado sugerido pela preventiva Não apto (GET /ordens-de-trabalho/{id}/chamado-sugerido). */
+export interface SuggestedTicket {
+  otOrigemId: string
+  otCodigo: string
+  equipamentoId: string
+  descricao: string
+  severidade: 'CRITICA' | 'ALTA' | 'MEDIA' | 'BAIXA' | string
+  /** Chamado não final já aberto para esta OT: a tela mostra esse em vez de abrir outro. */
+  chamadoExistenteId: string | null
 }
 
 export interface CorrectiveWorkOrderInput {
@@ -265,6 +296,8 @@ export interface WorkOrderDetail {
   assinaturas?: Signature[] | null
   /** Story 23.7: preenchido só em NAO_REALIZADA (equipamento em uso). */
   naoRealizada?: WorkOrderNotDone | null
+  /** Story 29.6: chamado aberto a partir desta OT (o mais recente). */
+  chamadoGeradoId?: string | null
 }
 
 /** Story 23.7: encerramento sem execução; motivo hoje só `em_uso`. */

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/axios'
 import { fetchPaged, usePagedQuery } from '@/lib/pagination'
-import type { ChangeTicketStatusInput, CreateTicketInput, CorrectiveWorkOrder, CorrectiveWorkOrderInput, EquipmentPart, Ticket, TicketHistoryEvent, TicketPart, TicketPartInput, TicketType } from '../types'
+import type { ChangeTicketStatusInput, CreateTicketInput, CorrectiveWorkOrder, CorrectiveWorkOrderInput, EquipmentPart, SuggestedTicket, Ticket, TicketHistoryEvent, TicketPart, TicketPartInput, TicketType } from '../types'
 
 export const ticketsKey = ['tickets'] as const
 
@@ -216,4 +216,14 @@ export function createTicketErrorMessage(error: unknown) {
   if (status === 400) return data?.detail ?? 'Dados inválidos. Revise os campos e tente novamente.'
   if (status && status >= 500) return 'O servidor não conseguiu abrir o chamado. Tente novamente em instantes.'
   return data?.detail ?? 'Não foi possível abrir o chamado. Tente novamente.'
+}
+
+/** Story 29.6: rascunho do chamado da preventiva Não apto; 409 OT_SEM_CHAMADO_SUGERIDO quando não se aplica. */
+export function useSuggestedTicket(workOrderId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['suggested-ticket', workOrderId],
+    queryFn: async () => (await apiClient.get<SuggestedTicket>(`/ordens-de-trabalho/${workOrderId}/chamado-sugerido`)).data,
+    enabled: Boolean(workOrderId) && enabled,
+    retry: false,
+  })
 }
