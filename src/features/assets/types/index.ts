@@ -19,7 +19,8 @@ export interface HospitalMetrics { setores: number; equipamentos: number; ordens
 export interface EquipamentoResumo { id: string }
 export interface OrdemResumo { equipamentoId: string; dataAgendada: string; status: 'AGENDADA' | 'EM_EXECUCAO' }
 
-export type EquipmentLifecycle = 'ATIVO' | 'NAO_APTO' | 'EM_MANUTENCAO' | 'INATIVO' | 'DESATIVADO' | 'DESCARTADO'
+/** OBSOLETO: Story 23.6 (condenado por laudo, ainda em uso; fica no parque). */
+export type EquipmentLifecycle = 'ATIVO' | 'NAO_APTO' | 'EM_MANUTENCAO' | 'OBSOLETO' | 'INATIVO' | 'DESATIVADO' | 'DESCARTADO'
 /** Estado do equipamento (contrato heem-backend#208): mesmo enum do ciclo de vida, por nome no JSON. */
 export type EquipmentState = EquipmentLifecycle
 export type EquipmentRiskClass = 'I' | 'II' | 'III' | 'IV'
@@ -62,7 +63,12 @@ export interface Equipment {
   descricaoEstado?: string | null
   /** Instante da última mudança de estado; nulo/ausente = nunca alterado. */
   estadoAtualizadoEm?: string | null
+  /** Story 23.8: selo de reincidência; nulo = não reincidente (ou backend antigo). */
+  reincidencia?: EquipmentRecurrence | null
 }
+
+/** Story 23.8: N chamados de falha (ou sem tipo) nos últimos D dias. */
+export interface EquipmentRecurrence { chamados: number; dias: number }
 
 export interface ChangeEquipmentStateInput {
   estado: EquipmentState
@@ -99,6 +105,8 @@ export interface EquipmentStateHistoryEntry {
   dataBaixa?: string | null
   /** Story 23.1: só na entrada em EM_MANUTENCAO (nulo nas demais e nas linhas antigas). */
   origemManutencao?: OrigemManutencaoEntry | null
+  /** Story 23.6: laudo de obsolescência da entrada em OBSOLETO (pode ter sido excluído depois). */
+  laudoDocumentoId?: string | null
 }
 
 export interface EquipmentEditableFields {
@@ -199,7 +207,7 @@ export interface EquipmentPageFilters extends EquipmentFilters {
   direcao?: 'asc' | 'desc'
 }
 
-export type DocumentType = 'MANUAL' | 'CERTIFICADO_CALIBRACAO' | 'LAUDO_SEGURANCA' | 'NOTA_FISCAL' | 'DOCUMENTO_BAIXA' | 'OUTRO'
+export type DocumentType = 'MANUAL' | 'CERTIFICADO_CALIBRACAO' | 'LAUDO_SEGURANCA' | 'NOTA_FISCAL' | 'DOCUMENTO_BAIXA' | 'LAUDO_OBSOLESCENCIA' | 'OUTRO'
 
 export interface EquipmentDocument {
   id: string

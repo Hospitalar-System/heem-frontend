@@ -279,6 +279,18 @@ export function useReportExport(id: string | null) {
   return { ...query, pollStopped }
 }
 
+/** Story 23.8: equipamentos reincidentes pela regra do cliente (N chamados de falha nos últimos D dias). */
+export interface RecurrentEquipment { equipamentoId: string; codigo: string; nome: string; hospitalId: string; hospitalNome: string; setorId: string; setorNome: string; chamados: number }
+export interface RecurrentEquipments { chamadosMinimos: number; dias: number; equipamentos: RecurrentEquipment[] }
+
+/** GET /relatorios/reincidentes (só admin): situação atual, sem período; aceita hospital e setor. */
+export function useRecurrentEquipments(filters: Pick<ReportFilters, 'hospitalId' | 'setorId'>) {
+  return useQuery({
+    queryKey: ['report-recurrent-equipments', filters],
+    queryFn: async () => (await apiClient.get<RecurrentEquipments>('/relatorios/reincidentes', { params: filters })).data,
+  })
+}
+
 /** Story 23.7: visitas preventivas não realizadas porque o equipamento estava em uso. */
 export interface NotDoneVisitsGroup { id: string | null; nome: string; encerradas: number; naoRealizadas: number; percentual: number | null }
 export interface NotDoneVisitsEquipment { equipamentoId: string; codigo: string; nome: string; hospitalNome: string; setorNome: string; seguidas: number; ultimaEm: string }

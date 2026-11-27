@@ -3,6 +3,7 @@ import { parseDate, formatBr } from '@/components/ui/civil-date'
 import { DataTable, type DataColumn, type DataTableProps } from '@/components/ui/DataTable'
 import type { Equipment } from '../types'
 import { EquipmentStateBadge } from './EquipmentStateBadge'
+import { RecurrenceBadge } from './RecurrenceBadge'
 import { formatLastMaintenance } from '../utils/last-maintenance'
 import { EquipmentThumb } from './EquipmentPhotoSection'
 
@@ -40,7 +41,7 @@ export function EquipmentListTable({ items, sectorNameById, isLoading, error, em
       return date ? <span className="text-text-secondary">{date}</span> : <span className="text-text-muted" title="Nenhuma manutenção concluída">—</span>
     } },
     { key: 'documentos', header: 'Documentos', className: 'whitespace-nowrap', cell: (item) => <DocumentsIndicator vencidos={item.documentosVencidos} vencendo={item.documentosVencendo} proximaValidade={item.proximaValidade} /> },
-    { key: 'status', header: 'Status', width: '8rem', className: 'whitespace-nowrap', cell: (item) => <EquipmentStateBadge state={item.statusCicloVida} /> },
+    { key: 'status', header: 'Status', width: '13rem', className: 'whitespace-nowrap', cell: (item) => <span className="inline-flex flex-wrap items-center gap-1"><EquipmentStateBadge state={item.statusCicloVida} /><RecurrenceBadge recurrence={item.reincidencia} /></span> },
   ]
   return <DataTable
     label="Equipamentos"

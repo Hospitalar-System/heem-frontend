@@ -1,4 +1,4 @@
-import { CircleCheck, CircleMinus, OctagonX, PowerOff, Trash2, Wrench } from 'lucide-react'
+import { CircleCheck, CircleMinus, FileWarning, OctagonX, PowerOff, Trash2, Wrench } from 'lucide-react'
 import type { ComponentType } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { equipmentStateTone } from '@/lib/status-tones'
@@ -13,6 +13,7 @@ const icons: Record<string, ComponentType<{ size?: number; strokeWidth?: number 
   ATIVO: CircleCheck,
   NAO_APTO: OctagonX,
   EM_MANUTENCAO: Wrench,
+  OBSOLETO: FileWarning,
   DESATIVADO: PowerOff,
   INATIVO: CircleMinus,
   DESCARTADO: Trash2,

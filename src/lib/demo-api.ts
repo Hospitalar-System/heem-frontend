@@ -65,6 +65,8 @@ const platformUsers: RecordValue[] = [{ id: 'platform-user-demo-1', codigo: 'SUP
 const tenants: RecordValue[] = [{ id: 'tenant-demo-1', cnpj: '00000000000191', nome: 'Rede Hospitalar Exemplo', ativo: true, createdAt: now }]
 const labels: RecordValue[] = []
 const dayIso = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10)
+/** Story 23.8: o ventilador da demo é reincidente (3 chamados de falha em 90 dias). */
+equipment[1].reincidencia = { chamados: 3, dias: 90 }
 const documents: RecordValue[] = [
   { id: 'doc-demo-1', equipamentoId: 'equipment-demo-1', tipoDocumento: 'CERTIFICADO_CALIBRACAO', nomeArquivo: 'calibracao-mx500.pdf', uploadedEm: now, validadeAte: dayIso(-5) },
   { id: 'doc-demo-2', equipamentoId: 'equipment-demo-1', tipoDocumento: 'LAUDO_SEGURANCA', nomeArquivo: 'laudo-60601.pdf', uploadedEm: now, validadeAte: dayIso(12) },
@@ -80,7 +82,7 @@ const stateHistory: RecordValue[] = [
   { id: 'est-1', equipamentoId: 'equipment-demo-2', estadoAnterior: 'ATIVO', estadoNovo: 'EM_MANUTENCAO', descricao: 'Aguardando troca da válvula expiratória', alteradoPorId: 'user-demo-2', alteradoPorNome: 'Bruno Técnico', alteradoEm: '2026-11-08T14:20:00Z', origem: 'MANUAL', ordemTrabalhoId: null, origemManutencao: { tipo: 'justificativa', ordemTrabalhoId: null, retiradoPorId: 'user-demo-2', retiradoPorNome: 'Bruno Técnico', destino: 'manutencao_externa', fornecedor: 'Assistência Técnica Sul', justificativa: 'Válvula expiratória enviada ao fornecedor para troca.' } },
   { id: 'est-2', equipamentoId: 'equipment-demo-3', estadoAnterior: 'ATIVO', estadoNovo: 'NAO_APTO', descricao: 'Falha no teste de carga da bateria', alteradoPorId: 'user-demo-2', alteradoPorNome: 'Bruno Técnico', alteradoEm: '2026-11-10T09:05:00Z', origem: 'MANUAL', ordemTrabalhoId: null },
 ]
-const STATE_ENUM = ['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']
+const STATE_ENUM = ['ATIVO', 'NAO_APTO', 'EM_MANUTENCAO', 'OBSOLETO', 'INATIVO', 'DESATIVADO', 'DESCARTADO']
 /** Story 23.1: origem obrigatória ao ENTRAR em EM_MANUTENCAO (OT do mesmo equipamento ou justificativa). */
 function maintenanceOrigin(record: RecordValue, body: RecordValue, userId: string | null, userName: string | null) {
   const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
@@ -112,9 +114,12 @@ function changeEquipmentState(record: RecordValue, body: RecordValue) {
   const descricao = estado === 'ATIVO' ? null : raw || null
   if (record.statusCicloVida === estado && (record.descricaoEstado ?? null) === descricao) return record
   if (record.statusCicloVida === 'DESCARTADO') throw demoProblem(409, { code: 'TRANSICAO_INVALIDA' })
+  // Story 23.6: entrar em OBSOLETO exige um laudo de obsolescência anexado ao equipamento.
+  const laudo = estado === 'OBSOLETO' && record.statusCicloVida !== 'OBSOLETO' ? documents.find((item) => item.equipamentoId === record.id && item.tipoDocumento === 'LAUDO_OBSOLESCENCIA') : null
+  if (estado === 'OBSOLETO' && record.statusCicloVida !== 'OBSOLETO' && !laudo) throw demoProblem(400, { code: 'LAUDO_OBSOLESCENCIA_OBRIGATORIO' })
   const origemManutencao = estado === 'EM_MANUTENCAO' && record.statusCicloVida !== 'EM_MANUTENCAO' ? maintenanceOrigin(record, body, user?.id ?? null, user?.name ?? null) : null
   const alteradoEm = new Date().toISOString()
-  stateHistory.push({ id: makeId('est'), equipamentoId: record.id, estadoAnterior: record.statusCicloVida, estadoNovo: estado, descricao, alteradoPorId: user?.id ?? null, alteradoPorNome: user?.name ?? 'Usuário demo', alteradoEm, origem: 'MANUAL', ordemTrabalhoId: null, origemManutencao })
+  stateHistory.push({ id: makeId('est'), equipamentoId: record.id, estadoAnterior: record.statusCicloVida, estadoNovo: estado, descricao, alteradoPorId: user?.id ?? null, alteradoPorNome: user?.name ?? 'Usuário demo', alteradoEm, origem: 'MANUAL', ordemTrabalhoId: null, origemManutencao, laudoDocumentoId: (laudo?.id as string | undefined) ?? null })
   Object.assign(record, { statusCicloVida: estado, descricaoEstado: descricao, estadoAtualizadoEm: alteradoEm })
   return record
 }
@@ -175,7 +180,7 @@ const userHospitals = new Map<string, string[]>(users.map((user) => [user.id as 
 const exportsById = new Map<string, RecordValue>()
 const importsById = new Map<string, { tipo: string; polls: number }>()
 /** Story 23.2: configuração do cliente (janela da qualidade da análise). */
-let clientConfig: RecordValue = { janelaQualidadeAnaliseDias: 30, padrao: true, atualizadoEm: null, atualizadoPor: null }
+let clientConfig: RecordValue = { janelaQualidadeAnaliseDias: 30, padrao: true, atualizadoEm: null, atualizadoPor: null, reincidenciaChamados: 3, reincidenciaDias: 90 }
 let slaPolicy: RecordValue[] = [
   { severidade: 'CRITICA', atendimentoMin: 15, resolucaoMin: 120, padrao: true },
   { severidade: 'ALTA', atendimentoMin: 30, resolucaoMin: 240, padrao: true },
@@ -336,6 +341,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path === '/relatorios/qualidade-analise') return demoQualityAnalysis()
   if (path === '/relatorios/top-equipamentos') return demoTopEquipment
   if (path === '/relatorios/trocas-pecas') return demoPartReplacements()
+  if (path === '/relatorios/reincidentes') return { chamadosMinimos: Number(clientConfig.reincidenciaChamados ?? 3), dias: Number(clientConfig.reincidenciaDias ?? 90), equipamentos: [{ equipamentoId: 'equipment-demo-2', codigo: 'EQ-1002', nome: 'Ventilador pulmonar', hospitalId: 'hospital-demo-1', hospitalNome: 'Hospital São Lucas', setorId: 'sector-demo-2', setorNome: 'Centro Cirúrgico', chamados: 3 }] }
   if (path === '/relatorios/visitas-nao-realizadas') return demoNotDoneVisits
   if (path === '/relatorios/avaliacoes-chamados') return { quantidade: 9, media: 4.4, porTecnico: [{ id: 'user-demo-2', nome: 'Bruno Técnico', quantidade: 7, media: 4.6 }, { id: null, nome: 'Sem responsável', quantidade: 2, media: 3.5 }], porHospital: [{ id: 'hospital-demo-1', nome: 'Hospital São Lucas', quantidade: 9, media: 4.4 }] }
   if (path === '/relatorios/conformidade') return ['CRITICO', 'ALTO', 'MEDIO', 'BAIXO'].map((nivelRisco, index) => ({ nivelRisco, percentualConforme: [96, 92, 98, 100][index], totalMedicoes: [25, 38, 54, 12][index] }))
@@ -374,9 +380,17 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path.startsWith('/importacoes/') && method === 'get') return pollDemoImport(lastPart(path))
   if (path === '/configuracao-cliente') {
     if (method === 'put') {
-      const dias = Number(body.janelaQualidadeAnaliseDias)
-      if (!Number.isInteger(dias) || dias < 7 || dias > 365) throw demoProblem(400, { code: 'JANELA_INVALIDA' })
-      clientConfig = { janelaQualidadeAnaliseDias: dias, padrao: false, atualizadoEm: new Date().toISOString(), atualizadoPor: getAuthState().user?.id ?? null }
+      const stamp = { atualizadoEm: new Date().toISOString(), atualizadoPor: getAuthState().user?.id ?? null }
+      if (body.reincidenciaChamados !== undefined || body.reincidenciaDias !== undefined) {
+        const n = Number(body.reincidenciaChamados), d = Number(body.reincidenciaDias)
+        if (!Number.isInteger(n) || n < 2 || n > 20 || !Number.isInteger(d) || d < 7 || d > 365) throw demoProblem(400, { code: 'REINCIDENCIA_INVALIDA' })
+        clientConfig = { ...clientConfig, reincidenciaChamados: n, reincidenciaDias: d, ...stamp }
+      }
+      if (body.janelaQualidadeAnaliseDias !== undefined) {
+        const dias = Number(body.janelaQualidadeAnaliseDias)
+        if (!Number.isInteger(dias) || dias < 7 || dias > 365) throw demoProblem(400, { code: 'JANELA_INVALIDA' })
+        clientConfig = { ...clientConfig, janelaQualidadeAnaliseDias: dias, padrao: false, ...stamp }
+      }
     }
     return clientConfig
   }

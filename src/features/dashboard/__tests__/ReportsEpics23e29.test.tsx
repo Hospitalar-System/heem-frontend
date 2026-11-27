@@ -73,3 +73,15 @@ describe('Chamados resolvidos e assinaturas (Story 29.2)', () => {
     expect(screen.queryByRole('region', { name: 'Chamados resolvidos e assinaturas' })).not.toBeInTheDocument()
   })
 })
+describe('Equipamentos reincidentes (Story 23.8)', () => {
+  it('mostra a regra, a lista com link para a ficha e o estado vazio', async () => {
+    const { ReportRecurrentEquipment } = await import('../components/ReportRecurrentEquipment')
+    const { unmount } = render(<MemoryRouter><ReportRecurrentEquipment data={{ chamadosMinimos: 3, dias: 90, equipamentos: [{ equipamentoId: 'e2', codigo: 'EQ-1002', nome: 'Ventilador pulmonar', hospitalId: 'h1', hospitalNome: 'Hospital São Lucas', setorId: 's2', setorNome: 'Centro Cirúrgico', chamados: 3 }] }} /></MemoryRouter>)
+    const section = screen.getByRole('region', { name: 'Equipamentos reincidentes' })
+    expect(section).toHaveTextContent('3 ou mais chamados de falha (ou sem tipo) nos últimos 90 dias')
+    expect(within(section).getByRole('link', { name: 'Ventilador pulmonar' })).toHaveAttribute('href', '/assets/e2')
+    unmount()
+    render(<MemoryRouter><ReportRecurrentEquipment data={{ chamadosMinimos: 3, dias: 90, equipamentos: [] }} /></MemoryRouter>)
+    expect(screen.getByText('Nenhum equipamento reincidente para os filtros selecionados.')).toBeInTheDocument()
+  })
+})
