@@ -211,7 +211,7 @@ describe('Resumo e puladas no painel da campanha (F4.10)', () => {
     const terms = within(summary).getAllByRole('term').map((term) => term.textContent)
     const values = within(summary).getAllByRole('definition').map((value) => value.textContent)
     expect(Object.fromEntries(terms.map((term, index) => [term, values[index]]))).toEqual({
-      Previstas: '10', Geradas: '7', 'Concluídas': '1', 'Em andamento': '1', Agendadas: '5', Canceladas: '0', Atrasadas: '1', Puladas: '1', 'Pendências': '2', '% de execução': '14,3%',
+      Previstas: '10', Geradas: '7', 'Concluídas': '1', 'Em andamento': '1', Agendadas: '5', Canceladas: '0', 'Não realizadas (em uso)': '0', Atrasadas: '1', Puladas: '1', 'Pendências': '2', '% de execução': '14,3%',
     })
     expect(summary).toHaveTextContent('Pendências por motivo: Sem categoria (1) · Categoria sem checklist padrão (1)')
   })

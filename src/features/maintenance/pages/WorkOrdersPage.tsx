@@ -31,7 +31,7 @@ import { useOrderingFallback } from '../utils/useOrderingFallback'
 const inputClass = 'h-9 rounded-md border border-border bg-bg px-3 text-xs text-text-primary outline-none focus:border-primary focus:ring-2 focus:ring-primary/20'
 const statusLabel: Record<string, string> = {
   AGENDADA: 'Agendada', EM_EXECUCAO: 'Em execução', EM_ANDAMENTO: 'Em andamento',
-  CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída', CANCELADA: 'Cancelada', CANCELADO: 'Cancelada',
+  CONCLUIDA: 'Concluída', CONCLUIDO: 'Concluída', CANCELADA: 'Cancelada', CANCELADO: 'Cancelada', NAO_REALIZADA: 'Não realizada',
 }
 
 function normalized(value: string) { return value.toLocaleUpperCase('pt-BR').replaceAll('Ç', 'C').replaceAll('Ã', 'A') }
@@ -193,7 +193,7 @@ export function WorkOrdersPage() {
 
       <FilterBar label="Filtros de ordens de trabalho">
         <label className="relative min-w-0 sm:col-span-2"><span className="sr-only">Buscar ordens</span><Search aria-hidden="true" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" /><input type="search" aria-label="Buscar ordens" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, equipamento ou setor" className={`${inputClass} w-full pl-8`} /></label>
-        <Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={(next) => pagination.setFilters({ status: next })} options={[{ value: '', label: 'Todos os status' }, { value: 'AGENDADA', label: 'Agendada' }, { value: 'EM_EXECUCAO', label: 'Em execução' }, { value: 'CONCLUIDA', label: 'Concluída' }, { value: 'CANCELADA', label: 'Cancelada' }]} />
+        <Select size="sm" aria-label="Filtrar por status" value={statusFilter} onChange={(next) => pagination.setFilters({ status: next })} options={[{ value: '', label: 'Todos os status' }, { value: 'AGENDADA', label: 'Agendada' }, { value: 'EM_EXECUCAO', label: 'Em execução' }, { value: 'CONCLUIDA', label: 'Concluída' }, { value: 'CANCELADA', label: 'Cancelada' }, { value: 'NAO_REALIZADA', label: 'Não realizada' }]} />
         <Checkbox label="Atrasadas" checked={onlyOverdue} onCheckedChange={(next) => pagination.setFilters({ atrasadas: next ? '1' : undefined })} containerClassName="h-9 justify-center rounded-md border border-border bg-bg px-3 text-xs text-text-secondary" />
         <Select size="sm" aria-label="Filtrar por tipo" value={typeFilter} onChange={(next) => pagination.setFilters({ tipo: next })} options={[{ value: '', label: 'Todos os tipos' }, { value: 'PREVENTIVA', label: 'Preventiva' }, { value: 'CORRETIVA', label: 'Corretiva' }]} />
         <Select size="sm" aria-label="Filtrar por técnico" value={technicianFilter} onChange={setTechnicianFilter} options={[{ value: '', label: 'Todos os técnicos' }, ...(users.data ?? []).filter((user) => user.role === 'tecnico').map((user) => ({ value: user.id, label: user.nome }))]} />

@@ -36,10 +36,13 @@ const tickets: RecordValue[] = [
   { id: 'ticket-demo-1', hospitalId: hospitals[0].id, setorId: sectors[0].id, equipamentoId: equipment[0].id, abertoPor: 'user-demo-1', descricao: 'Leitura de SpO2 oscilando durante o monitoramento.', severidade: 'ALTA', status: 'ABERTO', abertoEm: now, slaStatus: 'em_risco', codigo: 'CH-0001', tecnicoResponsavelId: null, primeiraRespostaEm: null, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false },
   { id: 'ticket-demo-2', hospitalId: hospitals[0].id, setorId: sectors[1].id, equipamentoId: equipment[1].id, abertoPor: 'user-demo-2', descricao: 'Alarme de pressão recorrente durante o autoteste.', severidade: 'MEDIA', status: 'EM_ANDAMENTO', abertoEm: now, slaStatus: 'no_prazo', codigo: 'CH-0002', tecnicoResponsavelId: 'user-demo-2', primeiraRespostaEm: now, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: true },
 ]
+tickets.push({ id: 'ticket-demo-3', hospitalId: hospitals[0].id, setorId: sectors[0].id, equipamentoId: equipment[0].id, abertoPor: 'user-demo-2', descricao: 'Aguardando retorno do fornecedor sobre o sensor.', severidade: 'MEDIA', status: 'PAUSADO', abertoEm: now, slaStatus: 'no_prazo', codigo: 'CH-0003', tecnicoResponsavelId: 'user-demo-2', primeiraRespostaEm: now, canceladoEm: null, solucao: null, causaCategoria: null, reaberturas: 0, prontoParaResolver: false, pausaMotivo: 'aguardando_fornecedor', pausaDescricao: 'Sensor em cotação', pausadoEm: now })
 const workOrders: RecordValue[] = [
   { id: 'order-demo-1', codigo: 'OT-2026-001', tipo: 'PREVENTIVA', status: 'AGENDADA', equipamentoId: equipment[0].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', local: 'UTI Adulto', dataAgendada: now, iniciadaEm: null, concluidaEm: null, atrasada: false, planoPreventivoId: 'plan-demo-1', campanhaPreventivaId: null },
   { id: 'order-demo-2', codigo: 'OT-2026-002', tipo: 'CORRETIVA', status: 'EM_EXECUCAO', equipamentoId: equipment[1].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', chamadoId: tickets[1].id, local: 'Centro Cirúrgico', dataAgendada: now, iniciadaEm: now, concluidaEm: null, atrasada: false, planoPreventivoId: null, campanhaPreventivaId: null },
   { id: 'order-demo-3', codigo: 'OT-2026-003', tipo: 'PREVENTIVA', status: 'CONCLUIDA', equipamentoId: equipment[0].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', local: 'UTI Adulto', dataAgendada: now, iniciadaEm: now, concluidaEm: now, atrasada: false, planoPreventivoId: 'plan-demo-1', campanhaPreventivaId: null },
+  // Story 23.7: preventiva encerrada sem execução porque o equipamento estava em uso.
+  { id: 'order-demo-5', codigo: 'OT-2026-005', tipo: 'PREVENTIVA', status: 'NAO_REALIZADA', equipamentoId: equipment[1].id, checklistId: 'checklist-demo-1', tecnicoId: 'user-demo-2', local: 'Centro Cirúrgico', dataAgendada: now, iniciadaEm: null, concluidaEm: null, atrasada: false, planoPreventivoId: null, campanhaPreventivaId: null, naoRealizada: { em: now, por: 'user-demo-2', motivo: 'em_uso', observacao: 'Ventilador em uso em paciente da sala 2; equipamento visivelmente apto.' } },
   // Campanha no modo "sem responsável": a OT não tem técnico.
   { id: 'order-demo-4', codigo: 'OT-2026-004', tipo: 'PREVENTIVA', status: 'AGENDADA', equipamentoId: equipment[0].id, checklistId: 'checklist-demo-1', tecnicoId: null, local: 'UTI Adulto', dataAgendada: now, iniciadaEm: null, concluidaEm: null, atrasada: false, planoPreventivoId: null, campanhaPreventivaId: 'campaign-demo-1' },
 ]
@@ -253,6 +256,8 @@ const demoPreventive = { atrasadas: 2, concluidasNoPrazo: 19, concluidasForaDoPr
 
 function demoIndicators(agrupar: unknown) {
   const total = { mtbfHoras: 186, mttaHoras: 1.8, triagemHoras: 3.2, mttrHoras: 5.4, esperaPecaHoras: 12.5, slaAtendimentoPct: 94.5, slaResolucaoPct: 88.2, disponibilidadePercentual: 98.6, qtdOtsPreventivas: 24, qtdOtsCorretivas: 8, preventiva: demoPreventive }
+  // Story 29.2 (só no total): resolvidos com e sem OT e assinaturas pendentes.
+  const sinais = { chamadosResolvidosComOt: 6, chamadosResolvidosSemOt: 4, resolvidosSemOtPct: 40, assinaturasPendentes: { ots: 2, chamados: 1, campanhas: 0 } }
   const groups = agrupar === 'setor'
     ? [
       { grupoId: 'sector-demo-1', grupoNome: 'UTI Adulto', ...total, mttaHoras: 1.2, mttrHoras: 4.1, qtdOtsPreventivas: 10, qtdOtsCorretivas: 3 },
@@ -265,7 +270,7 @@ function demoIndicators(agrupar: unknown) {
         { grupoId: 'hospital-demo-2', grupoNome: 'Clínica Vital Norte', ...total, mttaHoras: 2.4, mttrHoras: 6.9, qtdOtsPreventivas: 6, qtdOtsCorretivas: 2 },
       ]
       : null
-  return { ...total, severidadesConsideradas: ['ALTA', 'CRITICA'], grupos: groups }
+  return { ...total, ...sinais, severidadesConsideradas: ['ALTA', 'CRITICA'], grupos: groups }
 }
 
 const demoBacklog = {
@@ -331,6 +336,8 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path === '/relatorios/qualidade-analise') return demoQualityAnalysis()
   if (path === '/relatorios/top-equipamentos') return demoTopEquipment
   if (path === '/relatorios/trocas-pecas') return demoPartReplacements()
+  if (path === '/relatorios/visitas-nao-realizadas') return demoNotDoneVisits
+  if (path === '/relatorios/avaliacoes-chamados') return { quantidade: 9, media: 4.4, porTecnico: [{ id: 'user-demo-2', nome: 'Bruno Técnico', quantidade: 7, media: 4.6 }, { id: null, nome: 'Sem responsável', quantidade: 2, media: 3.5 }], porHospital: [{ id: 'hospital-demo-1', nome: 'Hospital São Lucas', quantidade: 9, media: 4.4 }] }
   if (path === '/relatorios/conformidade') return ['CRITICO', 'ALTO', 'MEDIO', 'BAIXO'].map((nivelRisco, index) => ({ nivelRisco, percentualConforme: [96, 92, 98, 100][index], totalMedicoes: [25, 38, 54, 12][index] }))
   if (path === '/relatorios/exportacoes' && method === 'post') {
     const id = makeId('export')
@@ -867,14 +874,14 @@ function campaignView(campaign: RecordValue, detail: boolean): RecordValue {
   else if (status !== 'cancelada') status = polls === 0 ? 'pendente' : 'processando'
   const done = status === 'concluida'
   const generated = done ? plan.geradas : Math.floor(plan.geradas * (processadas / Math.max(1, plan.total)))
-  Object.assign(campaign, { status, execucao: { totalEquipamentos: plan.total, processadas, geradas: generated, puladas: plan.puladas, pendencias: done ? plan.pendencias.length : 0 }, ots: { total: generated, agendadas: generated, emExecucao: 0, concluidas: 0, canceladas: 0, atrasadas: 0 } })
+  Object.assign(campaign, { status, execucao: { totalEquipamentos: plan.total, processadas, geradas: generated, puladas: plan.puladas, pendencias: done ? plan.pendencias.length : 0 }, ots: { total: generated, agendadas: generated, emExecucao: 0, concluidas: 0, canceladas: 0, atrasadas: 0, naoRealizadas: 0 } })
   return { ...campaign, pendenciasDetalhe: detail && done ? plan.pendencias : [], puladasDetalhe: detail && done ? plan.puladasDetalhe : [] }
 }
 
 function seedDemoCampaign() {
   const body = { hospitalId: hospitals[0].id, nome: 'Preventiva semestral UTI', setorIds: [sectors[0].id], categoriaIds: [], dataInicio: dayIso(-10), dataFim: null, recorrencia: 'meses', intervalo: 6, modoAtribuicao: 'equilibrado', tecnicoId: null }
   const id = 'campaign-demo-1'
-  campaigns.push({ id, ...body, proximaData: dayIso(170), status: 'concluida', ativa: true, janelaAtual: dayIso(-10), criadaEm: now, canceladaEm: null, execucao: { totalEquipamentos: 0, processadas: 0, geradas: 0, puladas: 0, pendencias: 0 }, ots: { total: 0, agendadas: 0, emExecucao: 0, concluidas: 0, canceladas: 0, atrasadas: 0 } })
+  campaigns.push({ id, ...body, proximaData: dayIso(170), status: 'concluida', ativa: true, janelaAtual: dayIso(-10), criadaEm: now, canceladaEm: null, execucao: { totalEquipamentos: 0, processadas: 0, geradas: 0, puladas: 0, pendencias: 0 }, ots: { total: 0, agendadas: 0, emExecucao: 0, concluidas: 0, canceladas: 0, atrasadas: 0, naoRealizadas: 0 } })
   const plan = planCampaign(body)
   // Uma pulada de exemplo (equipamento que já tem OT preventiva aberta) para exercitar a tabela de puladas no painel.
   const skipped: DemoSkipped = { equipamentoId: equipment[1].id as string, codigo: equipment[1].codigo as string, motivo: 'JA_TEM_OT_PREVENTIVA_ABERTA', otCodigo: 'OT-2026-001' }
@@ -888,7 +895,7 @@ function handleCampaigns(method: string, path: string, body: RecordValue, params
   if (path === '/campanhas-preventivas' && method === 'post') {
     const id = makeId('campaign-demo')
     const periodic = body.recorrencia !== 'avulsa'
-    campaigns.unshift({ id, setorIds: [], categoriaIds: [], dataFim: null, intervalo: null, tecnicoId: null, ...body, proximaData: periodic ? body.dataInicio : null, status: 'pendente', ativa: true, janelaAtual: body.dataInicio, criadaEm: now, canceladaEm: null, execucao: { totalEquipamentos: 0, processadas: 0, geradas: 0, puladas: 0, pendencias: 0 }, ots: { total: 0, agendadas: 0, emExecucao: 0, concluidas: 0, canceladas: 0, atrasadas: 0 } })
+    campaigns.unshift({ id, setorIds: [], categoriaIds: [], dataFim: null, intervalo: null, tecnicoId: null, ...body, proximaData: periodic ? body.dataInicio : null, status: 'pendente', ativa: true, janelaAtual: body.dataInicio, criadaEm: now, canceladaEm: null, execucao: { totalEquipamentos: 0, processadas: 0, geradas: 0, puladas: 0, pendencias: 0 }, ots: { total: 0, agendadas: 0, emExecucao: 0, concluidas: 0, canceladas: 0, atrasadas: 0, naoRealizadas: 0 } })
     campaignPlans.set(id, planCampaign(body))
     campaignPolls.set(id, 0)
     return { id, status: 'pendente' }
@@ -957,7 +964,7 @@ const demoFinalizedOts = [
   ...Array.from({ length: 8 }, (_, index) => ({ id: `order-demo-c${index + 5}`, codigo: `OT-2026-${105 + index}`, equipamentoId: 'eq-demo', concluidaEm: now, veredito: 'ATIVO' })),
 ]
 const demoFinalizations: RecordValue[] = [
-  { id: 'finalizacao-demo-1', campanhaId: 'campaign-demo-1', tecnicoId: 'user-demo-2', clientId: 'finalizacao-demo-1', finalizadoEm: now, resumo: { totalOts: 12, aptos: 10, naoAptos: 1, emManutencao: 1, semVeredito: 0, ots: demoFinalizedOts } },
+  { id: 'finalizacao-demo-1', campanhaId: 'campaign-demo-1', tecnicoId: 'user-demo-2', clientId: 'finalizacao-demo-1', finalizadoEm: now, resumo: { totalOts: 12, aptos: 9, naoAptos: 1, emManutencao: 1, semVeredito: 0, emUso: 1, ots: demoFinalizedOts } },
 ]
 
 function handleSignatures(method: string, path: string, body: RecordValue): unknown {
@@ -999,6 +1006,14 @@ function demoEquipmentParts(equipamentoId: string) {
   return demoParts.filter((part) => part.equipamentoId === equipamentoId).slice().reverse()
 }
 
+/** Story 23.7: amostra fixa das visitas não realizadas por equipamento em uso. */
+const demoNotDoneVisits = {
+  encerradas: 24, naoRealizadas: 3, percentual: 12.5,
+  porHospital: [{ id: 'hospital-demo-1', nome: 'Hospital São Lucas', encerradas: 24, naoRealizadas: 3, percentual: 12.5 }],
+  porSetor: [{ id: 'sector-demo-1', nome: 'UTI Adulto', encerradas: 15, naoRealizadas: 2, percentual: 13.3 }, { id: 'sector-demo-2', nome: 'Centro Cirúrgico', encerradas: 9, naoRealizadas: 1, percentual: 11.1 }],
+  porTecnico: [{ id: 'user-demo-2', nome: 'Bruno Técnico', encerradas: 24, naoRealizadas: 3, percentual: 12.5 }],
+  emUsoSeguidas: [{ equipamentoId: 'equipment-demo-2', codigo: 'EQ-1002', nome: 'Ventilador pulmonar', hospitalNome: 'Hospital São Lucas', setorNome: 'Centro Cirúrgico', seguidas: 2, ultimaEm: now }],
+}
 function demoPartReplacements() {
   const byEquipment = new Map<string, { trocas: number; pecas: number; chamados: Set<string> }>()
   demoParts.forEach((part) => {

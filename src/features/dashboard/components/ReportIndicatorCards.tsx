@@ -43,6 +43,19 @@ export function ReportIndicatorCards({ metrics }: { metrics: ReportIndicators })
           <Stat label="Preventivas canceladas" value={formatCount(preventive.canceladas)} />
         </>}
       </section>
+
+      {(typeof metrics.chamadosResolvidosComOt === 'number' || metrics.assinaturasPendentes) && <section aria-label="Chamados resolvidos e assinaturas" className="flex flex-wrap items-center gap-6 rounded-lg border border-border bg-surface px-5 py-4">
+        {typeof metrics.chamadosResolvidosComOt === 'number' && <>
+          <Stat label="Resolvidos com OT" value={formatCount(metrics.chamadosResolvidosComOt)} />
+          <Stat label="Resolvidos sem OT" value={formatCount(metrics.chamadosResolvidosSemOt ?? 0)} />
+          <Stat label="Resolvidos sem OT (%)" value={formatPercent(metrics.resolvidosSemOtPct)} />
+        </>}
+        {metrics.assinaturasPendentes && <>
+          <Stat label="Assinaturas pendentes: OTs" value={formatCount(metrics.assinaturasPendentes.ots)} />
+          <Stat label="Assinaturas pendentes: chamados" value={formatCount(metrics.assinaturasPendentes.chamados)} />
+          <Stat label="Assinaturas pendentes: campanhas" value={formatCount(metrics.assinaturasPendentes.campanhas)} />
+        </>}
+      </section>}
     </>
   )
 }

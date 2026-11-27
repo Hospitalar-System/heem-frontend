@@ -35,7 +35,7 @@ export function CampaignFinalizationSection({ campaignId, technicianNames }: { c
         : list.length === 0 ? <p className="mt-4 rounded-md border border-dashed border-border px-4 py-6 text-center text-xs text-text-muted">Nenhuma finalização registrada ainda.</p>
           : <ul className="mt-4 divide-y divide-border rounded-md border border-border">{list.map((item) => <li key={item.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-4 py-3">
             <div className="min-w-0"><p className="text-sm font-medium text-text-primary">{technicianNames?.[item.tecnicoId] ?? 'Técnico'}</p><p className="mt-0.5 text-[11px] text-text-muted">Finalizada em {formatDateTime(item.finalizadoEm)}</p><CoveredOrders codes={item.resumo.ots.map((ot) => ot.codigo)} /></div>
-            <p className="shrink-0 text-xs text-text-secondary">{plural(item.resumo.totalOts, 'OT', 'OTs')} · {item.resumo.aptos} aptos · {item.resumo.naoAptos} não aptos · {item.resumo.emManutencao} em manutenção{item.resumo.semVeredito > 0 ? ` · ${item.resumo.semVeredito} sem veredito` : ''}</p>
+            <p className="shrink-0 text-xs text-text-secondary">{plural(item.resumo.totalOts, 'OT', 'OTs')} · {item.resumo.aptos} aptos · {item.resumo.naoAptos} não aptos · {item.resumo.emManutencao} em manutenção{item.resumo.semVeredito > 0 ? ` · ${item.resumo.semVeredito} sem veredito` : ''}{item.resumo.emUso ? ` · ${item.resumo.emUso} em uso (não realizadas)` : ''}</p>
           </li>)}</ul>}
   </section>
 }

@@ -263,7 +263,12 @@ export interface WorkOrderDetail {
   assinada?: boolean
   /** Story 22.2: assinaturas na ordem do registro. */
   assinaturas?: Signature[] | null
+  /** Story 23.7: preenchido só em NAO_REALIZADA (equipamento em uso). */
+  naoRealizada?: WorkOrderNotDone | null
 }
+
+/** Story 23.7: encerramento sem execução; motivo hoje só `em_uso`. */
+export interface WorkOrderNotDone { em: string; por: string | null; motivo: 'em_uso' | string; observacao: string | null }
 
 export interface WorkOrderChecklistItem {
   id: string

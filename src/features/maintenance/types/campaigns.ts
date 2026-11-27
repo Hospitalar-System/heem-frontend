@@ -51,7 +51,7 @@ export interface Campaign {
   ativa: boolean
   janelaAtual: string | null
   execucao: { totalEquipamentos: number; processadas: number; geradas: number; puladas: number; pendencias: number }
-  ots: { total: number; agendadas: number; emExecucao: number; concluidas: number; canceladas: number; atrasadas: number }
+  ots: { total: number; agendadas: number; emExecucao: number; concluidas: number; canceladas: number; atrasadas: number; /** Story 23.7: encerradas sem execução (equipamento em uso). */ naoRealizadas?: number }
   /** Só no detalhe (até 1000 itens); vazio na lista. */
   pendenciasDetalhe: CampaignPendingItem[]
   /** Só no detalhe (até 1000 itens); vazio na lista. */

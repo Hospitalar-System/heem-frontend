@@ -18,8 +18,8 @@ describe('modo de demonstração', () => {
 
     expect(hospitals.data).toHaveLength(2)
     expect(dashboardSummaryResponseSchema.safeParse(dashboard.data).success).toBe(true)
-    expect(dashboard.data.chamadosRecentes).toHaveLength(2)
-    expect(orders.data).toHaveLength(4)
+    expect(dashboard.data.chamadosRecentes).toHaveLength(3) // inclui o chamado pausado da Story 29.3
+    expect(orders.data).toHaveLength(5) // inclui a OT não realizada da Story 23.7
   })
 
   it('serve categorias, equipamentos com categoria e o fluxo de mesclar', async () => {
@@ -222,7 +222,7 @@ describe('modo de demonstração: rotinas preventivas dentro das OTs (Story F7.2
   it('filtra OTs por hospital, setor, plano e campanha no servidor', async () => {
     const ids = async (params: Record<string, string>) => ((await apiClient.get('/ordens-de-trabalho', { params })).data as Order[]).map((order) => order.id)
     expect(await ids({ hospitalId: 'hospital-demo-2' })).toEqual([])
-    expect((await ids({ hospitalId: 'hospital-demo-1', setorId: 'sector-demo-2' }))).toEqual(['order-demo-2'])
+    expect((await ids({ hospitalId: 'hospital-demo-1', setorId: 'sector-demo-2' }))).toEqual(['order-demo-2', 'order-demo-5']) // order-demo-5: não realizada (23.7)
     expect(await ids({ planoPreventivoId: 'plan-demo-1' })).toEqual(['order-demo-1', 'order-demo-3'])
     expect(await ids({ campanhaPreventivaId: 'campaign-demo-1' })).toEqual(['order-demo-4'])
   })

@@ -99,9 +99,9 @@ export function PreventiveCampaignDetailPage() {
 
         <section aria-label="Situação das OTs" className="rounded-lg border border-border bg-surface p-4 md:p-5">
           <h2 className="text-sm font-semibold text-text-primary">Ordens de trabalho da campanha</h2>
-          <dl className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-6">
+          <dl className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7">
             <Metric label="Total" value={data.ots.total} /><Metric label="Agendadas" value={data.ots.agendadas} /><Metric label="Em execução" value={data.ots.emExecucao} />
-            <Metric label="Concluídas" value={data.ots.concluidas} /><Metric label="Canceladas" value={data.ots.canceladas} /><Metric label="Atrasadas" value={data.ots.atrasadas} tone={data.ots.atrasadas > 0 ? 'danger' : undefined} />
+            <Metric label="Concluídas" value={data.ots.concluidas} /><Metric label="Canceladas" value={data.ots.canceladas} /><Metric label="Não realizadas (em uso)" value={data.ots.naoRealizadas ?? 0} /><Metric label="Atrasadas" value={data.ots.atrasadas} tone={data.ots.atrasadas > 0 ? 'danger' : undefined} />
           </dl>
         </section>
 

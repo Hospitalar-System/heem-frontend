@@ -34,6 +34,12 @@ export interface IndicatorValues {
   qtdOtsPreventivas: number
   qtdOtsCorretivas: number
   preventiva: PreventiveIndicators
+  /** Story 29.2 (aditivo): chamados resolvidos no período com e sem OT. */
+  chamadosResolvidosComOt?: number | null
+  chamadosResolvidosSemOt?: number | null
+  resolvidosSemOtPct?: number | null
+  /** Story 29.2: finalizados no período sem a assinatura do técnico (só no total). */
+  assinaturasPendentes?: { ots: number; chamados: number; campanhas: number } | null
 }
 
 export interface IndicatorGroup extends IndicatorValues {
@@ -271,4 +277,40 @@ export function useReportExport(id: string | null) {
   })
   const pollStopped = query.data?.status === 'pendente' && (client.getQueryState(queryKey)?.dataUpdateCount ?? 0) >= EXPORT_POLL_MAX_UPDATES
   return { ...query, pollStopped }
+}
+
+/** Story 23.7: visitas preventivas não realizadas porque o equipamento estava em uso. */
+export interface NotDoneVisitsGroup { id: string | null; nome: string; encerradas: number; naoRealizadas: number; percentual: number | null }
+export interface NotDoneVisitsEquipment { equipamentoId: string; codigo: string; nome: string; hospitalNome: string; setorNome: string; seguidas: number; ultimaEm: string }
+export interface NotDoneVisits {
+  encerradas: number
+  naoRealizadas: number
+  percentual: number | null
+  porHospital: NotDoneVisitsGroup[]
+  porSetor: NotDoneVisitsGroup[]
+  porTecnico: NotDoneVisitsGroup[]
+  /** Situação atual (sem período): 2 ou mais preventivas seguidas não realizadas, mais seguidas primeiro. */
+  emUsoSeguidas: NotDoneVisitsEquipment[]
+}
+
+/** GET /relatorios/visitas-nao-realizadas (só admin do cliente); aceita hospital e setor. */
+export function useNotDoneVisits(filters: ReportFilters) {
+  return useQuery({
+    queryKey: ['report-not-done-visits', filters],
+    queryFn: async () => (await apiClient.get<NotDoneVisits>('/relatorios/visitas-nao-realizadas', { params: filters })).data,
+    enabled: validPeriod(filters),
+  })
+}
+
+/** Story 23.5: avaliação dos chamados pelo solicitante (nota 1 a 5). */
+export interface RatingGroup { id: string | null; nome: string; quantidade: number; media: number | null }
+export interface TicketRatings { quantidade: number; media: number | null; porTecnico: RatingGroup[]; porHospital: RatingGroup[] }
+
+/** GET /relatorios/avaliacoes-chamados (só admin do cliente); aceita hospital e setor. */
+export function useTicketRatings(filters: ReportFilters) {
+  return useQuery({
+    queryKey: ['report-ticket-ratings', filters],
+    queryFn: async () => (await apiClient.get<TicketRatings>('/relatorios/avaliacoes-chamados', { params: filters })).data,
+    enabled: validPeriod(filters),
+  })
 }
