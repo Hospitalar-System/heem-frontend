@@ -89,7 +89,11 @@ export interface RiskCompliance {
   totalMedicoes: number
 }
 
-export const EXPORT_CONTENTS = ['chamados', 'ordens_trabalho', 'medicoes', 'indicadores', 'campanha', EMERGENCIAS_CONTEUDO] as const
+/** Stories 23.3 (HEEM-PT), 24.3 (HEEM-PQ) e 24.4 (HEEM-IN): só o admin do cliente. */
+export const PRODUTIVIDADE_CONTEUDO = 'produtividade'
+export const EVOLUCAO_PARQUE_CONTEUDO = 'evolucao_parque'
+export const POSICAO_PARQUE_CONTEUDO = 'posicao_parque'
+export const EXPORT_CONTENTS = ['chamados', 'ordens_trabalho', 'medicoes', 'indicadores', 'campanha', EMERGENCIAS_CONTEUDO, PRODUTIVIDADE_CONTEUDO, EVOLUCAO_PARQUE_CONTEUDO, POSICAO_PARQUE_CONTEUDO] as const
 export const EXPORT_FORMATS = ['pdf', 'xlsx', 'csv'] as const
 
 /**
@@ -109,9 +113,17 @@ export const exportRequestSchema = z.object({
   status: z.enum(OT_STATUS_VALUES).optional(),
   nivel: z.enum(['RESUMO', 'COMPLETO']).optional(),
   orientacao: z.enum(['RETRATO', 'PAISAGEM']).optional(),
+  /** Só com conteudo=produtividade; ausente = todos os técnicos. */
+  tecnicoId: z.string().optional(),
+  /** Só com conteudo=posicao_parque (AAAA-MM-DD), no lugar de desde/ate; futura = 400 DATA_FUTURA. */
+  dataReferencia: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 }).superRefine((value, ctx) => {
   if (value.conteudo === 'campanha') {
     if (!value.campanhaId) ctx.addIssue({ code: 'custom', path: ['campanhaId'], message: 'Escolha a campanha.' })
+    return
+  }
+  if (value.conteudo === POSICAO_PARQUE_CONTEUDO) {
+    if (!value.dataReferencia) ctx.addIssue({ code: 'custom', path: ['dataReferencia'], message: 'Informe a data de referência.' })
     return
   }
   if (!value.desde || !value.ate) ctx.addIssue({ code: 'custom', path: ['desde'], message: 'Informe o período.' })
@@ -156,6 +168,48 @@ export function useReportTopEquipment(filters: ReportFilters) {
   return useQuery({
     queryKey: ['report-top-equipment', filters],
     queryFn: async () => (await apiClient.get<TopEquipment[]>('/relatorios/top-equipamentos', { params: { ...filters, n: TOP_EQUIPMENT_LIMIT } })).data,
+    enabled: validPeriod(filters),
+  })
+}
+
+/** Story 23.4: um técnico na qualidade da análise. `percentual` é null sem nenhum Apto no período. */
+export interface QualityTechnician {
+  tecnicoId: string
+  nome: string
+  aptos: number
+  comChamado: number
+  percentual: number | null
+}
+
+/** Um Apto seguido de chamado no mesmo equipamento dentro da janela. */
+export interface QualityCase {
+  tecnicoId: string
+  tecnicoNome: string
+  equipamentoCodigo: string
+  equipamentoNome: string
+  aptoEm: string
+  chamadoCodigo: string
+  chamadoAbertoEm: string
+  diasDepois: number
+}
+
+/** GET /relatorios/qualidade-analise (só admin do cliente). */
+export interface QualityAnalysis {
+  janelaDias: number
+  aptos: number
+  comChamado: number
+  percentual: number | null
+  tecnicos: QualityTechnician[]
+  casos: QualityCase[]
+  casosTruncados: boolean
+}
+
+/** Story 23.4: qualidade da análise no período; aceita hospital (o setor não se aplica). */
+export function useQualityAnalysis(filters: ReportFilters) {
+  const params = { desde: filters.desde, ate: filters.ate, ...(filters.hospitalId ? { hospitalId: filters.hospitalId } : {}) }
+  return useQuery({
+    queryKey: ['report-quality-analysis', params],
+    queryFn: async () => (await apiClient.get<QualityAnalysis>('/relatorios/qualidade-analise', { params })).data,
     enabled: validPeriod(filters),
   })
 }

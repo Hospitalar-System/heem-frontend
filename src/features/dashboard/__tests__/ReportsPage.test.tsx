@@ -49,6 +49,16 @@ const topFixture = [
   { equipamentoId: 'eq-3', codigo: null, nome: null, qtdChamados: 5, mtbfHoras: 48 },
 ]
 
+const qualityFixture = {
+  janelaDias: 45, aptos: 10, comChamado: 2, percentual: 20,
+  tecnicos: [
+    { tecnicoId: 't-1', nome: 'Rafael Costa', aptos: 6, comChamado: 2, percentual: 33.3 },
+    { tecnicoId: 't-2', nome: 'Juliana Prado', aptos: 4, comChamado: 0, percentual: 0 },
+  ],
+  casos: [{ tecnicoId: 't-1', tecnicoNome: 'Rafael Costa', equipamentoCodigo: 'EQ-9', equipamentoNome: 'Bomba de infusão', aptoEm: '2026-11-03T13:00:00Z', chamadoCodigo: 'CH-2026-0042', chamadoAbertoEm: '2026-11-04T13:00:00Z', diasDepois: 1 }],
+  casosTruncados: true,
+}
+
 function rowNames(table: HTMLElement) {
   return within(table).getAllByRole('row').slice(1).map((row) => within(row).getAllByRole('rowheader')[0].textContent)
 }
@@ -63,6 +73,7 @@ describe('ReportsPage', () => {
       if (url === '/hospitais/hospital-1/setores') return { data: [{ id: 'sector-1', hospitalId: 'hospital-1', codigo: 'ST-1', nome: 'UTI Adulto' }] } as never
       if (url === '/relatorios/indicadores') return { data: indicatorsFixture } as never
       if (url === '/relatorios/backlog') return { data: backlogFixture } as never
+      if (url === '/relatorios/qualidade-analise') return { data: qualityFixture } as never
       if (url === '/relatorios/top-equipamentos') return { data: topFixture } as never
       if (url === '/relatorios/conformidade') return { data: [{ nivelRisco: 'CRITICO', percentualConforme: 94, totalMedicoes: 16 }] } as never
       if (url === '/relatorios/exportacoes/export-1') return { data: { id: 'export-1', status: 'concluido', urlDownload: 'https://storage.test/export.pdf' } } as never
@@ -125,6 +136,7 @@ describe('ReportsPage', () => {
       if (url === '/relatorios/conformidade') return { data: [{ nivelRisco: 'ALTO', percentualConforme: 90, totalMedicoes: 5 }, { nivelRisco: 'MEDIO', percentualConforme: null, totalMedicoes: 0 }, { nivelRisco: 'BAIXO', percentualConforme: null, totalMedicoes: 0 }] } as never
       if (url === '/relatorios/indicadores') return { data: indicatorsFixture } as never
       if (url === '/relatorios/backlog') return { data: backlogFixture } as never
+      if (url === '/relatorios/qualidade-analise') return { data: qualityFixture } as never
       if (url === '/relatorios/top-equipamentos') return { data: topFixture } as never
       return { data: [] } as never
     })
@@ -268,6 +280,7 @@ describe('ReportsPage', () => {
       if (url === '/relatorios/top-equipamentos') throw forbidden
       if (url === '/relatorios/indicadores') return { data: indicatorsFixture } as never
       if (url === '/relatorios/backlog') return { data: backlogFixture } as never
+      if (url === '/relatorios/qualidade-analise') return { data: qualityFixture } as never
       return { data: [] } as never
     })
     render(<ReportsPage />, { wrapper: TestProviders })
@@ -282,10 +295,37 @@ describe('ReportsPage', () => {
     vi.mocked(apiClient.get).mockImplementation(async (url) => {
       if (url === '/relatorios/indicadores') throw { response: { status: 403, data: {} } }
       if (url === '/relatorios/backlog') return { data: backlogFixture } as never
+      if (url === '/relatorios/qualidade-analise') return { data: qualityFixture } as never
       return { data: [] } as never
     })
     render(<ReportsPage />, { wrapper: TestProviders })
     expect(await screen.findByText('Não foi possível carregar os indicadores.')).toBeInTheDocument()
+  })
+
+  it('qualidade da análise (Story 23.4): janela, totais, técnicos ordenados pelo percentual e casos com aviso de truncamento', async () => {
+    render(<ReportsPage />, { wrapper: TestProviders })
+    const section = await screen.findByRole('region', { name: 'Qualidade da análise' })
+    expect(within(section).getByText(/em até 45 dias/)).toBeInTheDocument()
+    expect(within(section).getByText(/Chamados de instalação não contam/)).toBeInTheDocument()
+    expect(rowNames(within(section).getByRole('table'))).toEqual(['Rafael Costa', 'Juliana Prado'])
+    expect(within(section).getByText('33,3%')).toBeInTheDocument()
+    expect(within(section).getByText(/Os 1 casos mais recentes; há outros no período/)).toBeInTheDocument()
+    expect(within(section).getByText(/chamado CH-2026-0042 .*1 dia depois/)).toBeInTheDocument()
+  })
+
+  it('qualidade da análise usa o período e o hospital, sem o setor', async () => {
+    const user = userEvent.setup()
+    render(<ReportsPage />, { wrapper: TestProviders })
+    await screen.findByRole('region', { name: 'Qualidade da análise' })
+    await chooseOption(user, 'Hospital', 'Santa Casa')
+    await chooseOption(user, 'Setor', 'UTI Adulto')
+    await waitFor(() => {
+      const calls = vi.mocked(apiClient.get).mock.calls.filter(([url]) => url === '/relatorios/qualidade-analise')
+      const last = calls.at(-1)?.[1] as { params: Record<string, string> }
+      expect(last.params.hospitalId).toBe('hospital-1')
+      expect(last.params).not.toHaveProperty('setorId')
+      expect(last.params.desde).toBeTruthy()
+    })
   })
 
   it('impede um período invertido: dias anteriores ao início ficam desabilitados', async () => {

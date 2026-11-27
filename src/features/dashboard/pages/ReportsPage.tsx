@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { endOfSystemDay, startOfSystemDay } from '@/lib/system-day'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { useHospitals, useSectors } from '@/features/assets/api/assets'
-import { useReportBacklog, useReportIndicators, useReportPartReplacements, useReportTopEquipment, useRiskCompliance } from '../api/reports'
+import { useQualityAnalysis, useReportBacklog, useReportIndicators, useReportPartReplacements, useReportTopEquipment, useRiskCompliance } from '../api/reports'
+import { ReportQualityAnalysis } from '../components/ReportQualityAnalysis'
 import type { ReportFilters, ReportGrouping } from '../api/reports'
 import { ExportBuilder } from '../components/ExportBuilder'
 import { ReportBacklog } from '../components/ReportBacklog'
@@ -60,6 +61,7 @@ export function ReportsPage() {
   const topEquipment = useReportTopEquipment(filters)
   const partReplacements = useReportPartReplacements(filters)
   const compliance = useRiskCompliance(filters)
+  const quality = useQualityAnalysis(filters)
   const invalidRange = !desde || !ate || desde > ate
   const metrics = indicators.data
 
@@ -126,6 +128,10 @@ export function ReportsPage() {
         {topEquipment.isLoading ? <SectionSkeleton label="Carregando equipamentos com mais chamados" /> : topEquipment.isError ? (
           <SectionError message={getErrorMessage(topEquipment.error, 'Não foi possível carregar os equipamentos com mais chamados.')} onRetry={() => void topEquipment.refetch()} />
         ) : topEquipment.data && <ReportTopEquipment items={topEquipment.data} desde={invalidRange ? undefined : desde} ate={invalidRange ? undefined : ate} />}
+
+        {quality.isLoading ? <SectionSkeleton label="Carregando qualidade da análise" /> : quality.isError ? (
+          <SectionError message={getErrorMessage(quality.error, 'Não foi possível carregar a qualidade da análise.')} onRetry={() => void quality.refetch()} />
+        ) : typeof quality.data?.janelaDias === 'number' && <ReportQualityAnalysis data={quality.data} />}
 
         {partReplacements.isLoading ? <SectionSkeleton label="Carregando trocas de peça" /> : partReplacements.isError ? (
           <SectionError message={getErrorMessage(partReplacements.error, 'Não foi possível carregar as trocas de peça.')} onRetry={() => void partReplacements.refetch()} />

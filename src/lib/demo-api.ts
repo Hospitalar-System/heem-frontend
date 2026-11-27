@@ -273,6 +273,27 @@ const demoBacklog = {
   total: 14,
 }
 
+/** Story 23.4: qualidade da análise de exemplo (janela da configuração do cliente, dois técnicos, casos recentes). */
+function demoQualityAnalysis() {
+  const janelaDias = Number((clientConfig as { janelaQualidadeAnaliseDias?: number }).janelaQualidadeAnaliseDias ?? 30)
+  return {
+    janelaDias,
+    aptos: 42,
+    comChamado: 4,
+    percentual: 9.5,
+    tecnicos: [
+      { tecnicoId: 'user-demo-2', nome: 'Rafael Costa', aptos: 27, comChamado: 3, percentual: 11.1 },
+      { tecnicoId: 'user-demo-5', nome: 'Juliana Prado', aptos: 15, comChamado: 1, percentual: 6.7 },
+    ],
+    casos: [
+      { tecnicoId: 'user-demo-2', tecnicoNome: 'Rafael Costa', equipamentoCodigo: 'EQ-1002', equipamentoNome: 'Ventilador pulmonar', aptoEm: '2026-11-03T13:00:00Z', chamadoCodigo: 'CH-2026-0118', chamadoAbertoEm: '2026-11-12T09:30:00Z', diasDepois: 9 },
+      { tecnicoId: 'user-demo-5', tecnicoNome: 'Juliana Prado', equipamentoCodigo: 'EQ-1003', equipamentoNome: 'Desfibrilador', aptoEm: '2026-10-28T15:20:00Z', chamadoCodigo: 'CH-2026-0109', chamadoAbertoEm: '2026-11-02T08:10:00Z', diasDepois: 5 },
+      { tecnicoId: 'user-demo-2', tecnicoNome: 'Rafael Costa', equipamentoCodigo: 'EQ-1001', equipamentoNome: 'Monitor multiparamétrico', aptoEm: '2026-10-20T11:00:00Z', chamadoCodigo: 'CH-2026-0097', chamadoAbertoEm: '2026-11-01T17:45:00Z', diasDepois: 12 },
+    ],
+    casosTruncados: false,
+  }
+}
+
 const demoTopEquipment = [
   { equipamentoId: 'equipment-demo-2', codigo: 'EQ-1002', nome: 'Ventilador pulmonar', qtdChamados: 7, mtbfHoras: 96.5 },
   { equipamentoId: 'equipment-demo-1', codigo: 'EQ-1001', nome: 'Monitor multiparamétrico', qtdChamados: 4, mtbfHoras: 168 },
@@ -302,6 +323,7 @@ function handleRequest(method: string, path: string, body: RecordValue, params?:
   if (path === '/relatorios/dashboard') return dashboard
   if (path === '/relatorios/indicadores') return demoIndicators(params?.agrupar)
   if (path === '/relatorios/backlog') return demoBacklog
+  if (path === '/relatorios/qualidade-analise') return demoQualityAnalysis()
   if (path === '/relatorios/top-equipamentos') return demoTopEquipment
   if (path === '/relatorios/trocas-pecas') return demoPartReplacements()
   if (path === '/relatorios/conformidade') return ['CRITICO', 'ALTO', 'MEDIO', 'BAIXO'].map((nivelRisco, index) => ({ nivelRisco, percentualConforme: [96, 92, 98, 100][index], totalMedicoes: [25, 38, 54, 12][index] }))

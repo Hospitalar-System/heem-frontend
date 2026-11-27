@@ -2,10 +2,13 @@ import { Download, FileSpreadsheet, FileText, RotateCw, SlidersHorizontal, Table
 import { useEffect, useId, useRef, useState } from 'react'
 import { isDemoMode } from '@/lib/demo-mode'
 import { Select } from '@/components/ui/Select'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { useCampaigns } from '@/features/maintenance/api/preventive-campaigns'
+import { useTenantUsers } from '@/features/tenants-users/api/users'
 import { otStatusOptions, otTipoOptions } from '../api/documents'
+import { POSICAO_PARQUE_CONTEUDO, PRODUTIVIDADE_CONTEUDO } from '../api/reports'
 import type { ExportRequest } from '../api/reports'
-import { EXPORT_BACKEND_SUPPORT, buildExportBody, visibleExportContents, defaultExportValues, defaultOrientation, exportContentLabels, exportFilename, exportFormatLabels } from './export-builder-model'
+import { EXPORT_BACKEND_SUPPORT, buildExportBody, dataReferenciaError, visibleExportContents, defaultExportValues, defaultOrientation, exportContentLabels, exportFilename, exportFormatLabels, todayIso, usesPeriod, usesSector } from './export-builder-model'
 import type { ExportBuilderValues } from './export-builder-model'
 import { useExportDownload } from './use-export-download'
 
@@ -46,6 +49,12 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
   const orientationTouched = useRef(false)
   const { conteudo } = values
   const isCampaign = conteudo === 'campanha'
+  // Stories 23.3/24.4: produtividade escolhe o técnico; a posição do parque usa uma data no lugar do período.
+  const isProductivity = conteudo === PRODUTIVIDADE_CONTEUDO
+  const isPosition = conteudo === POSICAO_PARQUE_CONTEUDO
+  const users = useTenantUsers()
+  const technicians = (users.data ?? []).filter((user) => user.role === 'tecnico' && user.ativo !== false)
+  const [dateError, setDateError] = useState<string | null>(null)
   const showOtFilters = EXPORT_BACKEND_SUPPORT.filtrosOt && conteudo === 'ordens_trabalho'
   const hasLayout = EXPORT_BACKEND_SUPPORT.nivel || EXPORT_BACKEND_SUPPORT.orientacao
   const hasMenu = hasLayout || showOtFilters
@@ -98,15 +107,20 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
   }
 
   function generate(formato: Format) {
-    if (!isCampaign && invalidRange) return
+    if (usesPeriod(conteudo) && invalidRange) return
     if (isCampaign && !values.campanhaId) { setCampaignError(true); return }
+    if (isPosition) {
+      const erro = dataReferenciaError(values.dataReferencia)
+      setDateError(erro)
+      if (erro) return
+    }
     setCampaignError(false)
     setMenuOpen(false)
-    send(buildExportBody({ ...values, formato, desde, ate, hospitalId, setorId: hospitalId ? setorId : '' }))
+    send(buildExportBody({ ...values, formato, desde, ate, hospitalId, setorId: hospitalId && usesSector(conteudo) ? setorId : '' }))
   }
 
   const busy = flow.phase === 'requesting' || flow.phase === 'generating'
-  const blocked = busy || (!isCampaign && invalidRange)
+  const blocked = busy || (usesPeriod(conteudo) && invalidRange)
   const summary = lastBody ? `${exportContentLabels[lastBody.conteudo]} em ${exportFormatLabels[lastBody.formato]}` : ''
 
   return (
@@ -114,8 +128,20 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
       <div className="relative flex flex-wrap items-end justify-end gap-2">
         <label className={`${fieldLabel} w-full min-[480px]:w-auto min-[480px]:min-w-44`}>
           <span>Conteúdo</span>
-          <Select size="sm" aria-label="Conteúdo da exportação" value={conteudo} onChange={(next) => { setCampaignError(false); patch({ conteudo: next as ExportBuilderValues['conteudo'] }) }} options={visibleExportContents().map((value) => ({ value, label: exportContentLabels[value] }))} />
+          <Select size="sm" aria-label="Conteúdo da exportação" value={conteudo} onChange={(next) => { setCampaignError(false); setDateError(null); patch({ conteudo: next as ExportBuilderValues['conteudo'] }) }} options={visibleExportContents().map((value) => ({ value, label: exportContentLabels[value] }))} />
         </label>
+        {isProductivity && (
+          <label className={`${fieldLabel} w-full min-[480px]:w-auto min-[480px]:min-w-44`}>
+            <span>Técnico</span>
+            <Select size="sm" aria-label="Técnico" value={values.tecnicoId} onChange={(next) => patch({ tecnicoId: next })} options={[{ value: '', label: 'Todos' }, ...technicians.map((user) => ({ value: user.id, label: user.nome }))]} />
+          </label>
+        )}
+        {isPosition && (
+          <label className={`${fieldLabel} w-full min-[480px]:w-auto`}>
+            <span>Data de referência</span>
+            <DatePicker size="sm" required aria-label="Data de referência" value={values.dataReferencia} max={todayIso()} aria-invalid={dateError ? true : undefined} aria-describedby={dateError ? `${ids}-data-error` : undefined} onChange={(next) => { setDateError(null); patch({ dataReferencia: next }) }} />
+          </label>
+        )}
         {isCampaign && (
           <label className={`${fieldLabel} w-full min-[480px]:w-auto min-[480px]:min-w-48`}>
             <span>Campanha</span>
@@ -168,6 +194,9 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
         </div>
       </div>
       {campaignError && <p id={`${ids}-campanha-error`} role="alert" className="text-right text-xs text-danger">Escolha a campanha.</p>}
+      {dateError && <p id={`${ids}-data-error`} role="alert" className="text-right text-xs text-danger">{dateError}</p>}
+      {isProductivity && <p className="text-right text-[11px] text-text-muted">Produtividade usa o período e o hospital dos filtros; o setor não se aplica.</p>}
+      {isPosition && <p className="text-right text-[11px] text-text-muted">Posição do parque usa a data de referência no lugar do período.</p>}
       {isDemoMode ? <p className="text-right text-[11px] text-text-muted">Modo demonstração: os arquivos são amostras ilustrativas, não o modelo final dos relatórios.</p> : null}
 
       <div role="status" aria-live="polite" className={busy || flow.phase === 'done' ? 'flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary' : 'sr-only'}>
