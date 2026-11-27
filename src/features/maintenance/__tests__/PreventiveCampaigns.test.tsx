@@ -327,7 +327,7 @@ describe('Campanha de preventiva', () => {
       expect(await screen.findByRole('heading', { name: 'Preventiva semestral', level: 2 })).toBeInTheDocument()
       const ots = screen.getByRole('region', { name: 'Situação das OTs' })
       expect(within(ots).getAllByRole('term').map((term) => term.textContent)).toEqual(['Total', 'Agendadas', 'Em execução', 'Concluídas', 'Canceladas', 'Não realizadas (em uso)', 'Atrasadas'])
-      expect(within(ots).getAllByRole('definition').map((value) => value.textContent)).toEqual(['7', '5', '1', '1', '0', '1'])
+      expect(within(ots).getAllByRole('definition').map((value) => value.textContent)).toEqual(['7', '5', '1', '1', '0', '0', '1'])
       expect(screen.getByRole('status')).toHaveTextContent('10 de 10 equipamentos processados · 7 OTs geradas · 1 puladas · 2 pendências')
       expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
       expect(screen.getByText(/próxima execução 10\/05\/2027/)).toBeInTheDocument()

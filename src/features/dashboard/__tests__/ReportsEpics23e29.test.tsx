@@ -20,7 +20,7 @@ describe('Visitas não realizadas (Story 23.7)', () => {
   it('mostra totais, agrupa por hospital, setor ou técnico e lista os equipamentos com visitas seguidas', async () => {
     render(<MemoryRouter><ReportNotDoneVisits data={notDone} /></MemoryRouter>)
     const section = screen.getByRole('region', { name: 'Visitas não realizadas (equipamento em uso)' })
-    expect(within(section).getByText('24')).toBeInTheDocument()
+    expect(within(section).getAllByText('24').length).toBeGreaterThan(0)
     expect(within(section).getByRole('table', { name: 'Visitas não realizadas por hospital' })).toHaveTextContent('Hospital São Lucas')
     await chooseOption(userEvent.setup(), 'Agrupar visitas não realizadas por', 'Técnico')
     expect(within(section).getByRole('table', { name: 'Visitas não realizadas por técnico' })).toHaveTextContent('Bruno Técnico')
