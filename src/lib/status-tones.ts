@@ -15,6 +15,8 @@ export function ticketStatusTone(status: string): BadgeVariant {
     case 'RESOLVIDO': return 'success'
     case 'CANCELADO': return 'muted'
     case 'AGUARDANDO_PECA': return 'warning'
+    // Story 29.3: atendimento pausado (chamado ainda aberto).
+    case 'PAUSADO': return 'warning'
     default: return 'neutral'
   }
 }

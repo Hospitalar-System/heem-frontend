@@ -129,6 +129,15 @@ describe('TicketDetailPage', () => {
       expect(within(care).getByText('Falha mecânica')).toBeInTheDocument()
     })
 
+    it('pausado (Story 29.3): mostra "Pausado" e não oferece ações de status', async () => {
+      loginAs('admin_cliente')
+      mockTicket({ status: 'PAUSADO', tecnicoResponsavelId: 'tech-1', pausaMotivo: 'aguardando_fornecedor', pausaDescricao: 'Peça em cotação', pausadoEm: '2026-10-14T12:00:00Z' })
+      render(<TicketDetailPage />, { wrapper: TestProviders })
+      expect(await screen.findByText('Pausado')).toBeInTheDocument()
+      const names = buttonNames()
+      for (const action of ['Aguardando peça', 'Peça chegou', 'Resolver', 'Cancelar chamado', 'Reabrir chamado']) expect(names).not.toContain(action)
+    })
+
     it('lets a technician assume an open ticket without responsible and hides admin-only actions', async () => {
       loginAs('tecnico', 'tech-1')
       mockTicket({})
