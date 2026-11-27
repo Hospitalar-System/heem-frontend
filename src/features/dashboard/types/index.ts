@@ -88,6 +88,7 @@ const ticketStatusLabels: Record<string, string> = {
   aberto: 'Aberto',
   em_andamento: 'Em andamento',
   aguardando_peca: 'Aguardando peça',
+  pausado: 'Pausado',
   resolvido: 'Resolvido',
   cancelado: 'Cancelado',
 }

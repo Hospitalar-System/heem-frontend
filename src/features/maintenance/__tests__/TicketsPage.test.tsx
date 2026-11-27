@@ -19,6 +19,8 @@ const tickets = [
   { id: 'ticket-critical', codigo: 'CH-6', hospitalId: 'hospital-1', setorId: 'sector-1', equipamentoId: 'equipment-1', abertoPor: 'user-2', descricao: 'Falha crítica de pressão', severidade: 'CRITICA', status: 'ABERTO', abertoEm: '2026-10-14T10:00:00Z', slaStatus: 'vencido', slaAtendimentoAte: '2026-10-14T10:15:00Z', slaResolucaoAte: '2026-10-14T14:00:00Z' },
   { id: 'ticket-resolved', codigo: 'CH-7', hospitalId: 'hospital-1', setorId: 'sector-1', equipamentoId: 'equipment-1', abertoPor: 'user-2', descricao: 'Falha resolvida', severidade: 'ALTA', status: 'RESOLVIDO', abertoEm: '2026-10-13T10:00:00Z' },
 ]
+// Story 29.3: atendimento pausado (só no teste do selo).
+const pausedTicket = { id: 'ticket-paused', codigo: 'CH-8', hospitalId: 'hospital-1', setorId: 'sector-1', equipamentoId: 'equipment-1', abertoPor: 'user-2', descricao: 'Falha pausada', severidade: 'MEDIA', status: 'PAUSADO', abertoEm: '2026-10-12T10:00:00Z', pausaMotivo: 'aguardando_fornecedor', pausadoEm: '2026-10-12T12:00:00Z' }
 let currentTickets = [...tickets]
 
 function TestProviders({ children }: PropsWithChildren) {
@@ -78,6 +80,17 @@ describe('TicketsPage', () => {
       codigo: 'OT-2042', chamadoId: 'ticket-critical', tecnicoId: 'tech-1',
     }))
     await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+  })
+
+  it('pausado (Story 29.3): selo "Pausado" na lista e opção no filtro de status', async () => {
+    currentTickets.push({ ...pausedTicket } as never)
+    render(<TicketsPage />, { wrapper: TestProviders })
+    await screen.findByText('Falha pausada')
+    const row = screen.getAllByRole('row').find((candidate) => within(candidate).queryByText('Falha pausada')) as HTMLElement
+    expect(within(row).getByText('Pausado')).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: 'Gerar OT corretiva' })).not.toBeInTheDocument()
+    await chooseOption(userEvent.setup(), 'Filtrar por status', 'Pausado')
+    expect(await screen.findByText('Falha pausada')).toBeInTheDocument()
   })
 
   it('filters by status and hides corrective action for ineligible calls', async () => {
