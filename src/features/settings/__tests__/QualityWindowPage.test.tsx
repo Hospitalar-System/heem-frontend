@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type PropsWithChildren } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RequireRole } from '@/app/RequireRole'
 import { clearAuthSession, setAuthSession } from '@/features/auth/session'
@@ -11,6 +12,7 @@ import { apiClient } from '@/lib/axios'
 import { QualityWindowPage } from '../pages/QualityWindowPage'
 
 vi.mock('@/lib/axios', () => ({ apiClient: { get: vi.fn(), put: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('@/components/layout/AdminPageShell', () => ({
   AdminPageShell: ({ title, children }: PropsWithChildren<{ title: string }>) => <main><h1>{title}</h1>{children}</main>,
 }))
@@ -51,7 +53,7 @@ describe('QualityWindowPage (Story 23.2)', () => {
     await user.type(input, '45')
     await user.click(screen.getByRole('button', { name: 'Salvar janela' }))
     await waitFor(() => expect(apiClient.put).toHaveBeenCalledWith('/configuracao-cliente', { janelaQualidadeAnaliseDias: 45 }))
-    expect(await screen.findByRole('status')).toHaveTextContent('relatórios já emitidos não mudam')
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Janela salva. Vale para os próximos cálculos.'))
     expect(screen.getByText('Personalizado')).toBeInTheDocument()
     expect(await screen.findByText(/por Clara Mendes/)).toBeInTheDocument()
   })
@@ -73,7 +75,13 @@ describe('QualityWindowPage (Story 23.2)', () => {
     await user.clear(input)
     await user.type(input, '20')
     await user.click(screen.getByRole('button', { name: 'Salvar janela' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('entre 7 e 365 dias')
+    const alerta = await screen.findByRole('alert')
+    expect(alerta).toHaveTextContent('entre 7 e 365 dias')
+    // o campo fica invalido (borda danger) e aponta para a mensagem do servidor
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(input.getAttribute('aria-describedby')).toContain(alerta.id)
+    expect(input).toHaveClass('border-danger')
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   it.each([['tecnico'], ['interno_hospital']] as [UserRole][])('%s não acessa', async (role) => {
