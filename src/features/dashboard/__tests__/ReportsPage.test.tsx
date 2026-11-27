@@ -310,7 +310,10 @@ describe('ReportsPage', () => {
     expect(rowNames(within(section).getByRole('table'))).toEqual(['Rafael Costa', 'Juliana Prado'])
     expect(within(section).getByText('33,3%')).toBeInTheDocument()
     expect(within(section).getByText(/Os 1 casos mais recentes; há outros no período/)).toBeInTheDocument()
-    expect(within(section).getByText(/chamado CH-2026-0042 .*1 dia depois/)).toBeInTheDocument()
+    const codigo = within(section).getByText('CH-2026-0042')
+    expect(codigo).toHaveClass('whitespace-nowrap') // código nunca quebra no hífen
+    expect(within(section).getByText((_, el) => el?.tagName === 'P' && /chamado CH-2026-0042 em .*1 dia depois/.test(el.textContent ?? ''))).toBeInTheDocument()
+    expect(within(section).getByText('EQ-9')).toHaveClass('whitespace-nowrap')
   })
 
   it('qualidade da análise usa o período e o hospital, sem o setor', async () => {
@@ -326,6 +329,18 @@ describe('ReportsPage', () => {
       expect(last.params).not.toHaveProperty('setorId')
       expect(last.params.desde).toBeTruthy()
     })
+  })
+
+  it('posição do parque no gerador desliga Desde e Até (a data de referência substitui o período); outro conteúdo religa', async () => {
+    const user = userEvent.setup()
+    render(<ReportsPage />, { wrapper: TestProviders })
+    await screen.findByText('286 h')
+    expect(screen.getByRole('button', { name: 'Data inicial' })).toBeEnabled()
+    await chooseOption(user, 'Conteúdo da exportação', 'Posição do parque numa data')
+    expect(screen.getByRole('button', { name: 'Data inicial' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Data final' })).toBeDisabled()
+    await chooseOption(user, 'Conteúdo da exportação', 'Evolução do parque')
+    expect(screen.getByRole('button', { name: 'Data inicial' })).toBeEnabled()
   })
 
   it('impede um período invertido: dias anteriores ao início ficam desabilitados', async () => {

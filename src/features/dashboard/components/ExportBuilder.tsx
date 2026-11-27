@@ -38,7 +38,7 @@ export interface ExportFiltersSummary {
  * Exportação compacta: "Conteúdo [tipo] [opções] [Excel] [CSV] [PDF]". Nível, orientação e filtros de OT ficam
  * num popover do botão de opções. Período, hospital e setor vêm dos filtros da página.
  */
-export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
+export function ExportBuilder({ filters, onContentChange }: { filters: ExportFiltersSummary; /** Avisa a página do conteúdo escolhido (ex.: a posição do parque desliga Desde e Até). */ onContentChange?: (conteudo: ExportBuilderValues['conteudo']) => void }) {
   const { desde, ate, hospitalId, setorId, invalidRange } = filters
   const ids = useId()
   const [values, setValues] = useState<ExportBuilderValues>(() => defaultExportValues())
@@ -72,6 +72,8 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
     setLastBody(body)
     void flow.start(body, exportFilename(body))
   }
+
+  useEffect(() => { onContentChange?.(conteudo) }, [conteudo, onContentChange])
 
   // Trocar o tipo reaplica a orientação padrão dele, se a pessoa ainda não escolheu uma.
   useEffect(() => {
@@ -137,7 +139,7 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
           </label>
         )}
         {isPosition && (
-          <label className={`${fieldLabel} w-full min-[480px]:w-auto`}>
+          <label className={`${fieldLabel} w-full min-[480px]:w-auto min-[480px]:min-w-40`}>
             <span>Data de referência</span>
             <DatePicker size="sm" required aria-label="Data de referência" value={values.dataReferencia} max={todayIso()} aria-invalid={dateError ? true : undefined} aria-describedby={dateError ? `${ids}-data-error` : undefined} onChange={(next) => { setDateError(null); patch({ dataReferencia: next }) }} />
           </label>
@@ -194,10 +196,10 @@ export function ExportBuilder({ filters }: { filters: ExportFiltersSummary }) {
         </div>
       </div>
       {campaignError && <p id={`${ids}-campanha-error`} role="alert" className="text-right text-xs text-danger">Escolha a campanha.</p>}
-      {dateError && <p id={`${ids}-data-error`} role="alert" className="text-right text-xs text-danger">{dateError}</p>}
-      {isProductivity && <p className="text-right text-[11px] text-text-muted">Produtividade usa o período e o hospital dos filtros; o setor não se aplica.</p>}
-      {isPosition && <p className="text-right text-[11px] text-text-muted">Posição do parque usa a data de referência no lugar do período.</p>}
-      {isDemoMode ? <p className="text-right text-[11px] text-text-muted">Modo demonstração: os arquivos são amostras ilustrativas, não o modelo final dos relatórios.</p> : null}
+      {dateError && <p id={`${ids}-data-error`} role="alert" className="text-left text-xs text-danger min-[480px]:text-right">{dateError}</p>}
+      {isProductivity && <p className="text-left text-[11px] text-text-muted min-[480px]:text-right">Produtividade usa o período e o hospital dos filtros; o setor não se aplica.</p>}
+      {isPosition && <p className="text-left text-[11px] text-text-muted min-[480px]:text-right">Posição do parque usa a data de referência no lugar do período.</p>}
+      {isDemoMode ? <p className="text-left text-[11px] text-text-muted min-[480px]:text-right">Modo demonstração: os arquivos são amostras ilustrativas, não o modelo final dos relatórios.</p> : null}
 
       <div role="status" aria-live="polite" className={busy || flow.phase === 'done' ? 'flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-secondary' : 'sr-only'}>
         {flow.phase === 'requesting' && <span className="flex items-center gap-2"><RotateCw aria-hidden="true" className="animate-spin text-primary" size={14} />Solicitando o relatório…</span>}

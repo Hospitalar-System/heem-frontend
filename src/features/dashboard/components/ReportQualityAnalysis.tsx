@@ -62,8 +62,9 @@ export function ReportQualityAnalysis({ data: bruto }: { data: QualityAnalysis }
           <ul className="mt-3 grid gap-2">
             {data.casos.map((c) => (
               <li key={`${c.tecnicoId}-${c.equipamentoCodigo}-${c.aptoEm}-${c.chamadoCodigo}`} className="rounded-md border border-border bg-bg px-3 py-2 text-xs">
-                <p className="font-medium text-text-primary">{c.equipamentoNome} <span className="font-normal text-text-muted">{c.equipamentoCodigo}</span></p>
-                <p className="mt-0.5 text-text-secondary">Apto por {c.tecnicoNome} em {formatDate(c.aptoEm)} · chamado {c.chamadoCodigo} em {formatDate(c.chamadoAbertoEm)}, {c.diasDepois} {c.diasDepois === 1 ? 'dia' : 'dias'} depois</p>
+                {/* códigos (EQ-…, CH-…) nunca quebram no hífen: a linha quebra antes deles */}
+                <p className="font-medium text-text-primary">{c.equipamentoNome} <span className="whitespace-nowrap font-normal text-text-muted">{c.equipamentoCodigo}</span></p>
+                <p className="mt-0.5 text-text-secondary">Apto por {c.tecnicoNome} em {formatDate(c.aptoEm)} · chamado <span className="whitespace-nowrap">{c.chamadoCodigo}</span> em {formatDate(c.chamadoAbertoEm)}, {c.diasDepois} {c.diasDepois === 1 ? 'dia' : 'dias'} depois</p>
               </li>
             ))}
           </ul>
