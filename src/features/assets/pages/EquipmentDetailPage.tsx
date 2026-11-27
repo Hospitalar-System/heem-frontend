@@ -69,7 +69,7 @@ export function EquipmentDetailPage() {
           {canGenerateDossier ? <GenerateDocumentButton label="Gerar dossiê do equipamento" body={dossieEquipamentoBody(equipment.data.id)} filename={`dossie-${equipment.data.codigo}.pdf`} align="start" fullWidthMobile className="max-sm:col-span-2" /> : null}
           <EquipmentStateControl equipment={equipment.data} role={role} />
           <EquipmentTransferControl equipment={equipment.data} hospitalId={sector.data?.hospitalId ?? ''} role={role} />
-          {isAdmin ? <button type="button" onClick={() => navigate(`/assets/${id}/edit`)} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-border px-3 text-xs font-semibold text-text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary max-sm:h-11"><Edit3 aria-hidden="true" size={14} />Editar</button> : null}
+          {isAdmin ? <button type="button" onClick={() => navigate(`/assets/${id}/edit`)} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-border px-3 text-xs font-semibold text-text-primary hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary max-sm:col-span-2 max-sm:h-11"><Edit3 aria-hidden="true" size={14} />Editar</button> : null}
         </div>
       </div>
 

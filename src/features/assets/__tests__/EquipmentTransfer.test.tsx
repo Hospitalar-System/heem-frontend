@@ -128,6 +128,22 @@ describe('Transferir equipamento e Movimentações (Stories 24.1, 24.2 e 24.5)',
     expect(linhas[1]).toHaveTextContent('Não informado')
   })
 
+  it('celular: cada movimentação vira um card (data e por, de → para, tipo e motivo); "Não informado" em cinza', async () => {
+    const user = setup()
+    await user.click(await screen.findByRole('tab', { name: 'Movimentações' }))
+    const lista = await screen.findByRole('list', { name: 'Movimentações' })
+    const cards = within(lista).getAllByRole('listitem')
+    expect(cards).toHaveLength(2)
+    expect(cards[0]).toHaveTextContent(/Rafael Costa/)
+    expect(cards[0]).toHaveTextContent('Centro Cirúrgico → UTI Adulto')
+    expect(within(cards[0]).getByText('Empréstimo')).toHaveClass('font-semibold')
+    expect(cards[1]).toHaveTextContent('Emergência · Clínica Norte → Centro Cirúrgico · Santa Casa')
+    expect(within(cards[1]).getByText('Clínica Norte')).toHaveClass('whitespace-nowrap') // quebra antes do hospital, não no nome
+    expect(within(cards[1]).getByText('Não informado')).toHaveClass('text-text-muted')
+    // a tabela também marca o "Não informado" em cinza
+    expect(within(screen.getByRole('table', { name: 'Movimentações' })).getByText('Não informado')).toHaveClass('text-text-muted')
+  })
+
   it('mensagens por código do servidor', () => {
     const erro = (code: string, status = 400) => ({ response: { status, data: { code } } })
     expect(transferErrorMessage(erro('SETOR_DESATIVADO', 409))).toMatch(/desativado/)

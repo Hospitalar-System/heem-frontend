@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { DataTable, type DataColumn } from '@/components/ui/DataTable'
-import { PAGINATION_SIZES } from '@/components/ui/Pagination'
+import { PAGINATION_SIZES, Pagination } from '@/components/ui/Pagination'
 import { tipoMotivoLabel, useEquipmentMovements, type EquipmentMovement } from '../api/movements'
 
 const dateFormat = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
@@ -39,16 +39,47 @@ export function EquipmentMovementsSection({ equipmentId }: { equipmentId: string
     { key: 'motivo', header: 'Motivo', className: 'max-w-[320px]', cell: (row) => <span className="block break-words text-text-secondary">{row.motivo || '—'}</span> },
     { key: 'por', header: 'Por', cell: (row) => <span className="text-text-secondary">{row.movimentadoPorNome || '—'}</span> },
   ]
-  return <DataTable
-    label="Movimentações"
-    columns={columns}
-    rows={query.data?.items ?? []}
-    getRowId={(row) => row.id}
-    isLoading={query.isLoading}
-    loadingLabel="Carregando movimentações"
-    error={query.isError ? { message: 'Não foi possível carregar as movimentações.', onRetry: () => void query.refetch() } : null}
-    empty={{ title: 'Nenhuma movimentação', description: 'Este equipamento ainda não foi transferido de setor.' }}
-    pagination={{ page, size, total: query.data?.total ?? 0, onPageChange: (next) => update({ mpagina: next > 1 ? String(next) : undefined }), onSizeChange: (next) => update({ mtamanho: next === 10 ? undefined : String(next), mpagina: undefined }) }}
-    minWidth="900px"
-  />
+  const rows = query.data?.items ?? []
+  const pagination = { page, size, total: query.data?.total ?? 0, onPageChange: (next: number) => update({ mpagina: next > 1 ? String(next) : undefined }), onSizeChange: (next: number) => update({ mtamanho: next === 10 ? undefined : String(next), mpagina: undefined }) }
+  // Abaixo de sm a tabela de 6 colunas não cabe: cada movimentação vira um card (carregando, erro e vazio seguem na tabela).
+  const cards = !query.isLoading && !query.isError && rows.length > 0
+  return <>
+    <div className={cards ? 'hidden sm:block' : undefined}>
+      <DataTable
+        label="Movimentações"
+        columns={columns}
+        rows={rows}
+        getRowId={(row) => row.id}
+        isLoading={query.isLoading}
+        loadingLabel="Carregando movimentações"
+        error={query.isError ? { message: 'Não foi possível carregar as movimentações.', onRetry: () => void query.refetch() } : null}
+        empty={{ title: 'Nenhuma movimentação', description: 'Este equipamento ainda não foi transferido de setor.' }}
+        pagination={pagination}
+        minWidth="900px"
+      />
+    </div>
+    {cards ? <div className="sm:hidden">
+      <ul aria-label="Movimentações" className="grid gap-2">
+        {rows.map((row) => <MovementCard key={row.id} row={row} />)}
+      </ul>
+      <Pagination {...pagination} className="mt-2 rounded-lg border border-border bg-surface" />
+    </div> : null}
+  </>
+}
+
+/** Nome de lugar que quebra entre setor e hospital, nunca no meio de um nome. */
+function Lugar({ setor, hospital, mostrarHospital }: { setor: string | null; hospital: string | null; mostrarHospital: boolean }) {
+  return <><span className="whitespace-nowrap">{setor || 'Sem setor'}</span>{mostrarHospital && hospital ? <> · <span className="whitespace-nowrap">{hospital}</span></> : null}</>
+}
+
+function MovementCard({ row }: { row: EquipmentMovement }) {
+  const entre = row.hospitalOrigemId !== row.hospitalDestinoId
+  return <li className="rounded-lg border border-border bg-surface px-3 py-2.5 text-xs">
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="whitespace-nowrap text-text-secondary">{formatDateTime(row.movimentadoEm)}</span>
+      <span className="truncate text-text-muted">{row.movimentadoPorNome || '—'}</span>
+    </div>
+    <p className="mt-1 text-text-secondary"><Lugar setor={row.setorOrigemNome} hospital={row.hospitalOrigemNome} mostrarHospital={entre} /> → <span className="font-semibold text-text-primary"><Lugar setor={row.setorDestinoNome} hospital={row.hospitalDestinoNome} mostrarHospital={entre} /></span></p>
+    <p className="mt-1"><span className={row.tipoMotivo ? 'font-semibold text-text-primary' : 'text-text-muted'}>{tipoMotivoLabel(row.tipoMotivo)}</span>{row.motivo ? <span className="text-text-muted"> · {row.motivo}</span> : null}</p>
+  </li>
 }
