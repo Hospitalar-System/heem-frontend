@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { endOfSystemDay, startOfSystemDay } from '@/lib/system-day'
 import { AdminPageShell } from '@/components/layout/AdminPageShell'
 import { useHospitals, useSectors } from '@/features/assets/api/assets'
-import { useReportBacklog, useReportIndicators, useReportPartReplacements, useReportTopEquipment, useRiskCompliance } from '../api/reports'
+import { POSICAO_PARQUE_CONTEUDO, useQualityAnalysis, useReportBacklog, useReportIndicators, useReportPartReplacements, useReportTopEquipment, useRiskCompliance } from '../api/reports'
+import { ReportQualityAnalysis } from '../components/ReportQualityAnalysis'
 import type { ReportFilters, ReportGrouping } from '../api/reports'
 import { ExportBuilder } from '../components/ExportBuilder'
 import { ReportBacklog } from '../components/ReportBacklog'
@@ -47,6 +48,9 @@ export function ReportsPage() {
   const [hospitalId, setHospitalId] = useState('')
   const [setorId, setSetorId] = useState('')
   const [agrupar, setAgrupar] = useState<ReportGrouping>('hospital')
+  // Story 24.4: com "Posição do parque" no gerador, a data de referência substitui o período: Desde e Até ficam desligados.
+  const [exportContent, setExportContent] = useState('')
+  const periodOff = exportContent === POSICAO_PARQUE_CONTEUDO
   const hospitals = useHospitals()
   const sectors = useSectors(hospitalId)
   const filters: ReportFilters = {
@@ -60,6 +64,7 @@ export function ReportsPage() {
   const topEquipment = useReportTopEquipment(filters)
   const partReplacements = useReportPartReplacements(filters)
   const compliance = useRiskCompliance(filters)
+  const quality = useQualityAnalysis(filters)
   const invalidRange = !desde || !ate || desde > ate
   const metrics = indicators.data
 
@@ -69,11 +74,11 @@ export function ReportsPage() {
         <FilterBar label="Filtros do relatório" className="items-end" dense>
           <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
             <span>Desde</span>
-            <DatePicker size="sm" required aria-label="Data inicial" value={desde} max={ate || undefined} onChange={setDesde} />
+            <DatePicker size="sm" required aria-label="Data inicial" value={desde} max={ate || undefined} disabled={periodOff} onChange={setDesde} />
           </label>
           <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
             <span>Até</span>
-            <DatePicker size="sm" required aria-label="Data final" value={ate} min={desde || undefined} onChange={setAte} />
+            <DatePicker size="sm" required aria-label="Data final" value={ate} min={desde || undefined} disabled={periodOff} onChange={setAte} />
           </label>
           <label className="grid min-w-0 gap-1 text-xs text-text-secondary">
             <span>Hospital</span>
@@ -87,7 +92,7 @@ export function ReportsPage() {
             <span>Agrupar por</span>
             <Select size="sm" aria-label="Agrupar por" value={agrupar} onChange={(next) => setAgrupar(next as ReportGrouping)} options={[{ value: 'hospital', label: 'Hospital' }, { value: 'setor', label: 'Setor' }]} />
           </label>
-          <ExportBuilder filters={{ desde, ate, hospitalId, setorId, invalidRange }} />
+          <ExportBuilder filters={{ desde, ate, hospitalId, setorId, invalidRange }} onContentChange={setExportContent} />
         </FilterBar>
 
         {invalidRange && <p role="alert" className="text-xs text-danger">Informe um período válido: a data inicial deve ser anterior ou igual à data final.</p>}
@@ -126,6 +131,10 @@ export function ReportsPage() {
         {topEquipment.isLoading ? <SectionSkeleton label="Carregando equipamentos com mais chamados" /> : topEquipment.isError ? (
           <SectionError message={getErrorMessage(topEquipment.error, 'Não foi possível carregar os equipamentos com mais chamados.')} onRetry={() => void topEquipment.refetch()} />
         ) : topEquipment.data && <ReportTopEquipment items={topEquipment.data} desde={invalidRange ? undefined : desde} ate={invalidRange ? undefined : ate} />}
+
+        {quality.isLoading ? <SectionSkeleton label="Carregando qualidade da análise" /> : quality.isError ? (
+          <SectionError message={getErrorMessage(quality.error, 'Não foi possível carregar a qualidade da análise.')} onRetry={() => void quality.refetch()} />
+        ) : typeof quality.data?.janelaDias === 'number' && <ReportQualityAnalysis data={quality.data} />}
 
         {partReplacements.isLoading ? <SectionSkeleton label="Carregando trocas de peça" /> : partReplacements.isError ? (
           <SectionError message={getErrorMessage(partReplacements.error, 'Não foi possível carregar as trocas de peça.')} onRetry={() => void partReplacements.refetch()} />
